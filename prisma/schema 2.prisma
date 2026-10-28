@@ -1,0 +1,183 @@
+// Esquema de control-gastos.
+//
+// Nota sobre montos: en Chile el peso no tiene decimales, asi que `monto` es Int
+// (pesos enteros). Eso evita arrastrar Decimal, que ademas no serializa directo
+// entre servidor y cliente en Next.js.
+//
+// Nota sobre fechas: `fecha` es @db.Date (solo dia, sin hora). Siempre se guarda
+// y se lee como medianoche UTC. Ver src/lib/fecha.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MedioPago {
+  EFECTIVO
+  DEBITO
+  CREDITO
+  TRANSFERENCIA
+  OTRO
+}
+
+model Categoria {
+  id       String   @id @default(cuid())
+  nombre   String   @unique @db.VarChar(60)
+  /// Color hex para graficos y acentos, formato #RRGGBB.
+  color    String   @db.VarChar(7)
+  /// Nombre del icono de lucide-react.
+  icono    String   @db.VarChar(40)
+  /// true = gasto fijo o inevitable (arriendo, luz). false = discrecional.
+  esencial Boolean  @default(false)
+  orden    Int      @default(0)
+  /// Las categorias no se borran si tienen gastos: se desactivan.
+  activa   Boolean  @default(true)
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  gastos  Gasto[]
+  cuentas Cuenta[]
+
+  @@index([activa, orden])
+  @@map("categorias")
+}
+
+model Gasto {
+  id            String    @id @default(cuid())
+  fecha         DateTime  @db.Date
+  descripcion   String    @db.VarChar(120)
+  /// Pesos chilenos enteros. Siempre mayor que cero (constraint en la migracion).
+  monto         Int
+  medioPago     MedioPago @default(DEBITO) @map("medio_pago")
+  notas         String?   @db.VarChar(500)
+  categoriaId   String    @map("categoria_id")
+  /// Nombre del archivo de la boleta dentro de la carpeta de boletas.
+  /// Solo el nombre, nunca una ruta: lo genera el servidor.
+  boletaArchivo String?   @db.VarChar(255) @map("boleta_archivo")
+  creadoEn      DateTime  @default(now()) @map("creado_en")
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en")
+
+  categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  /// La cuenta que se pago y genero este gasto, si vino de ahi.
+  cuenta    Cuenta?
+  /// La cuota de deuda que se pago y genero este gasto, si vino de ahi.
+  cuota     CuotaPagada?
+
+  @@index([fecha])
+  @@index([categoriaId, fecha])
+  @@map("gastos")
+}
+
+/// Sueldo mensual, con vigencia.
+///
+/// No se guarda un solo monto editable sino uno por cada vez que cambia, con
+/// el mes desde el que rige. Asi un aumento en marzo no reescribe lo que
+/// ganabas en febrero, y el historial de meses viejos sigue siendo cierto.
+model Sueldo {
+  id            String   @id @default(cuid())
+  /// Pesos chilenos enteros. Cero es valido: un mes sin ingresos.
+  monto         Int
+  /// Primer dia del mes desde el que rige este monto.
+  vigenteDesde  DateTime @unique @db.Date @map("vigente_desde")
+  nota          String?  @db.VarChar(200)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@map("sueldos")
+}
+
+/// Deuda pagada en cuotas fijas.
+///
+/// Se guarda el mes de la PRIMERA cuota en vez de "cuotas pagadas": las dos
+/// cosas son equivalentes, pero el mes no se pone viejo. En noviembre la app
+/// sola sabe que vas una cuota mas adelante, sin tener que marcar nada.
+model Deuda {
+  id            String   @id @default(cuid())
+  nombre        String   @db.VarChar(80)
+  /// Monto de cada cuota, en pesos.
+  montoCuota    Int      @map("monto_cuota")
+  cuotasTotales Int      @map("cuotas_totales")
+  /// Primer dia del mes en que se paga la primera cuota.
+  primeraCuota  DateTime @db.Date @map("primera_cuota")
+  /// false si se pago antes de tiempo o se anulo.
+  activa        Boolean  @default(true)
+  nota          String?  @db.VarChar(200)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  cuotasPagadas CuotaPagada[]
+
+  @@index([activa, primeraCuota])
+  @@map("deudas")
+}
+
+/// Una cuota de una deuda, ya pagada.
+///
+/// Las cuotas no se guardan por adelantado: se calculan del mes de la primera
+/// cuota mas el total. Aqui queda registro solo de la que SI se pago, con el
+/// dia exacto y el gasto que genero.
+///
+/// El par (deuda, mes) es unico: no se puede pagar dos veces la misma cuota.
+model CuotaPagada {
+  id       String   @id @default(cuid())
+  deudaId  String   @map("deuda_id")
+  /// Mes de la cuota, guardado como el primer dia de ese mes.
+  mes      DateTime @db.Date
+  /// Dia exacto en que se pago.
+  pagadaEn DateTime @db.Date @map("pagada_en")
+  /// Lo que se pago de verdad, que puede diferir de la cuota pactada.
+  monto    Int
+  gastoId  String?  @unique @map("gasto_id")
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  deuda Deuda  @relation(fields: [deudaId], references: [id], onDelete: Cascade)
+  gasto Gasto? @relation(fields: [gastoId], references: [id], onDelete: SetNull)
+
+  @@unique([deudaId, mes])
+  @@index([mes])
+  @@map("cuotas_pagadas")
+}
+
+/// Cuenta por pagar.
+///
+/// Es un gasto que todavia no ocurre: luz, agua, internet, el gimnasio. Al
+/// marcarla pagada se crea el Gasto correspondiente con la fecha real de pago,
+/// asi no hay que anotar lo mismo dos veces y los totales del mes quedan bien.
+///
+/// Las marcadas `mensual` se regeneran solas al abrir el mes siguiente.
+model Cuenta {
+  id             String    @id @default(cuid())
+  nombre         String    @db.VarChar(120)
+  /// Monto esperado. Al pagarla se puede corregir al monto real.
+  monto          Int
+  /// Mes al que corresponde, guardado como el dia 1.
+  mes            DateTime  @db.Date
+  /// Dia del mes en que vence, 1 a 31. Opcional.
+  diaVencimiento Int?      @map("dia_vencimiento")
+  categoriaId    String    @map("categoria_id")
+  /// null = pendiente. Con fecha = pagada ese dia exacto.
+  pagadaEn       DateTime? @db.Date @map("pagada_en")
+  /// El gasto que se creo al pagarla.
+  gastoId        String?   @unique @map("gasto_id")
+  /// true si debe reaparecer sola el mes siguiente.
+  mensual        Boolean   @default(false)
+  /// Nombre del archivo de la boleta. Solo el nombre, nunca una ruta.
+  boletaArchivo  String?   @db.VarChar(255) @map("boleta_archivo")
+  nota           String?   @db.VarChar(500)
+  creadoEn       DateTime  @default(now()) @map("creado_en")
+  actualizadoEn  DateTime  @updatedAt @map("actualizado_en")
+
+  categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  /// Si se borra el gasto, la cuenta vuelve a quedar pendiente en vez de
+  /// desaparecer con el.
+  gasto     Gasto?    @relation(fields: [gastoId], references: [id], onDelete: SetNull)
+
+  /// Una cuenta con el mismo nombre no se repite dentro del mismo mes. Es lo
+  /// que hace que regenerar las mensuales sea idempotente.
+  @@unique([nombre, mes])
+  @@index([mes, pagadaEn])
+  @@map("cuentas")
+}

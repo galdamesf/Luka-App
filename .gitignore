@@ -1,0 +1,34 @@
+node_modules/
+.next/
+out/
+build/
+.DS_Store
+*.pem
+
+# Variables de entorno (se versiona solo .env.example)
+.env
+.env*.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# TypeScript incremental
+*.tsbuildinfo
+
+# Fotos de boletas: son tuyas, no van al repositorio
+boletas/
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Tests
+coverage/
+.vitest/
+
+# Editores
+.idea/
+.vscode/*
+!.vscode/extensions.json

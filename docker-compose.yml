@@ -1,0 +1,25 @@
+# Postgres local para control-gastos.
+# Puerto 5433 en la maquina para no chocar con un Postgres que ya tengas en 5432.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: control-gastos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gastos
+      POSTGRES_PASSWORD: gastos_local
+      POSTGRES_DB: control_gastos
+      # Fuerza es_CL para ordenamiento y mensajes coherentes.
+      LANG: es_CL.utf8
+    ports:
+      - "5433:5432"
+    volumes:
+      - gastos_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gastos -d control_gastos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  gastos_data:

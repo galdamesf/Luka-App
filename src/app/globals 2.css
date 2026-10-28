@@ -1,0 +1,220 @@
+@import "tailwindcss";
+
+/*
+  Tema Swiss minimal: grilla, harto aire, contraste alto, verde solo como senal.
+  Los tokens viven en :root y se redefinen para modo oscuro. El switch de la
+  seccion 3 escribe data-theme en <html>; mientras no exista, manda el sistema.
+*/
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* La marca. Redonda como el dibujo de Luka; el resto de la app sigue en Inter. */
+  --font-marca: "Baloo 2", ui-rounded, "Segoe UI", system-ui, sans-serif;
+  /* Monoespaciado para montos: deja las cifras alineadas en columna. */
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  --radius-base: 0.5rem;
+}
+
+:root {
+  color-scheme: light;
+
+  --fondo: #e6eaf0;
+  --superficie: #f2f4f7;
+  /* El riel va mas CLARO que la card, al reves de lo habitual. No es
+     capricho: las barras de categoria se dibujan encima de el, y a #f1f5f9
+     el ocre de Alimentacion quedaba en 2.89:1, bajo el 3:1 que pide WCAG
+     1.4.11. En blanco da 3.17:1. */
+  --superficie-tenue: #ffffff;
+  --texto: #0f172a;
+  --texto-tenue: #475569;
+  --borde: #d8dfe8;
+
+  --primario: #1e293b;
+  --primario-texto: #ffffff;
+
+  /* Dos verdes a proposito: el sobrio para texto, el fuerte para rellenos y
+     barras. En claro el fuerte es green-600 y no green-500: #22c55e sobre
+     blanco da 2.28:1 y no alcanza el 3:1 que pide WCAG 1.4.11 para elementos
+     graficos. En oscuro #22c55e si rinde (6.88:1).
+
+     Los dos valores del modo claro bajaron al oscurecer la card: sobre
+     #f2f4f7, #16a34a daba 2.99:1 y #dc2626 daba 4.38:1 para texto. Ahora
+     dan 3.75:1 y 4.72:1 sobre la card, y 3.42:1 y 4.44:1 sobre la pagina. Los atraparon los tests de contraste. */
+  --exito: #15803d;
+  --exito-fuerte: #13903e;
+  --alerta: #b45309;
+  --peligro: #d42121;
+  /* Azul de progreso (barras de deuda). No es --foco aunque se parezca: el
+     anillo de foco tiene que poder distinguirse de un relleno cualquiera. */
+  --avance: #1557c0;
+
+  --foco: #1d4ed8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --fondo: #0f172a;
+    --superficie: #1b2336;
+    --superficie-tenue: #181f30;
+    --texto: #f8fafc;
+    --texto-tenue: #94a3b8;
+    --borde: #334155;
+
+    --primario: #f8fafc;
+    --primario-texto: #0f172a;
+
+    --exito: #4ade80;
+    --exito-fuerte: #22c55e;
+    --alerta: #fbbf24;
+    --peligro: #f87171;
+    --avance: #58a6ff;
+
+    --foco: #93c5fd;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --fondo: #0f172a;
+  --superficie: #1b2336;
+  --superficie-tenue: #181f30;
+  --texto: #f8fafc;
+  --texto-tenue: #94a3b8;
+  --borde: #334155;
+
+  --primario: #f8fafc;
+  --primario-texto: #0f172a;
+
+  --exito: #4ade80;
+  --exito-fuerte: #22c55e;
+  --alerta: #fbbf24;
+  --peligro: #f87171;
+  --avance: #58a6ff;
+
+  --foco: #93c5fd;
+}
+
+@theme inline {
+  --color-fondo: var(--fondo);
+  --color-superficie: var(--superficie);
+  --color-superficie-tenue: var(--superficie-tenue);
+  --color-texto: var(--texto);
+  --color-texto-tenue: var(--texto-tenue);
+  --color-borde: var(--borde);
+  --color-primario: var(--primario);
+  --color-primario-texto: var(--primario-texto);
+  --color-exito: var(--exito);
+  --color-exito-fuerte: var(--exito-fuerte);
+  --color-alerta: var(--alerta);
+  --color-peligro: var(--peligro);
+  --color-avance: var(--avance);
+  --color-foco: var(--foco);
+}
+
+* {
+  min-width: 0;
+}
+
+body {
+  background-color: var(--fondo);
+  color: var(--texto);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Foco visible siempre: nunca se quita el anillo, se reemplaza por uno mejor. */
+:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+}
+
+/* Las cifras en tablas se leen mejor con ancho fijo por digito. */
+.cifra {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+  Impresion. El informe esta pensado para poder imprimirse o guardarse en PDF,
+  asi que se saca todo lo que no sirve en papel: botones, formularios y el
+  fondo oscuro, que gastaria tinta sin aportar nada.
+*/
+@media print {
+  :root,
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --fondo: #ffffff;
+    --superficie: #ffffff;
+    --superficie-tenue: #f3f4f6;
+    --texto: #000000;
+    --texto-tenue: #374151;
+    --borde: #d1d5db;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  .no-imprimir {
+    display: none !important;
+  }
+
+  /* Que las tarjetas no se partan a la mitad entre dos paginas. */
+  section {
+    break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: "";
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Luka, la mascota. Las animaciones viven aca y no en el componente para
+   que no se dupliquen cuando aparece mas de una vez en la pagina.
+
+   Solo se anima transform. Cada animacion descansa en la identidad a
+   proposito: al apagarlas, el valor estatico ES la pose de reposo y no hace
+   falta fijarle una base a mano.
+   --------------------------------------------------------------------- */
+.luka-cuerpo { animation: luka-cuerpo 2.3s ease-in-out infinite; transform-origin: 200px 266px; }
+.luka-olfato { animation: luka-olfato 2.3s ease-in-out infinite; transform-origin: 150px 214px; }
+.luka-oreja  { animation: luka-oreja  2.3s ease-in-out infinite; transform-origin: 124px 206px; }
+.luka-cola   { animation: luka-cola   .72s ease-in-out infinite; transform-origin: 236px 196px; }
+.luka-ojo    { animation: luka-ojo    6.9s steps(1) infinite;    transform-origin: 112px 198px; }
+
+/* El hocico baja y sube: el perro husmea, no camina. */
+@keyframes luka-olfato { 0%, 100% { transform: rotate(0) }   50% { transform: rotate(3.5deg) } }
+@keyframes luka-oreja  { 0%, 100% { transform: rotate(0) }   50% { transform: rotate(4deg) } }
+@keyframes luka-cuerpo { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-2px) } }
+@keyframes luka-cola   { 0%, 100% { transform: rotate(-19deg) } 50% { transform: rotate(19deg) } }
+@keyframes luka-ojo    { 0%, 30% { transform: scaleY(1) } 31%, 33% { transform: scaleY(.08) } 34%, 100% { transform: scaleY(1) } }
+
+/* Echado: respira despacio, la oreja se mueve de vez en cuando y parpadea
+   lento. Nada mas: es el pie de pagina, no tiene que llamar la atencion. */
+.luka-dormido     { animation: luka-dormido 5.4s ease-in-out infinite; transform-origin: 140px 152px; }
+.luka-oreja-echada{ animation: luka-oreja-echada 9s ease-in-out infinite; transform-origin: 104px 112px; }
+.luka-ojo-echado  { animation: luka-ojo-echado 9s steps(1) infinite; transform-origin: 85px 128px; }
+
+@keyframes luka-dormido      { 0%, 100% { transform: scaleY(1) } 50% { transform: scaleY(1.035) } }
+@keyframes luka-oreja-echada { 0%, 88%, 100% { transform: rotate(0) } 92% { transform: rotate(-6deg) } 96% { transform: rotate(3deg) } }
+@keyframes luka-ojo-echado   { 0%, 40% { transform: scaleY(1) } 41%, 46% { transform: scaleY(.08) } 47%, 100% { transform: scaleY(1) } }
+
+@media (prefers-reduced-motion: reduce) {
+  .luka-cuerpo, .luka-olfato, .luka-oreja, .luka-cola, .luka-ojo,
+  .luka-dormido, .luka-oreja-echada, .luka-ojo-echado { animation: none; }
+}
