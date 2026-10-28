@@ -129,7 +129,7 @@ describe("el tema de globals.css cumple WCAG AA", () => {
   for (const [modo, tema] of [["claro", claro], ["oscuro", oscuro]] as const) {
     describe(`modo ${modo}`, () => {
       test("define todos los tokens esperados", () => {
-        for (const token of ["fondo", "superficie", "superficie-tenue", "texto", "texto-tenue", "primario", "primario-texto", "exito", "exito-fuerte", "alerta", "peligro", "avance", "pie", "pie-texto", "foco", "acento", "acento-fuerte", "acento-tinta", "durazno", "durazno-texto", "durazno-tenue", "durazno-realce"]) {
+        for (const token of ["fondo", "superficie", "superficie-tenue", "texto", "texto-tenue", "primario", "primario-texto", "exito", "exito-fuerte", "alerta", "peligro", "avance", "pie", "pie-texto", "foco", "acento", "acento-fuerte", "acento-tinta", "durazno", "durazno-texto", "durazno-tenue", "durazno-realce", "paisaje-cerro-lejos", "paisaje-cerro-cerca", "paisaje-bosque-lejos", "paisaje-bosque-cerca", "paisaje-tronco", "paisaje-suelo"]) {
           expect(tema[token], `falta --${token} en modo ${modo}`).toBeDefined();
         }
       });
@@ -225,7 +225,16 @@ describe("el tema de globals.css cumple WCAG AA", () => {
       // ninguno de los cuatro colores de senal, o el boton de "Iniciar
       // sesion" se lee como un aviso de presupuesto. Antes la portada usaba
       // el ocre de --alerta, que era literalmente el mismo color.
-      test.each([["acento"], ["durazno-realce"]])(
+      test.each([
+        ["acento"],
+        ["durazno-realce"],
+        ["paisaje-cerro-lejos"],
+        ["paisaje-cerro-cerca"],
+        ["paisaje-bosque-lejos"],
+        ["paisaje-bosque-cerca"],
+        ["paisaje-tronco"],
+        ["paisaje-suelo"],
+      ])(
         "%s no se confunde con ningun color de senal",
         (token) => {
         for (const senal of ["exito-fuerte", "alerta", "peligro", "avance"] as const) {

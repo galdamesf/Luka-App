@@ -75,6 +75,16 @@
   --durazno-texto: #2b1708;
   --durazno-tenue: #6b5546;
   --durazno-realce: #8c2160;
+  /* El paisaje del header. Son tonos apagados a proposito: un verde saturado
+     se leeria como el --exito de "te sobra". Medidos, el mas cercano a un
+     color de senal queda a 11 en OKLab. No cambian con el tema, igual que la
+     banda que los contiene. */
+  --paisaje-cerro-lejos: #e8c9bd;
+  --paisaje-cerro-cerca: #d9ab9c;
+  --paisaje-bosque-lejos: #9aa48c;
+  --paisaje-bosque-cerca: #6f7d66;
+  --paisaje-tronco: #7a5c47;
+  --paisaje-suelo: #c9b9a2;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -138,6 +148,16 @@
   --durazno-texto: #2b1708;
   --durazno-tenue: #6b5546;
   --durazno-realce: #8c2160;
+  /* El paisaje del header. Son tonos apagados a proposito: un verde saturado
+     se leeria como el --exito de "te sobra". Medidos, el mas cercano a un
+     color de senal queda a 11 en OKLab. No cambian con el tema, igual que la
+     banda que los contiene. */
+  --paisaje-cerro-lejos: #e8c9bd;
+  --paisaje-cerro-cerca: #d9ab9c;
+  --paisaje-bosque-lejos: #9aa48c;
+  --paisaje-bosque-cerca: #6f7d66;
+  --paisaje-tronco: #7a5c47;
+  --paisaje-suelo: #c9b9a2;
 }
 
 @theme inline {

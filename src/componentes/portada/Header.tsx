@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Luka } from "@/componentes/Luka";
 import { Onda } from "./Onda";
+import { Paisaje } from "./Paisaje";
 
 /**
  * El header de la portada: la primera pantalla de Luka para quien todavia no
@@ -16,20 +17,23 @@ import { Onda } from "./Onda";
  *   mismo color con que Luka avisa que te pasaste del presupuesto.
  * - La palabra destacada va en --durazno-realce y no en el acento: el acento
  *   es un relleno claro y como letra sobre la banda no se lee.
+ * - El paisaje ocupa SOLO la franja del perro y no toda la seccion: su linea
+ *   de suelo cae justo donde pisan las patas, y debajo queda el titular
+ *   sobre la banda limpia. Puesto detras de todo, el suelo cruzaba el boton.
  * - La seccion termina en una onda rellena con --fondo, el color de lo que
  *   viene abajo. El aire que esa curva necesita lo pone `.con-onda`: esta
  *   seccion no escribe su propio padding de abajo.
  *
  * Luka ya trae su animacion de olfateo desde globals.css (.luka-olfato,
  * .luka-oreja, .luka-cola, .luka-ojo). Aqui solo se le suma el avance del
- * paseo, y solo en el grande del header.
+ * paseo, y solo al grande del header.
  */
 export function Header() {
   return (
     <header className="con-onda relative isolate overflow-clip bg-durazno pt-0 text-durazno-texto">
       {/* La barra de la portada no es el navbar de la app: quien llega aqui
           todavia no tiene sesion, asi que solo lleva la marca y la entrada. */}
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
         <p
           className="text-xl leading-none font-extrabold tracking-tight sm:text-2xl"
           style={{ fontFamily: "var(--font-marca)" }}
@@ -44,15 +48,21 @@ export function Header() {
         </Link>
       </div>
 
-      <div className="mx-auto grid w-full max-w-6xl justify-items-center gap-0 px-4 pt-6 pb-2 text-center sm:px-6">
+      {/* La franja del paseo. El alto de esta caja define donde queda el
+          horizonte: el paisaje se ancla a su borde de abajo y Luka se para
+          sobre ese mismo borde. */}
+      <div className="relative mt-2 h-[clamp(11rem,26vw,20rem)]">
+        <Paisaje className="h-full" />
         <Luka
           pose="rastreando"
           descripcion={null}
-          className="luka-pasea h-[clamp(9rem,22vw,17rem)] w-auto"
+          className="luka-pasea absolute bottom-[1.5%] left-1/2 h-[clamp(9rem,21vw,16.5rem)] w-auto -translate-x-1/2"
         />
+      </div>
 
+      <div className="relative mx-auto grid w-full max-w-6xl justify-items-center px-4 pt-7 pb-2 text-center sm:px-6">
         <h1
-          className="mt-6 max-w-[15ch] text-[clamp(2.25rem,6.2vw,4.5rem)] leading-[0.95] font-extrabold tracking-[-0.035em] text-balance"
+          className="max-w-[15ch] text-[clamp(2.25rem,6.2vw,4.5rem)] leading-[0.95] font-extrabold tracking-[-0.035em] text-balance"
           style={{ fontFamily: "var(--font-marca)" }}
         >
           Sigue el rastro de{" "}
