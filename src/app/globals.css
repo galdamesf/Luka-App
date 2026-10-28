@@ -55,6 +55,36 @@
      propios y no reusa --primario, que en modo oscuro es casi blanco. */
   --pie: #1b2336;
   --pie-texto: #f8fafc;
+
+  /* El acento de marca. Hasta ahora la app no tenia uno propio y la portada
+     usaba el ocre de --alerta, o sea el mismo color con que Luka avisa que
+     te pasaste del presupuesto: el boton se leia como aviso. Este durazno
+     esta lejos de los cuatro colores de senal.
+
+     --acento rellena (botones, bandas) y --acento-tinta es el texto que va
+     ENCIMA de ese relleno; nunca al reves.
+
+     La banda --durazno de la portada es clara en los DOS temas, igual que el
+     pie es oscuro en los dos. Por eso lleva sus propios tokens de texto, que
+     no siguen al tema: si siguieran, en modo oscuro quedaria claro sobre
+     claro. Es el mismo motivo por el que --pie no reusa --primario. */
+  --acento: #ff9f6e;
+  --acento-fuerte: #f2823f;
+  --acento-tinta: #231405;
+  --durazno: #ffe9dd;
+  --durazno-texto: #2b1708;
+  --durazno-tenue: #6b5546;
+  --durazno-realce: #8c2160;
+  /* El paisaje del header. Son tonos apagados a proposito: un verde saturado
+     se leeria como el --exito de "te sobra". Medidos, el mas cercano a un
+     color de senal queda a 11 en OKLab. No cambian con el tema, igual que la
+     banda que los contiene. */
+  --paisaje-cerro-lejos: #e8c9bd;
+  --paisaje-cerro-cerca: #d9ab9c;
+  --paisaje-bosque-lejos: #9aa48c;
+  --paisaje-bosque-cerca: #6f7d66;
+  --paisaje-tronco: #7a5c47;
+  --paisaje-suelo: #c9b9a2;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -107,9 +137,37 @@
 
   --pie: #232e45;
   --pie-texto: #f8fafc;
+
+  /* El acento y la banda de durazno no cambian con el tema: la banda es
+     clara en los dos, como el pie es oscuro en los dos. Solo el tono de
+     hover se aclara, porque aqui el relleno vive sobre fondo oscuro. */
+  --acento: #ff9f6e;
+  --acento-fuerte: #ffb892;
+  --acento-tinta: #231405;
+  --durazno: #ffe9dd;
+  --durazno-texto: #2b1708;
+  --durazno-tenue: #6b5546;
+  --durazno-realce: #8c2160;
+  /* El paisaje del header. Son tonos apagados a proposito: un verde saturado
+     se leeria como el --exito de "te sobra". Medidos, el mas cercano a un
+     color de senal queda a 11 en OKLab. No cambian con el tema, igual que la
+     banda que los contiene. */
+  --paisaje-cerro-lejos: #e8c9bd;
+  --paisaje-cerro-cerca: #d9ab9c;
+  --paisaje-bosque-lejos: #9aa48c;
+  --paisaje-bosque-cerca: #6f7d66;
+  --paisaje-tronco: #7a5c47;
+  --paisaje-suelo: #c9b9a2;
 }
 
 @theme inline {
+  --color-acento: var(--acento);
+  --color-acento-fuerte: var(--acento-fuerte);
+  --color-durazno-texto: var(--durazno-texto);
+  --color-durazno-tenue: var(--durazno-tenue);
+  --color-durazno-realce: var(--durazno-realce);
+  --color-acento-tinta: var(--acento-tinta);
+  --color-durazno: var(--durazno);
   --color-fondo: var(--fondo);
   --color-superficie: var(--superficie);
   --color-superficie-tenue: var(--superficie-tenue);
@@ -243,7 +301,21 @@ body {
 @keyframes luka-oreja-echada { 0%, 88%, 100% { transform: rotate(0) } 92% { transform: rotate(-6deg) } 96% { transform: rotate(3deg) } }
 @keyframes luka-ojo-echado   { 0%, 40% { transform: scaleY(1) } 41%, 46% { transform: scaleY(.08) } 47%, 100% { transform: scaleY(1) } }
 
+/* El paseo del header: Luka ya olfatea desde los keyframes de arriba, esto
+   solo le suma el avance. Va aparte para que el Luka del navbar no camine. */
+.luka-pasea { animation: luka-pasea 4.6s ease-in-out infinite; }
+@keyframes luka-pasea {
+  0%, 100% { transform: translateX(-10px) }
+  50%      { transform: translateX(10px) }
+}
+
+/* La seccion que termina en una onda reserva aqui el aire que la curva
+   necesita. Si la seccion escribe su propio padding de abajo, se lo come y
+   la curva queda encima del texto. */
+.con-onda { position: relative; padding-bottom: clamp(38px, 5.5vw, 74px); }
+
 @media (prefers-reduced-motion: reduce) {
   .luka-cuerpo, .luka-olfato, .luka-oreja, .luka-cola, .luka-ojo,
   .luka-dormido, .luka-oreja-echada, .luka-ojo-echado { animation: none; }
+  .luka-pasea { animation: none; transform: none; }
 }

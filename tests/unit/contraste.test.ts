@@ -129,7 +129,7 @@ describe("el tema de globals.css cumple WCAG AA", () => {
   for (const [modo, tema] of [["claro", claro], ["oscuro", oscuro]] as const) {
     describe(`modo ${modo}`, () => {
       test("define todos los tokens esperados", () => {
-        for (const token of ["fondo", "superficie", "superficie-tenue", "texto", "texto-tenue", "primario", "primario-texto", "exito", "exito-fuerte", "alerta", "peligro", "avance", "pie", "pie-texto", "foco"]) {
+        for (const token of ["fondo", "superficie", "superficie-tenue", "texto", "texto-tenue", "primario", "primario-texto", "exito", "exito-fuerte", "alerta", "peligro", "avance", "pie", "pie-texto", "foco", "acento", "acento-fuerte", "acento-tinta", "durazno", "durazno-texto", "durazno-tenue", "durazno-realce", "paisaje-cerro-lejos", "paisaje-cerro-cerca", "paisaje-bosque-lejos", "paisaje-bosque-cerca", "paisaje-tronco", "paisaje-suelo"]) {
           expect(tema[token], `falta --${token} en modo ${modo}`).toBeDefined();
         }
       });
@@ -186,6 +186,64 @@ describe("el tema de globals.css cumple WCAG AA", () => {
           sirveParaTexto(f, b),
           `pie-texto (${f}) sobre pie (${b}) da ${contraste(f, b).toFixed(2)}:1`,
         ).toBe(true);
+      });
+
+      // La banda --durazno de la portada es clara en los dos temas, asi que
+      // su texto se mide contra ella y no contra las superficies de la
+      // pagina, igual que el del pie.
+      test.each([["durazno-texto"], ["durazno-tenue"], ["durazno-realce"]])(
+        "%s se lee sobre la banda de durazno",
+        (frente) => {
+          const f = tema[frente] as string;
+          const b = tema["durazno"] as string;
+          expect(
+            sirveParaTexto(f, b),
+            `${frente} (${f}) sobre durazno (${b}) da ${contraste(f, b).toFixed(2)}:1`,
+          ).toBe(true);
+        },
+      );
+
+      test("la banda de durazno es clara en los dos temas", () => {
+        // Si siguiera al tema, en oscuro quedaria texto oscuro sobre fondo
+        // oscuro: es el mismo error que --pie evita al reves.
+        expect(
+          luminancia(tema["durazno"] as string),
+          `--durazno (${tema["durazno"]}) no es claro en modo ${modo}`,
+        ).toBeGreaterThan(0.6);
+      });
+
+      test("el texto del boton de acento se lee encima del relleno", () => {
+        const f = tema["acento-tinta"] as string;
+        const b = tema["acento"] as string;
+        expect(
+          sirveParaTexto(f, b),
+          `acento-tinta (${f}) sobre acento (${b}) da ${contraste(f, b).toFixed(2)}:1`,
+        ).toBe(true);
+      });
+
+      // Lo mas importante de este bloque: el acento NO puede parecerse a
+      // ninguno de los cuatro colores de senal, o el boton de "Iniciar
+      // sesion" se lee como un aviso de presupuesto. Antes la portada usaba
+      // el ocre de --alerta, que era literalmente el mismo color.
+      test.each([
+        ["acento"],
+        ["durazno-realce"],
+        ["paisaje-cerro-lejos"],
+        ["paisaje-cerro-cerca"],
+        ["paisaje-bosque-lejos"],
+        ["paisaje-bosque-cerca"],
+        ["paisaje-tronco"],
+        ["paisaje-suelo"],
+      ])(
+        "%s no se confunde con ningun color de senal",
+        (token) => {
+        for (const senal of ["exito-fuerte", "alerta", "peligro", "avance"] as const) {
+          const d = distanciaPerceptual(tema[token] as string, tema[senal] as string);
+          expect(
+            d,
+            `--${token} (${tema[token]}) esta a ${d.toFixed(1)} de --${senal} (${tema[senal]})`,
+          ).toBeGreaterThan(10);
+        }
       });
 
       test("el pie es oscuro en los dos temas", () => {
