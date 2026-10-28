@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { GUION_TEMA } from "@/componentes/InterruptorTema";
 import { Navbar } from "@/componentes/Navbar";
 import { PieDePagina } from "@/componentes/PieDePagina";
+import { SoloEnLaApp } from "@/componentes/SoloEnLaApp";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -37,11 +38,17 @@ export default function RootLayout({
             conservar el mes al cambiar de pestana. El hueco mide lo mismo
             que el navbar en reposo (4.5rem mas su pt-3) para que la pagina
             no salte cuando aparece. */}
-        <Suspense fallback={<div className="h-[calc(4.5rem+0.75rem)]" />}>
-          <Navbar />
-        </Suspense>
+        {/* Las paginas publicas traen su propio marco: ahi el navbar y el
+            pie de la app no van. */}
+        <SoloEnLaApp>
+          <Suspense fallback={<div className="h-[calc(4.5rem+0.75rem)]" />}>
+            <Navbar />
+          </Suspense>
+        </SoloEnLaApp>
         {children}
-        <PieDePagina />
+        <SoloEnLaApp>
+          <PieDePagina />
+        </SoloEnLaApp>
       </body>
     </html>
   );
