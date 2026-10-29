@@ -125,12 +125,17 @@ describe("el tema de globals.css cumple WCAG AA", () => {
     ["alerta", "superficie"],
     ["peligro", "superficie"],
     ["foco", "fondo"],
+    // La banda nocturna del paseo: su texto sobre su fondo y sobre su carta.
+    ["noche-texto", "noche"],
+    ["noche-tenue", "noche"],
+    ["noche-texto", "noche-superficie"],
+    ["noche-tenue", "noche-superficie"],
   ];
 
   for (const [modo, tema] of [["claro", claro], ["oscuro", oscuro]] as const) {
     describe(`modo ${modo}`, () => {
       test("define todos los tokens esperados", () => {
-        for (const token of ["fondo", "superficie", "superficie-tenue", "texto", "texto-tenue", "primario", "primario-texto", "exito", "exito-fuerte", "alerta", "peligro", "avance", "pie", "pie-texto", "foco", "acento", "acento-fuerte", "acento-tinta", "durazno", "durazno-texto", "durazno-tenue", "durazno-realce"]) {
+        for (const token of ["fondo", "superficie", "superficie-tenue", "texto", "texto-tenue", "primario", "primario-texto", "exito", "exito-fuerte", "alerta", "peligro", "avance", "pie", "pie-texto", "foco", "acento", "acento-fuerte", "acento-tinta", "durazno", "durazno-texto", "durazno-tenue", "durazno-realce", "noche", "noche-superficie", "noche-borde", "noche-texto", "noche-tenue"]) {
           expect(tema[token], `falta --${token} en modo ${modo}`).toBeDefined();
         }
       });

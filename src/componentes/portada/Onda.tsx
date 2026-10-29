@@ -32,6 +32,7 @@ export type ColorDeOnda =
   | "superficie-tenue"
   | "durazno"
   | "acento"
+  | "noche"
   | "pie";
 
 type Props = {

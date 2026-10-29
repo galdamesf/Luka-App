@@ -70,6 +70,14 @@
      pie es oscuro en los dos. Por eso lleva sus propios tokens de texto, que
      no siguen al tema: si siguieran, en modo oscuro quedaria claro sobre
      claro. Es el mismo motivo por el que --pie no reusa --primario. */
+  /* La banda nocturna de la portada (el paseo de las paradas). Oscura en los
+     DOS temas, como el pie: la portada no cambia de escena con el tema. Por
+     eso trae sus propios tonos de carta y de texto, que tampoco cambian. */
+  --noche: #0f172a;
+  --noche-superficie: #1b2336;
+  --noche-borde: #334155;
+  --noche-texto: #f8fafc;
+  --noche-tenue: #94a3b8;
   --acento: #ff9f6e;
   --acento-fuerte: #f2823f;
   --acento-tinta: #231405;
@@ -139,6 +147,14 @@
   /* El acento y la banda de durazno no cambian con el tema: la banda es
      clara en los dos, como el pie es oscuro en los dos. Solo el tono de
      hover se aclara, porque aqui el relleno vive sobre fondo oscuro. */
+  /* La banda nocturna de la portada (el paseo de las paradas). Oscura en los
+     DOS temas, como el pie: la portada no cambia de escena con el tema. Por
+     eso trae sus propios tonos de carta y de texto, que tampoco cambian. */
+  --noche: #0f172a;
+  --noche-superficie: #1b2336;
+  --noche-borde: #334155;
+  --noche-texto: #f8fafc;
+  --noche-tenue: #94a3b8;
   --acento: #ff9f6e;
   --acento-fuerte: #ffb892;
   --acento-tinta: #231405;
@@ -162,6 +178,11 @@
   --color-durazno-realce: var(--durazno-realce);
   --color-acento-tinta: var(--acento-tinta);
   --color-durazno: var(--durazno);
+  --color-noche: var(--noche);
+  --color-noche-superficie: var(--noche-superficie);
+  --color-noche-borde: var(--noche-borde);
+  --color-noche-texto: var(--noche-texto);
+  --color-noche-tenue: var(--noche-tenue);
   --color-fondo: var(--fondo);
   --color-superficie: var(--superficie);
   --color-superficie-tenue: var(--superficie-tenue);
@@ -408,3 +429,219 @@ body {
 }
 /* Al pausar el paseo se detiene tambien lo que se mueva en el paisaje. */
 [data-paseo][data-pausado] .cordillera-condor { animation-play-state: paused; }
+
+/* ---------------------------------------------------------------------------
+   El paseo de la portada: cinco paradas unidas por un hilo punteado.
+
+   El hilo entra a cada parada por --entra, cruza el piso hasta --sale y de
+   ahi sigue bajando a la siguiente. Angosta, baja recto por el canal de la
+   izquierda; ancha (>=820px), zigzaguea con los --d y --h de cada parada.
+   Regla heredada de las maquetas: el hilo cruza al 85 % del alto del perro,
+   el centro de sus patas; mas abajo, las patas claras no pisan nada.
+   --------------------------------------------------------------------------- */
+.paseo {
+  --hilo: var(--acento);
+  --perro-alto: clamp(54px, 6.6vw, 84px);
+  background: var(--noche);
+  color: var(--noche-texto);
+}
+
+.paseo-parada {
+  position: relative;
+  --desde: 20px;
+  --hasta: 20px;
+  --perro-x: var(--xn, 30%);
+  --piso-y: var(--perro-alto);
+  padding: calc(var(--piso-y) + clamp(16px, 2.4vw, 30px)) 0 clamp(30px, 5vw, 66px) 44px;
+  animation: paseo-sube 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.08s);
+}
+@keyframes paseo-sube { from { transform: translateY(26px); } }
+
+.paseo-entra,
+.paseo-sale {
+  position: absolute;
+  left: var(--desde);
+  border-left: 2px dashed var(--hilo);
+}
+.paseo-entra { top: 0; height: var(--piso-y); }
+.paseo-sale { top: var(--piso-y); bottom: 0; left: var(--hasta); }
+/* La ultima parada deja el hilo cayendo hacia la onda. */
+.paseo-piso {
+  position: absolute;
+  top: var(--piso-y);
+  left: 0;
+  right: 0;
+  border-top: 2px dashed var(--hilo);
+}
+.paseo-nodo {
+  position: absolute;
+  top: var(--piso-y);
+  left: var(--desde);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--hilo);
+  transform: translate(-50%, -50%);
+}
+
+/* Luka chico, apoyado en el piso: la linea le cruza por el centro de las patas. */
+.paseo-perro {
+  position: absolute;
+  top: calc(var(--piso-y) - var(--perro-alto) * 0.852);
+  left: var(--perro-x);
+  transform: translateX(-50%);
+  z-index: 1;
+}
+.paseo-der .paseo-perro { transform: translateX(-50%) scaleX(-1); }
+.paseo-perro svg { height: var(--perro-alto); width: auto; }
+.paseo-anda {
+  display: block;
+  animation: paseo-llega 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.08s + 0.1s);
+}
+.paseo-der .paseo-anda { --llega: 20px; }
+@keyframes paseo-llega { from { transform: translateX(var(--llega, -20px)); } }
+
+.paseo-cuerpo { display: grid; gap: clamp(15px, 2.2vw, 26px); grid-template-columns: 1fr; }
+
+@media (min-width: 820px) {
+  .paseo-parada {
+    --desde: var(--d);
+    --hasta: var(--h);
+    --perro-x: var(--h);
+    padding-left: 0;
+  }
+  .paseo-piso {
+    left: min(var(--desde), var(--hasta));
+    right: calc(100% - max(var(--desde), var(--hasta)));
+  }
+  .paseo-izq { padding-left: var(--pad); }
+  .paseo-der { padding-right: var(--pad); }
+  .paseo-cuerpo {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    column-gap: clamp(22px, 3.4vw, 52px);
+  }
+  .paseo-der .paseo-arte { order: -1; }
+  .paseo-medio { padding-left: 0; padding-right: 0; }
+  .paseo-medio .paseo-cuerpo { column-gap: clamp(44px, 6vw, 84px); }
+}
+
+.paseo-hito {
+  margin: 0 0 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--noche-tenue);
+}
+.paseo-dice h2 {
+  margin: 0;
+  font-family: var(--font-marca);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-size: clamp(25px, 3.4vw, 40px);
+  line-height: 1;
+  text-wrap: balance;
+}
+.paseo-dice > p:last-child {
+  margin: clamp(9px, 1.2vw, 14px) 0 0;
+  max-width: 42ch;
+  line-height: 1.6;
+  font-size: clamp(14px, 1.4vw, 16.5px);
+  color: var(--noche-tenue);
+  text-wrap: pretty;
+}
+
+/* ---- la pieza real de la app, en su carta nocturna ---- */
+.paseo-carta {
+  background: var(--noche-superficie);
+  border: 1px solid var(--noche-borde);
+  border-radius: clamp(14px, 1.6vw, 20px);
+  padding: clamp(14px, 1.8vw, 22px);
+}
+.paseo-ct {
+  margin: 0 0 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.paseo-ct em { font-style: normal; font-weight: 400; font-size: 11.5px; color: var(--noche-tenue); }
+.paseo-ct2 { margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--noche-borde); }
+.paseo-r {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 13.5px;
+}
+.paseo-r .cifra { font-size: 13px; }
+.paseo-r em { display: block; font-style: normal; font-size: 11.5px; margin-top: 3px; color: var(--noche-tenue); }
+.paseo-tot {
+  margin: 9px 0 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--noche-borde);
+}
+.paseo-tot b { font-size: 13.5px; }
+.paseo-tot .cifra { font-size: clamp(22px, 2.8vw, 32px); font-weight: 700; }
+.paseo-falta { color: var(--noche-texto); }
+
+.paseo-aviso {
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--noche-tenue);
+}
+.paseo-aviso i { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--peligro); }
+.paseo-techo + .paseo-techo { margin-top: 14px; }
+.paseo-riel { height: 8px; border-radius: 99px; background: var(--noche); overflow: hidden; margin: 0 0 5px; }
+.paseo-riel i { display: block; height: 100%; border-radius: 99px; }
+.paseo-pp { margin: 0; display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--noche-tenue); }
+.paseo-pp b { font-weight: 600; color: var(--noche-texto); }
+
+.paseo-gasto { display: flex; align-items: center; gap: clamp(12px, 1.6vw, 18px); }
+.paseo-gtex { flex: 1; min-width: 0; }
+.paseo-gtex p { margin: 0; font-size: 14px; font-weight: 600; }
+.paseo-gtex span { display: block; margin-top: 3px; font-size: 12px; color: var(--noche-tenue); }
+.paseo-gmonto { font-size: 15px; font-weight: 600; }
+.paseo-boleta {
+  flex: none;
+  width: clamp(44px, 5vw, 56px);
+  aspect-ratio: 34 / 42;
+  background: #ffffff;
+  border-radius: 4px 4px 0 0;
+  padding: 8px 7px 0;
+  display: grid;
+  gap: 5px;
+  align-content: start;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 93.75% 92%, 87.5% 100%, 81.25% 92%, 75% 100%, 68.75% 92%, 62.5% 100%, 56.25% 92%, 50% 100%, 43.75% 92%, 37.5% 100%, 31.25% 92%, 25% 100%, 18.75% 92%, 12.5% 100%, 6.25% 92%, 0 100%);
+}
+.paseo-boleta i { display: block; height: 3px; border-radius: 2px; background: #cbd5e1; }
+.paseo-boleta i:first-child { width: 60%; background: #94a3b8; }
+
+.paseo-chips { margin: 0; display: flex; flex-wrap: wrap; gap: 7px; }
+.paseo-chips span,
+.paseo-chips b {
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--noche-borde);
+  color: var(--noche-texto);
+}
+.paseo-chips b { border-style: dashed; color: var(--noche-tenue); }
+
+/* El acordeon de preguntas: el marcador nativo se esconde y el + gira solo. */
+.pregunta summary::-webkit-details-marker { display: none; }

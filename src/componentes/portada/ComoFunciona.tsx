@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Onda } from "./Onda";
 
 /**
  * «Cómo funciona, en seis paneles»: el lienzo que se recorre de lado.
@@ -333,6 +334,7 @@ export function ComoFunciona({ queda, categorias }: Props) {
           ))}
         </ul>
       </div>
+      <Onda color="noche" curva={5} />
     </section>
   );
 }
