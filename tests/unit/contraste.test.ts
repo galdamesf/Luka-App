@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, test } from "vitest";
+import { PALETA_PAISAJE as PALETA } from "@/componentes/portada/paleta-paisaje";
 import {
   contraste,
   distanciaPerceptual,
@@ -129,7 +130,7 @@ describe("el tema de globals.css cumple WCAG AA", () => {
   for (const [modo, tema] of [["claro", claro], ["oscuro", oscuro]] as const) {
     describe(`modo ${modo}`, () => {
       test("define todos los tokens esperados", () => {
-        for (const token of ["fondo", "superficie", "superficie-tenue", "texto", "texto-tenue", "primario", "primario-texto", "exito", "exito-fuerte", "alerta", "peligro", "avance", "pie", "pie-texto", "foco", "acento", "acento-fuerte", "acento-tinta", "durazno", "durazno-texto", "durazno-tenue", "durazno-realce", "paisaje-cerro-lejos", "paisaje-cerro-cerca", "paisaje-bosque-lejos", "paisaje-bosque-cerca", "paisaje-tronco", "paisaje-suelo"]) {
+        for (const token of ["fondo", "superficie", "superficie-tenue", "texto", "texto-tenue", "primario", "primario-texto", "exito", "exito-fuerte", "alerta", "peligro", "avance", "pie", "pie-texto", "foco", "acento", "acento-fuerte", "acento-tinta", "durazno", "durazno-texto", "durazno-tenue", "durazno-realce"]) {
           expect(tema[token], `falta --${token} en modo ${modo}`).toBeDefined();
         }
       });
@@ -228,12 +229,6 @@ describe("el tema de globals.css cumple WCAG AA", () => {
       test.each([
         ["acento"],
         ["durazno-realce"],
-        ["paisaje-cerro-lejos"],
-        ["paisaje-cerro-cerca"],
-        ["paisaje-bosque-lejos"],
-        ["paisaje-bosque-cerca"],
-        ["paisaje-tronco"],
-        ["paisaje-suelo"],
       ])(
         "%s no se confunde con ningun color de senal",
         (token) => {
@@ -261,4 +256,67 @@ describe("el tema de globals.css cumple WCAG AA", () => {
       });
     });
   }
+});
+
+describe("la paleta del paisaje del header", () => {
+  // El paisaje es una pintura y no sigue al tema, asi que se mide una sola vez.
+  // Lo que se vigila es que ningun tono del dibujo se acerque a los cuatro
+  // colores con que Luka avisa: un cerro verde diria "te sobra plata" y un
+  // alamo azul diria "deuda". El color de esta app significa algo.
+  const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
+  const raiz = css.slice(css.indexOf(":root {"), css.indexOf("}", css.indexOf(":root {")));
+  const senal = (nombre: string): string => {
+    const m = new RegExp(`--${nombre}:\\s*(#[0-9a-fA-F]{6});`).exec(raiz);
+    expect(m, `falta --${nombre} en :root`).not.toBeNull();
+    return ((m as RegExpExecArray)[1] as string).toLowerCase();
+  };
+  const senales = ["exito-fuerte", "alerta", "peligro", "avance"] as const;
+  const tonos = Object.entries(PALETA);
+
+  test("tiene todos los planos del dibujo", () => {
+    for (const plano of ["cielo-2", "nieve-luz", "roca-luz", "roca-sombra", "pre-cerca", "llano-cerca", "alamo", "matorral", "pirca", "senda"]) {
+      expect(PALETA[plano as keyof typeof PALETA], `falta ${plano} en la paleta`).toBeDefined();
+    }
+  });
+
+  test.each(tonos)("%s no se confunde con ningun color de senal", (nombre, hex) => {
+    for (const nombreSenal of senales) {
+      const d = distanciaPerceptual(hex, senal(nombreSenal));
+      expect(
+        d,
+        `${nombre} (${hex}) esta a ${d.toFixed(1)} de --${nombreSenal}`,
+      ).toBeGreaterThan(10);
+    }
+  });
+
+  test("el texto del header se lee sobre CUALQUIER banda del cielo", () => {
+    // El titular y su bajada no descansan sobre --durazno a secas: descansan
+    // sobre las bandas pintadas del cielo, que bajan hasta un arrebol bastante
+    // mas saturado. Medir solo contra el token dejaba pasar texto ilegible
+    // sobre la banda dorada, que es justo donde cae la nota de Google.
+    const cielo = ["cielo-2", "cielo-3", "cielo-4", "dorado"] as const;
+    const sobreTexto = ["durazno-texto", "durazno-tenue", "durazno-realce"] as const;
+    const raizTexto = (n: string) => {
+      const m = new RegExp(`--${n}:\\s*(#[0-9a-fA-F]{6});`).exec(raiz);
+      return ((m as RegExpExecArray)[1] as string).toLowerCase();
+    };
+    for (const t of sobreTexto) {
+      for (const banda of cielo) {
+        const f = raizTexto(t);
+        const b = PALETA[banda];
+        expect(
+          sirveParaTexto(f, b),
+          `--${t} (${f}) sobre la banda ${banda} (${b}) da ${contraste(f, b).toFixed(2)}:1`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  test("el frente es oscuro: Luka es claro y tiene que recortarse contra el", () => {
+    // Sin esta franja oscura el perro desaparece sobre el paisaje. Es una
+    // regla del dibujo, no una preferencia.
+    for (const plano of ["matorral", "pirca", "borde"] as const) {
+      expect(luminancia(PALETA[plano]), `${plano} deberia ser oscuro`).toBeLessThan(0.3);
+    }
+  });
 });
