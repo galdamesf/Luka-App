@@ -645,3 +645,25 @@ body {
 
 /* El acordeon de preguntas: el marcador nativo se esconde y el + gira solo. */
 .pregunta summary::-webkit-details-marker { display: none; }
+
+/* El boton de Google, con sus reglas de marca: fondo blanco SIEMPRE (tambien
+   en tema oscuro), su logo tal cual y texto sobrio. Google no permite pintarlo
+   del color de la app. */
+.boton-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 44px;
+  padding-inline: 16px;
+  border-radius: 999px;
+  border: 1px solid #747775;
+  background: #ffffff;
+  color: #1f1f1f;
+  font-family: "Google Sans", var(--font-sans);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1;
+  transition: box-shadow 0.15s, background-color 0.15s;
+}
+.boton-google:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgb(0 0 0 / 0.18); }
