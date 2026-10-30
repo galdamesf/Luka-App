@@ -19,6 +19,8 @@ type Props = {
   /** Lo que el aviso de confirmacion necesita decir antes de tocar nada. */
   monto: number;
   categoria: string;
+  /** Sin margen arriba, para ir en la misma linea que el nombre y el monto. */
+  enLinea?: boolean;
 };
 
 const BASE =
@@ -52,7 +54,7 @@ function Ocultos({ campos }: { campos: Record<string, string> }) {
  */
 export function ControlEstadoPago({
   pagado, accionPagar, camposPagar, accionRevertir, camposRevertir, queEs,
-  monto, categoria,
+  monto, categoria, enLinea = false,
 }: Props) {
   const [estadoPagar, pagar, pagando] = useActionState(accionPagar, ESTADO_INICIAL);
   const [estadoRevertir, revertir, revirtiendo] = useActionState(
@@ -91,7 +93,7 @@ export function ControlEstadoPago({
     (estadoRevertir.ok === false ? estadoRevertir.mensaje : null);
 
   return (
-    <div className="mt-1.5">
+    <div className={enLinea ? "inline-flex flex-col items-end" : "mt-1.5"}>
       <div className="inline-flex items-center gap-0.5 rounded-md border border-borde p-0.5">
         <form action={pagar} ref={formPagar} onSubmit={interceptar("pagar")} className="inline-flex">
           <Ocultos campos={camposPagar} />

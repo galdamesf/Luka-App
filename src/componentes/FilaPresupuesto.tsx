@@ -13,6 +13,8 @@ type Props = {
   detalle: DetalleDeCategoria;
   accionEditar: AccionFormulario;
   alEliminar: (datos: FormData) => void;
+  /** Cuentas de esta categoria que faltan por pagar este mes. */
+  comprometido?: number;
 };
 
 const CAMPO =
@@ -20,7 +22,7 @@ const CAMPO =
 const SECUNDARIO =
   "cursor-pointer rounded-md border border-borde px-3 py-2 text-xs font-medium text-texto-tenue transition-colors duration-150 hover:bg-superficie hover:text-texto";
 
-export function FilaPresupuesto({ linea, detalle, accionEditar, alEliminar }: Props) {
+export function FilaPresupuesto({ linea, detalle, accionEditar, alEliminar, comprometido = 0 }: Props) {
   const [estado, editar, editando] = useActionState(accionEditar, ESTADO_INICIAL);
   const [abierto, setAbierto] = useState(false);
   const [desplegado, setDesplegado] = useState(false);
@@ -37,8 +39,19 @@ export function FilaPresupuesto({ linea, detalle, accionEditar, alEliminar }: Pr
   const ancho = Math.min(porcentaje, 100);
   const tono = agotado ? "text-peligro" : alLimite ? "text-alerta" : "text-texto-tenue";
 
+  // Lo que falta pagar de esta categoria va rayado a continuacion, del color
+  // de como va a terminar el mes si se paga todo.
+  const anchoComprometido =
+    presupuesto.monto > 0
+      ? Math.max(0, Math.min((comprometido / presupuesto.monto) * 100, 100 - ancho))
+      : 0;
+  const proyectado = porcentaje + (presupuesto.monto > 0 ? (comprometido / presupuesto.monto) * 100 : 0);
+  const rayas = proyectado >= 100 ? "rayas-peligro" : proyectado >= 80 ? "rayas-alerta" : "rayas-exito";
+
   return (
-    <li className="border-b border-borde py-3 last:border-0 last:pb-0">
+    <li
+      className={`fila-viva ${agotado ? "viva-peligro" : alLimite ? "viva-alerta" : "viva-exito"} -mx-5 border-b border-borde px-5 py-3 last:border-0`}
+    >
       <div className="flex items-baseline justify-between gap-3">
         {/* Toda la fila, menos los iconos de accion, abre el desglose. Los
             botones de editar y eliminar van FUERA de este boton: un boton
@@ -58,7 +71,15 @@ export function FilaPresupuesto({ linea, detalle, accionEditar, alEliminar }: Pr
             >
               <Icono nombre="chevron-down" tamano={13} />
             </span>
-            <Icono nombre={presupuesto.categoria.icono} tamano={14} className="shrink-0" />
+            <span
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md"
+              style={{
+                color: presupuesto.categoria.color,
+                backgroundColor: `color-mix(in oklab, ${presupuesto.categoria.color} 16%, transparent)`,
+              }}
+            >
+              <Icono nombre={presupuesto.categoria.icono} tamano={15} />
+            </span>
             <span className="truncate font-medium">{presupuesto.categoria.nombre}</span>
             {excedido && (
               <span className="shrink-0 text-peligro" title="Te pasaste del presupuesto">
@@ -107,11 +128,11 @@ export function FilaPresupuesto({ linea, detalle, accionEditar, alEliminar }: Pr
       </div>
 
       <div
-        className="mt-2 h-1.5 overflow-hidden rounded-full bg-superficie-tenue"
+        className="mt-2 flex h-2 overflow-hidden rounded-full bg-superficie-tenue"
         aria-hidden="true"
       >
         <div
-          className="h-full rounded-full"
+          className="h-full transition-[width] duration-500"
           style={{
             width: `${Math.max(ancho, gastado > 0 ? 1.5 : 0)}%`,
             // Semaforo: verde mientras sobra, amarillo desde el 80%, rojo
@@ -127,6 +148,9 @@ export function FilaPresupuesto({ linea, detalle, accionEditar, alEliminar }: Pr
                 : "var(--exito-fuerte)",
           }}
         />
+        {anchoComprometido > 0 && (
+          <div className={`h-full ${rayas}`} style={{ width: `${anchoComprometido}%` }} />
+        )}
       </div>
 
       <p className={`mt-1 text-xs ${tono}`}>
@@ -143,8 +167,13 @@ export function FilaPresupuesto({ linea, detalle, accionEditar, alEliminar }: Pr
             <span className="cifra tabular-nums">{formatearCLP(restante)}</span>
           </>
         )}{" "}
-        · <span className="cifra">{Math.round(porcentaje)}%</span> usado · creado el{" "}
-        {fechaCorta(presupuesto.creadoEn)}
+        · <span className="cifra">{Math.round(porcentaje)}%</span> usado
+        {comprometido > 0 && (
+          <>
+            {" "}· <span className="cifra">+{formatearCLP(comprometido)}</span> por pagar
+          </>
+        )}{" "}
+        · creado el {fechaCorta(presupuesto.creadoEn)}
       </p>
 
       {desplegado && (

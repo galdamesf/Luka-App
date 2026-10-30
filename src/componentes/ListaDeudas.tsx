@@ -31,10 +31,11 @@ export function ListaDeudas({
   return (
     <section
       aria-labelledby="titulo-deudas"
-      className="rounded-lg border border-borde bg-superficie p-4"
+      className="tarjeta-viva viva-avance rounded-xl border border-borde bg-superficie p-5 shadow-sm"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="titulo-deudas" className="text-sm font-semibold">Deudas</h2>
+        {/* h3: vive dentro de la seccion 03 del dashboard, que ya tiene su h2. */}
+        <h3 id="titulo-deudas" className="text-base font-bold">Deudas en cuotas</h3>
         {activas.length > 0 && (
           <p className="text-xs text-texto-tenue">
             queda por pagar{" "}
@@ -48,7 +49,7 @@ export function ListaDeudas({
           No tienes deudas registradas.
         </p>
       ) : (
-        <ul className="mt-3 space-y-3">
+        <ul className="mt-2">
           {activas.map((deuda) => (
             <FilaDeuda
               key={deuda.id}

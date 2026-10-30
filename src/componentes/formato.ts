@@ -42,6 +42,21 @@ export function porcentajeLegible(valor: number): string {
   return `${Math.round(valor)}%`;
 }
 
+/**
+ * Variacion para mostrar, con signo y coma decimal: "+4,2%", "−12%".
+ * Un decimal bajo 10 y entero desde ahi, como en el resto de la app. El menos
+ * es el signo tipografico (U+2212), no el guion. null es "no hay con que
+ * comparar" y se muestra como raya, no como cero.
+ */
+export function variacionLegible(valor: number | null): string {
+  if (valor === null) return "—";
+  const absoluto = Math.abs(valor);
+  const cifra =
+    absoluto < 10 ? absoluto.toFixed(1).replace(".", ",") : String(Math.round(absoluto));
+  if (cifra === "0,0") return "0%";
+  return `${valor > 0 ? "+" : "−"}${cifra}%`;
+}
+
 export { formatearCLP };
 
 /**

@@ -15,7 +15,7 @@ function Tarjeta({
   acento?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-borde bg-superficie p-4">
+    <div className="tarjeta-viva rounded-xl border border-borde bg-superficie p-5 shadow-sm">
       <h3 className="text-xs font-medium uppercase tracking-wide text-texto-tenue">
         {titulo}
       </h3>
@@ -39,8 +39,8 @@ export function TarjetasResumen({ resumen }: Props) {
   const pct = (parte: number) => (total === 0 ? 0 : (parte / total) * 100);
 
   return (
-    <section aria-label="Resumen del mes">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section aria-label="Total, esenciales, discrecionales y promedio diario del mes">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Tarjeta
           titulo="Total del mes"
           valor={formatearCLP(total)}

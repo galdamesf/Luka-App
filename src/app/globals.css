@@ -7,9 +7,11 @@
 */
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: "Nunito Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   /* La marca. Redonda como el dibujo de Luka; el resto de la app sigue en Inter. */
-  --font-marca: "Baloo 2", ui-rounded, "Segoe UI", system-ui, sans-serif;
+  --font-marca: "Bricolage Grotesque", ui-sans-serif, "Segoe UI", system-ui, sans-serif;
+  /* La palabra acento de los titulares, en cursiva. */
+  --font-acento: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
   /* Monoespaciado para montos: deja las cifras alineadas en columna. */
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 
@@ -33,21 +35,36 @@
   --primario: #1e293b;
   --primario-texto: #ffffff;
 
-  /* Dos verdes a proposito: el sobrio para texto, el fuerte para rellenos y
-     barras. En claro el fuerte es green-600 y no green-500: #22c55e sobre
-     blanco da 2.28:1 y no alcanza el 3:1 que pide WCAG 1.4.11 para elementos
-     graficos. En oscuro #22c55e si rinde (6.88:1).
+  /* Las senales siguen al mockup del dashboard: esmeralda para lo sano,
+     ambar para la advertencia y coral (rose) para lo urgente. Dos tonos de
+     cada una a proposito: el sobrio para texto, el fuerte para rellenos y
+     barras.
 
-     Los dos valores del modo claro bajaron al oscurecer la card: sobre
-     #f2f4f7, #16a34a daba 2.99:1 y #dc2626 daba 4.38:1 para texto. Ahora
-     dan 3.75:1 y 4.72:1 sobre la card, y 3.42:1 y 4.44:1 sobre la pagina. Los atraparon los tests de contraste. */
-  --exito: #15803d;
-  --exito-fuerte: #13903e;
+     En claro van un paso mas oscuro que en el mockup, que era solo oscuro:
+     emerald-500 sobre blanco no llega al 3:1 que pide WCAG 1.4.11. Medidos:
+     #047857 da 4.98:1 sobre la card y 4.54:1 sobre la pagina para texto;
+     #059669 da 3.42:1 sobre la card y 3.12:1 sobre la pagina como relleno;
+     #be123c da 5.70:1 sobre la card. Los vigilan los tests de contraste. */
+  --exito: #047857;
+  --exito-fuerte: #059669;
   --alerta: #b45309;
-  --peligro: #d42121;
+  --peligro: #be123c;
   /* Azul de progreso (barras de deuda). No es --foco aunque se parezca: el
      anillo de foco tiene que poder distinguirse de un relleno cualquiera. */
   --avance: #1557c0;
+
+  /* La accion: botones principales, seleccion y CTAs. El indigo-violeta del
+     mockup del dashboard. Es color de ACCION, no de senal, y un test vigila
+     que no se parezca a ninguno de los cuatro. --accion rellena,
+     --accion-texto va encima, y --accion-tinta es el tono para texto e
+     iconos sobre las superficies.
+
+     Tira a violeta y no a indigo puro a proposito: #4f46e5 quedaba a 8.4 en
+     OKLab del azul de --avance, y un boton se leia como barra de deuda.
+     #7c3aed queda a 14.9 y con blanco encima da 5.70:1. */
+  --accion: #7c3aed;
+  --accion-texto: #ffffff;
+  --accion-tinta: #6d28d9;
 
   --foco: #1d4ed8;
 
@@ -68,23 +85,27 @@
      pie es oscuro en los dos. Por eso lleva sus propios tokens de texto, que
      no siguen al tema: si siguieran, en modo oscuro quedaria claro sobre
      claro. Es el mismo motivo por el que --pie no reusa --primario. */
+  /* La banda nocturna de la portada (el paseo de las paradas). Oscura en los
+     DOS temas, como el pie: la portada no cambia de escena con el tema. Por
+     eso trae sus propios tonos de carta y de texto, que tampoco cambian. */
+  --noche: #0f172a;
+  --noche-superficie: #1b2336;
+  --noche-borde: #334155;
+  --noche-texto: #f8fafc;
+  --noche-tenue: #94a3b8;
   --acento: #ff9f6e;
   --acento-fuerte: #f2823f;
   --acento-tinta: #231405;
+  /* El canto del boton: el acento, mas oscuro. */
+  --acento-canto: #d9733f;
   --durazno: #ffe9dd;
   --durazno-texto: #2b1708;
-  --durazno-tenue: #6b5546;
-  --durazno-realce: #8c2160;
+  --durazno-tenue: #534237;
+  --durazno-realce: #7e1e56;
   /* El paisaje del header. Son tonos apagados a proposito: un verde saturado
      se leeria como el --exito de "te sobra". Medidos, el mas cercano a un
      color de senal queda a 11 en OKLab. No cambian con el tema, igual que la
      banda que los contiene. */
-  --paisaje-cerro-lejos: #e8c9bd;
-  --paisaje-cerro-cerca: #d9ab9c;
-  --paisaje-bosque-lejos: #9aa48c;
-  --paisaje-bosque-cerca: #6f7d66;
-  --paisaje-tronco: #7a5c47;
-  --paisaje-suelo: #c9b9a2;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -101,11 +122,15 @@
     --primario: #f8fafc;
     --primario-texto: #0f172a;
 
-    --exito: #4ade80;
-    --exito-fuerte: #22c55e;
+    --exito: #34d399;
+    --exito-fuerte: #10b981;
     --alerta: #fbbf24;
-    --peligro: #f87171;
+    --peligro: #fb7185;
     --avance: #58a6ff;
+
+    --accion: #a78bfa;
+    --accion-texto: #0f172a;
+    --accion-tinta: #c4b5fd;
 
     --foco: #93c5fd;
 
@@ -127,11 +152,21 @@
   --primario: #f8fafc;
   --primario-texto: #0f172a;
 
-  --exito: #4ade80;
-  --exito-fuerte: #22c55e;
+  /* Las senales del mockup del dashboard, en su version para fondo oscuro:
+     emerald-400/500, amber-400 y rose-400. El coral no es red-500 (#ef4444):
+     sobre la card da 4.08:1 y no alcanza para texto; rose-400 da 5.82:1. */
+  --exito: #34d399;
+  --exito-fuerte: #10b981;
   --alerta: #fbbf24;
-  --peligro: #f87171;
+  --peligro: #fb7185;
   --avance: #58a6ff;
+
+  /* En oscuro el boton es violeta claro con tinta oscura, como --primario.
+     El indigo-600 del mockup daba 2.49:1 contra la card: el boton no se
+     separaba del fondo. #a78bfa da 5.76:1 y su tinta encima, 6.56:1. */
+  --accion: #a78bfa;
+  --accion-texto: #0f172a;
+  --accion-tinta: #c4b5fd;
 
   --foco: #93c5fd;
 
@@ -141,23 +176,27 @@
   /* El acento y la banda de durazno no cambian con el tema: la banda es
      clara en los dos, como el pie es oscuro en los dos. Solo el tono de
      hover se aclara, porque aqui el relleno vive sobre fondo oscuro. */
+  /* La banda nocturna de la portada (el paseo de las paradas). Oscura en los
+     DOS temas, como el pie: la portada no cambia de escena con el tema. Por
+     eso trae sus propios tonos de carta y de texto, que tampoco cambian. */
+  --noche: #0f172a;
+  --noche-superficie: #1b2336;
+  --noche-borde: #334155;
+  --noche-texto: #f8fafc;
+  --noche-tenue: #94a3b8;
   --acento: #ff9f6e;
   --acento-fuerte: #ffb892;
   --acento-tinta: #231405;
+  /* El canto del boton: el acento, mas oscuro. */
+  --acento-canto: #d9733f;
   --durazno: #ffe9dd;
   --durazno-texto: #2b1708;
-  --durazno-tenue: #6b5546;
-  --durazno-realce: #8c2160;
+  --durazno-tenue: #534237;
+  --durazno-realce: #7e1e56;
   /* El paisaje del header. Son tonos apagados a proposito: un verde saturado
      se leeria como el --exito de "te sobra". Medidos, el mas cercano a un
      color de senal queda a 11 en OKLab. No cambian con el tema, igual que la
      banda que los contiene. */
-  --paisaje-cerro-lejos: #e8c9bd;
-  --paisaje-cerro-cerca: #d9ab9c;
-  --paisaje-bosque-lejos: #9aa48c;
-  --paisaje-bosque-cerca: #6f7d66;
-  --paisaje-tronco: #7a5c47;
-  --paisaje-suelo: #c9b9a2;
 }
 
 @theme inline {
@@ -168,6 +207,11 @@
   --color-durazno-realce: var(--durazno-realce);
   --color-acento-tinta: var(--acento-tinta);
   --color-durazno: var(--durazno);
+  --color-noche: var(--noche);
+  --color-noche-superficie: var(--noche-superficie);
+  --color-noche-borde: var(--noche-borde);
+  --color-noche-texto: var(--noche-texto);
+  --color-noche-tenue: var(--noche-tenue);
   --color-fondo: var(--fondo);
   --color-superficie: var(--superficie);
   --color-superficie-tenue: var(--superficie-tenue);
@@ -181,6 +225,9 @@
   --color-alerta: var(--alerta);
   --color-peligro: var(--peligro);
   --color-avance: var(--avance);
+  --color-accion: var(--accion);
+  --color-accion-texto: var(--accion-texto);
+  --color-accion-tinta: var(--accion-tinta);
   --color-pie: var(--pie);
   --color-pie-texto: var(--pie-texto);
   --color-foco: var(--foco);
@@ -200,6 +247,82 @@ body {
 :focus-visible {
   outline: 2px solid var(--foco);
   outline-offset: 2px;
+}
+
+/* Lo comprometido (cuentas y cuotas por pagar) se dibuja rayado, del color
+   del total proyectado: se distingue de lo gastado por el patron y no solo
+   por el color. */
+.rayas-exito,
+.rayas-alerta,
+.rayas-peligro {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--rayas) 0 3px,
+    color-mix(in oklab, var(--rayas) 22%, transparent) 3px 7px
+  );
+}
+.rayas-exito { --rayas: var(--exito-fuerte); }
+.rayas-alerta { --rayas: var(--alerta); }
+.rayas-peligro { --rayas: var(--peligro); }
+
+/* ---------------------------------------------------------------------------
+   Lo que responde al mouse y al teclado. Al pasar por una tarjeta o una fila,
+   se enciende del color de su seccion: asi se sabe donde se esta parado.
+   :focus-within hace lo mismo con el teclado, que es quien mas lo necesita.
+   El hover va dentro de (hover: hover): en celular un toque dejaria la
+   tarjeta encendida pegada.
+   --------------------------------------------------------------------------- */
+.tarjeta-viva {
+  transition: border-color 150ms, box-shadow 150ms, background-color 150ms;
+}
+.tarjeta-viva:focus-within {
+  border-color: color-mix(in oklab, var(--viva, var(--accion)) 60%, var(--borde));
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--viva, var(--accion)) 35%, transparent),
+    0 14px 30px -16px color-mix(in oklab, var(--viva, var(--accion)) 70%, transparent);
+}
+.fila-viva {
+  transition: background-color 150ms, box-shadow 150ms;
+}
+.fila-viva:focus-within {
+  background-color: color-mix(in oklab, var(--viva, var(--accion)) 9%, transparent);
+  box-shadow: inset 3px 0 0 var(--viva, var(--accion));
+}
+@media (hover: hover) {
+  .tarjeta-viva:hover {
+    border-color: color-mix(in oklab, var(--viva, var(--accion)) 60%, var(--borde));
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--viva, var(--accion)) 35%, transparent),
+      0 14px 30px -16px color-mix(in oklab, var(--viva, var(--accion)) 70%, transparent);
+  }
+  .fila-viva:hover {
+    background-color: color-mix(in oklab, var(--viva, var(--accion)) 9%, transparent);
+    box-shadow: inset 3px 0 0 var(--viva, var(--accion));
+  }
+}
+.viva-accion { --viva: var(--accion); }
+.viva-exito { --viva: var(--exito-fuerte); }
+.viva-alerta { --viva: var(--alerta); }
+.viva-peligro { --viva: var(--peligro); }
+.viva-avance { --viva: var(--avance); }
+.viva-acento { --viva: var(--acento); }
+
+/* El aviso flotante entra subiendo un poco. Con movimiento reducido, la
+   regla general de arriba lo deja aparecer sin animacion. */
+@keyframes aviso-entra {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.aviso-entra { animation: aviso-entra 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* El brillo de arriba del dashboard: dos manchas de color, violeta y
+   durazno, para que la pagina no sea un bloque oscuro parejo. Es fondo y
+   nada mas: no lleva informacion. */
+.fondo-panel {
+  background:
+    radial-gradient(55% 60% at 10% 0%, color-mix(in oklab, var(--accion) 24%, transparent), transparent 70%),
+    radial-gradient(40% 50% at 92% 4%, color-mix(in oklab, var(--acento) 20%, transparent), transparent 70%),
+    radial-gradient(35% 40% at 55% 30%, color-mix(in oklab, var(--avance) 10%, transparent), transparent 70%);
 }
 
 /* Las cifras en tablas se leen mejor con ancho fijo por digito. */
@@ -303,11 +426,13 @@ body {
 
 /* El paseo del header: Luka ya olfatea desde los keyframes de arriba, esto
    solo le suma el avance. Va aparte para que el Luka del navbar no camine. */
-.luka-pasea { animation: luka-pasea 4.6s ease-in-out infinite; }
-@keyframes luka-pasea {
-  0%, 100% { transform: translateX(-10px) }
-  50%      { transform: translateX(10px) }
-}
+/* Luka en el paseo del header. El movimiento lo calcula EscenaPaseo en JS
+   (la fase del paso sale de la distancia recorrida), asi que las animaciones
+   de reposo se apagan: una animacion CSS le gana a un transform en linea y el
+   perro quedaria temblando entre las dos. */
+.luka-pasea .luka-olfato,
+.luka-pasea .luka-oreja,
+.luka-pasea .luka-cola { animation: none; }
 
 /* La seccion que termina en una onda reserva aqui el aire que la curva
    necesita. Si la seccion escribe su propio padding de abajo, se lo come y
@@ -317,5 +442,336 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .luka-cuerpo, .luka-olfato, .luka-oreja, .luka-cola, .luka-ojo,
   .luka-dormido, .luka-oreja-echada, .luka-ojo-echado { animation: none; }
-  .luka-pasea { animation: none; transform: none; }
+  
 }
+
+/* ---------------------------------------------------------------------------
+   El boton de la portada, el mismo de la tienda Vitalia: mayusculas con letra
+   espaciada y un canto solido abajo que se hunde al apretar. El canto es un
+   box-shadow sin desenfoque, no un borde: asi el boton no cambia de tamano.
+   --------------------------------------------------------------------------- */
+.btn-luka {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 56px;
+  padding-inline: 28px;
+  border: 0;
+  border-radius: 16px;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 75ms, box-shadow 75ms, filter 75ms, background-color 75ms;
+}
+.btn-luka:hover { filter: brightness(1.04); }
+.btn-luka:active { transform: translateY(2px); }
+
+.btn-luka-acento {
+  background: var(--acento);
+  color: var(--acento-tinta);
+  box-shadow: 0 4px 0 var(--acento-canto);
+}
+.btn-luka-acento:active { box-shadow: 0 2px 0 var(--acento-canto); }
+
+/* El segundo boton es SOLIDO, no un fantasma translucido: sobre el paisaje un
+   fondo transparente lo hacia desaparecer en las bandas oscuras. */
+.btn-luka-durazno {
+  background: var(--durazno);
+  color: var(--acento-tinta);
+  box-shadow: 0 2px 0 color-mix(in oklab, var(--acento-tinta) 30%, var(--durazno));
+  border: 2px solid color-mix(in oklab, var(--acento-tinta) 30%, var(--durazno));
+}
+.btn-luka-durazno:hover { background: color-mix(in oklab, #fff 18%, var(--durazno)); }
+.btn-luka-durazno:active { box-shadow: none; }
+
+/* ---------------------------------------------------------------------------
+   El lienzo de «Como funciona»: va a sangre y se desliza de lado. --borde-l
+   alinea el primer panel (y cada encaje) con el borde del contenido de la
+   pagina, no con el de la ventana.
+   --------------------------------------------------------------------------- */
+.lienzo {
+  --borde-l: max(1rem, calc((100% - 72rem) / 2 + 1rem));
+  scroll-padding-inline: var(--borde-l);
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+}
+@media (min-width: 640px) {
+  .lienzo { --borde-l: max(1.5rem, calc((100% - 72rem) / 2 + 1.5rem)); }
+}
+
+/* Los trazos a mano de los paneles. pathLength=1 deja que cada camino se
+   dibuje sin tener que medirlo: va de dashoffset 1 a 0. */
+.tinta path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: 0;
+}
+@keyframes luka-traza { from { stroke-dashoffset: 1 } to { stroke-dashoffset: 0 } }
+@media (prefers-reduced-motion: no-preference) {
+  [data-panel]:not([data-visto]) .tinta path { stroke-dashoffset: 1; }
+  [data-panel][data-visto] .tinta path {
+    animation: luka-traza var(--dur, 700ms) cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(160ms + var(--i, 0) * 90ms);
+  }
+}
+
+/* El condor del paisaje: lo unico que se mueve en el dibujo. */
+@media (prefers-reduced-motion: no-preference) {
+  .cordillera-condor { animation: cordillera-planeo 58s linear infinite; }
+  @keyframes cordillera-planeo {
+    0%   { transform: translate(330px, 24px); opacity: 0 }
+    7%   { opacity: 1 }
+    48%  { transform: translate(0px, -6px) }
+    93%  { opacity: 1 }
+    100% { transform: translate(-340px, 30px); opacity: 0 }
+  }
+}
+/* Al pausar el paseo se detiene tambien lo que se mueva en el paisaje. */
+[data-paseo][data-pausado] .cordillera-condor { animation-play-state: paused; }
+
+/* ---------------------------------------------------------------------------
+   El paseo de la portada: cinco paradas unidas por un hilo punteado.
+
+   El hilo entra a cada parada por --entra, cruza el piso hasta --sale y de
+   ahi sigue bajando a la siguiente. Angosta, baja recto por el canal de la
+   izquierda; ancha (>=820px), zigzaguea con los --d y --h de cada parada.
+   Regla heredada de las maquetas: el hilo cruza al 85 % del alto del perro,
+   el centro de sus patas; mas abajo, las patas claras no pisan nada.
+   --------------------------------------------------------------------------- */
+.paseo {
+  --hilo: var(--acento);
+  --perro-alto: clamp(54px, 6.6vw, 84px);
+  background: var(--noche);
+  color: var(--noche-texto);
+}
+
+.paseo-parada {
+  position: relative;
+  --desde: 20px;
+  --hasta: 20px;
+  --perro-x: var(--xn, 30%);
+  --piso-y: var(--perro-alto);
+  padding: calc(var(--piso-y) + clamp(16px, 2.4vw, 30px)) 0 clamp(30px, 5vw, 66px) 44px;
+  animation: paseo-sube 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.08s);
+}
+@keyframes paseo-sube { from { transform: translateY(26px); } }
+
+.paseo-entra,
+.paseo-sale {
+  position: absolute;
+  left: var(--desde);
+  border-left: 2px dashed var(--hilo);
+}
+.paseo-entra { top: 0; height: var(--piso-y); }
+.paseo-sale { top: var(--piso-y); bottom: 0; left: var(--hasta); }
+/* La ultima parada deja el hilo cayendo hacia la onda. */
+.paseo-piso {
+  position: absolute;
+  top: var(--piso-y);
+  left: 0;
+  right: 0;
+  border-top: 2px dashed var(--hilo);
+}
+.paseo-nodo {
+  position: absolute;
+  top: var(--piso-y);
+  left: var(--desde);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--hilo);
+  transform: translate(-50%, -50%);
+}
+
+/* Luka chico, apoyado en el piso: la linea le cruza por el centro de las patas. */
+.paseo-perro {
+  position: absolute;
+  top: calc(var(--piso-y) - var(--perro-alto) * 0.852);
+  left: var(--perro-x);
+  transform: translateX(-50%);
+  z-index: 1;
+}
+.paseo-der .paseo-perro { transform: translateX(-50%) scaleX(-1); }
+.paseo-perro svg { height: var(--perro-alto); width: auto; }
+.paseo-anda {
+  display: block;
+  animation: paseo-llega 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.08s + 0.1s);
+}
+.paseo-der .paseo-anda { --llega: 20px; }
+@keyframes paseo-llega { from { transform: translateX(var(--llega, -20px)); } }
+
+.paseo-cuerpo { display: grid; gap: clamp(15px, 2.2vw, 26px); grid-template-columns: 1fr; }
+
+@media (min-width: 820px) {
+  .paseo-parada {
+    --desde: var(--d);
+    --hasta: var(--h);
+    --perro-x: var(--h);
+    padding-left: 0;
+  }
+  .paseo-piso {
+    left: min(var(--desde), var(--hasta));
+    right: calc(100% - max(var(--desde), var(--hasta)));
+  }
+  .paseo-izq { padding-left: var(--pad); }
+  .paseo-der { padding-right: var(--pad); }
+  .paseo-cuerpo {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    column-gap: clamp(22px, 3.4vw, 52px);
+  }
+  .paseo-der .paseo-arte { order: -1; }
+  .paseo-medio { padding-left: 0; padding-right: 0; }
+  .paseo-medio .paseo-cuerpo { column-gap: clamp(44px, 6vw, 84px); }
+}
+
+.paseo-hito {
+  margin: 0 0 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--noche-tenue);
+}
+.paseo-dice h2 {
+  margin: 0;
+  font-family: var(--font-marca);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-size: clamp(25px, 3.4vw, 40px);
+  line-height: 1;
+  text-wrap: balance;
+}
+.paseo-dice > p:last-child {
+  margin: clamp(9px, 1.2vw, 14px) 0 0;
+  max-width: 42ch;
+  line-height: 1.6;
+  font-size: clamp(14px, 1.4vw, 16.5px);
+  color: var(--noche-tenue);
+  text-wrap: pretty;
+}
+
+/* ---- la pieza real de la app, en su carta nocturna ---- */
+.paseo-carta {
+  background: var(--noche-superficie);
+  border: 1px solid var(--noche-borde);
+  border-radius: clamp(14px, 1.6vw, 20px);
+  padding: clamp(14px, 1.8vw, 22px);
+}
+.paseo-ct {
+  margin: 0 0 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.paseo-ct em { font-style: normal; font-weight: 400; font-size: 11.5px; color: var(--noche-tenue); }
+.paseo-ct2 { margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--noche-borde); }
+.paseo-r {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 13.5px;
+}
+.paseo-r .cifra { font-size: 13px; }
+.paseo-r em { display: block; font-style: normal; font-size: 11.5px; margin-top: 3px; color: var(--noche-tenue); }
+.paseo-tot {
+  margin: 9px 0 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--noche-borde);
+}
+.paseo-tot b { font-size: 13.5px; }
+.paseo-tot .cifra { font-size: clamp(22px, 2.8vw, 32px); font-weight: 700; }
+.paseo-falta { color: var(--noche-texto); }
+
+.paseo-aviso {
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--noche-tenue);
+}
+.paseo-aviso i { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--peligro); }
+.paseo-techo + .paseo-techo { margin-top: 14px; }
+.paseo-riel { height: 8px; border-radius: 99px; background: var(--noche); overflow: hidden; margin: 0 0 5px; }
+.paseo-riel i { display: block; height: 100%; border-radius: 99px; }
+.paseo-pp { margin: 0; display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--noche-tenue); }
+.paseo-pp b { font-weight: 600; color: var(--noche-texto); }
+
+.paseo-gasto { display: flex; align-items: center; gap: clamp(12px, 1.6vw, 18px); }
+.paseo-gtex { flex: 1; min-width: 0; }
+.paseo-gtex p { margin: 0; font-size: 14px; font-weight: 600; }
+.paseo-gtex span { display: block; margin-top: 3px; font-size: 12px; color: var(--noche-tenue); }
+.paseo-gmonto { font-size: 15px; font-weight: 600; }
+.paseo-boleta {
+  flex: none;
+  width: clamp(44px, 5vw, 56px);
+  aspect-ratio: 34 / 42;
+  background: #ffffff;
+  border-radius: 4px 4px 0 0;
+  padding: 8px 7px 0;
+  display: grid;
+  gap: 5px;
+  align-content: start;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 93.75% 92%, 87.5% 100%, 81.25% 92%, 75% 100%, 68.75% 92%, 62.5% 100%, 56.25% 92%, 50% 100%, 43.75% 92%, 37.5% 100%, 31.25% 92%, 25% 100%, 18.75% 92%, 12.5% 100%, 6.25% 92%, 0 100%);
+}
+.paseo-boleta i { display: block; height: 3px; border-radius: 2px; background: #cbd5e1; }
+.paseo-boleta i:first-child { width: 60%; background: #94a3b8; }
+
+.paseo-chips { margin: 0; display: flex; flex-wrap: wrap; gap: 7px; }
+.paseo-chips span,
+.paseo-chips b {
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--noche-borde);
+  color: var(--noche-texto);
+}
+.paseo-chips b { border-style: dashed; color: var(--noche-tenue); }
+
+/* El acordeon de preguntas: el marcador nativo se esconde y el + gira solo. */
+.pregunta summary::-webkit-details-marker { display: none; }
+
+/* El boton de Google, con sus reglas de marca: fondo blanco SIEMPRE (tambien
+   en tema oscuro), su logo tal cual y texto sobrio. Google no permite pintarlo
+   del color de la app. */
+.boton-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 44px;
+  padding-inline: 16px;
+  border-radius: 999px;
+  border: 1px solid #747775;
+  background: #ffffff;
+  color: #1f1f1f;
+  font-family: "Google Sans", var(--font-sans);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1;
+  transition: box-shadow 0.15s, background-color 0.15s;
+}
+.boton-google:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgb(0 0 0 / 0.18); }

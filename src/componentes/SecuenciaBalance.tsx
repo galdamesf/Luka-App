@@ -57,12 +57,13 @@ export function SecuenciaBalance({ balance, gastos, children }: Props) {
   return (
     <section
       aria-labelledby="titulo-balance"
-      className="rounded-lg border border-borde bg-superficie p-4"
+      className="tarjeta-viva rounded-xl border border-borde bg-superficie p-5 shadow-sm"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="titulo-balance" className="text-sm font-semibold">
+        {/* h3: vive dentro de la seccion 01 del dashboard, que ya tiene su h2. */}
+        <h3 id="titulo-balance" className="text-sm font-semibold">
           Balance de <span className="capitalize">{nombreDelMes(balance.mes)}</span>
-        </h2>
+        </h3>
         {!sinSueldo && (
           <p className="text-xs text-texto-tenue">
             {porcentajeLegible(porcentajeComprometido)} del sueldo comprometido

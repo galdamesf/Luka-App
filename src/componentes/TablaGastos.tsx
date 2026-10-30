@@ -12,6 +12,12 @@ type Props = {
   alEliminar?: (datos: FormData) => void;
   /** Accion para adjuntar la foto de la boleta. */
   accionBoleta?: AccionFormulario;
+  /** Lo que va entre el titulo y la lista: buscador y filtros. */
+  herramientas?: React.ReactNode;
+  /** Que decir cuando no hay nada que mostrar. */
+  mensajeVacio?: string;
+  /** h2 suelta (el informe) o h3 dentro de una seccion (el dashboard). */
+  nivelTitulo?: "h2" | "h3";
 };
 
 /**
@@ -31,7 +37,9 @@ function PuntoCategoria({ gasto }: { gasto: GastoPlano }) {
         className="size-2 shrink-0 rounded-full"
         style={{ backgroundColor: gasto.categoria.color }}
       />
-      <Icono nombre={gasto.categoria.icono} tamano={14} className="shrink-0" />
+      <span className="shrink-0" style={{ color: gasto.categoria.color }}>
+        <Icono nombre={gasto.categoria.icono} tamano={14} />
+      </span>
       <span className="truncate text-texto-tenue">{gasto.categoria.nombre}</span>
     </span>
   );
@@ -91,20 +99,25 @@ function Boleta({
   );
 }
 
-export function TablaGastos({ gastos, alEliminar, accionBoleta }: Props) {
+export function TablaGastos({
+  gastos, alEliminar, accionBoleta, herramientas,
+  mensajeVacio = "Todavía no hay gastos registrados en este mes.",
+  nivelTitulo = "h2",
+}: Props) {
+  const Titulo = nivelTitulo;
   return (
     <section
       aria-labelledby="titulo-gastos"
-      className="rounded-lg border border-borde bg-superficie"
+      className="tarjeta-viva overflow-hidden rounded-xl border border-borde bg-superficie shadow-sm"
     >
-      <h2 id="titulo-gastos" className="border-b border-borde p-4 text-sm font-semibold">
+      <Titulo id="titulo-gastos" className="border-b border-borde p-5 text-base font-bold">
         Gastos del mes
-      </h2>
+      </Titulo>
+
+      {herramientas}
 
       {gastos.length === 0 ? (
-        <p className="py-12 text-center text-sm text-texto-tenue">
-          Todavía no hay gastos registrados en este mes.
-        </p>
+        <p className="py-12 text-center text-sm text-texto-tenue">{mensajeVacio}</p>
       ) : (
         <>
           {/* --- Celular: una tarjeta por gasto, sin scroll lateral --- */}
@@ -112,7 +125,7 @@ export function TablaGastos({ gastos, alEliminar, accionBoleta }: Props) {
             {gastos.map((gasto) => (
               <li
                 key={gasto.id}
-                className="flex items-start gap-3 border-b border-borde px-4 py-3 last:border-0"
+                className="fila-viva flex items-start gap-3 border-b border-borde px-4 py-3 last:border-0"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{gasto.descripcion}</p>
@@ -161,7 +174,7 @@ export function TablaGastos({ gastos, alEliminar, accionBoleta }: Props) {
               {gastos.map((gasto) => (
                 <tr
                   key={gasto.id}
-                  className="border-b border-borde transition-colors duration-150 last:border-0 hover:bg-superficie-tenue"
+                  className="fila-viva border-b border-borde last:border-0"
                 >
                   <td className="cifra whitespace-nowrap px-4 py-2.5 text-texto-tenue">
                     {fechaCorta(gasto.fecha)}

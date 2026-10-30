@@ -5,6 +5,8 @@ export type PoseLuka = "rastreando" | "echado";
 
 type Props = {
   pose?: PoseLuka;
+  /** En el paseo del header: el movimiento lo calcula EscenaPaseo, no el CSS. */
+  paseando?: boolean;
   /**
    * Alto en pixeles. El ancho sale solo del viewBox.
    * Si se omite, no se escribe style y manda la clase — necesario para dar
@@ -47,22 +49,34 @@ const POSES: Record<PoseLuka, { viewBox: string; dibujo: ReactNode }> = {
     viewBox: "52 137 240 144",
     dibujo: (
       <g className="luka-cuerpo">
-        <g className="luka-cola">
+        <g className="luka-cola" data-cola>
           <path d="M233 200c3-22 11-40 22-52 7-8 15-7 18 1 3 9-3 16-10 23-11 11-19 23-22 35z" fill="#8d7358" />
           <path d="M273 149c-3-8-11-9-18-1-4 4-7 9-10 15 9-7 19-10 28-14z" fill="#f3ece3" />
         </g>
-        <path d="M216 222c10 0 17 10 17 24v22h-17z" fill="#b3977b" />
-        <ellipse cx="224" cy="268" rx="13" ry="7" fill="#e3d5c3" />
-        <path d="M150 226c9 0 15 9 15 21v21h-15z" fill="#b3977b" />
-        <ellipse cx="157" cy="268" rx="13" ry="7" fill="#e3d5c3" />
+        <g className="luka-pata" data-pata="3" style={{ transformOrigin: "224.5px 236px" }}>
+          <path d="M216 222c10 0 17 10 17 24v22h-17z" fill="#b3977b" />
+          <ellipse cx="224" cy="268" rx="13" ry="7" fill="#d9c7af" />
+        </g>
+        <g className="luka-pata" data-pata="4" style={{ transformOrigin: "157.5px 236px" }}>
+          <path d="M150 226c9 0 15 9 15 21v21h-15z" fill="#b3977b" />
+          <ellipse cx="157" cy="268" rx="13" ry="7" fill="#d9c7af" />
+        </g>
         <path d="M150 178c46 0 86 12 92 34 5 20-8 42-30 48-30 8-82 6-106-6-18-9-18-34-4-52 10-14 28-24 48-24z" fill="#cdb49a" />
         <path d="M150 178c46 0 86 12 92 34 2 8 1 16-2 23-6-26-44-40-90-40-18 0-33 5-43 13 10-18 27-30 43-30z" fill="#2a2a33" />
-        <path d="M124 238c22 8 60 10 86 5-6 10-16 17-28 20-30 8-74 6-98-6-5-3-8-7-10-12 14 0 34-3 50-7z" fill="#f3ece3" />
-        <path d="M168 226c10 0 17 10 17 24v18h-17z" fill="#e3d5c3" />
-        <path d="M133 228c9 0 15 9 15 21v19h-15z" fill="#e3d5c3" />
-        <ellipse cx="176" cy="268" rx="13" ry="7" fill="#f3ece3" />
-        <ellipse cx="140" cy="268" rx="13" ry="7" fill="#f3ece3" />
-        <g className="luka-olfato">
+        {/* La pechera: nace bajo el menton y baja siguiendo el pecho. */}
+        <path
+          d="M100 226 C110 236 126 242 148 245 C170 248 192 248 212 244 C206 256 196 264 182 267 C154 273 118 270 98 261 C90 257 88 248 92 238 C94 233 97 229 100 226 Z"
+          fill="#eee0cd"
+        />
+        <g className="luka-pata" data-pata="1" style={{ transformOrigin: "176.5px 236px" }}>
+          <path d="M168 226c10 0 17 10 17 24v18h-17z" fill="#e8d9c3" />
+          <ellipse cx="176" cy="268" rx="13" ry="7" fill="#f7f0e5" />
+        </g>
+        <g className="luka-pata" data-pata="2" style={{ transformOrigin: "140.5px 236px" }}>
+          <path d="M133 228c9 0 15 9 15 21v19h-15z" fill="#e8d9c3" />
+          <ellipse cx="140" cy="268" rx="13" ry="7" fill="#f7f0e5" />
+        </g>
+        <g className="luka-olfato" data-cabeza>
           <path d="M118 174c20 0 34 14 32 34-2 18-14 30-32 32-20 2-36-10-38-28-2-20 14-38 38-38z" fill="#cdb49a" />
           <path d="M104 198c-14 8-28 22-36 36-5 9-2 17 7 19 7 1 14-2 20-8 11-11 18-26 20-38z" fill="#f3ece3" />
           <g transform="rotate(-24 74 244)">
@@ -76,8 +90,11 @@ const POSES: Record<PoseLuka, { viewBox: string; dibujo: ReactNode }> = {
           </g>
           <path className="luka-oreja" d="M128 182c14-2 24 10 26 32 2 24-4 44-14 50-8 5-16 0-18-12-3-16-1-32-2-45-1-14-2-24 8-25z" fill="#8d7358" />
         </g>
-        <path d="M158 174c9 13 12 30 9 46-8 3-16 3-24 1 3-16 1-32-8-45 8-3 15-4 23-2z" fill="#b45309" />
-        <circle cx="156" cy="222" r="6.5" fill="#e3d5c3" />
+        <path
+          d="M158 174c9 13 12 30 9 46-8 3-16 3-24 1 3-16 1-32-8-45 8-3 15-4 23-2z"
+          fill="var(--acento-fuerte)"
+        />
+        <circle cx="156" cy="222" r="6.5" fill="#f7f0e5" />
       </g>
     ),
   },
@@ -102,14 +119,20 @@ const POSES: Record<PoseLuka, { viewBox: string; dibujo: ReactNode }> = {
         </g>
         <ellipse cx="60" cy="141" rx="8" ry="6.4" fill="#0f172a" />
         <path className="luka-oreja-echada" d="M99 110c9-2 16 7 18 21 1 15-2 27-8 31-5 3-11 0-12-8-2-10-2-21-2-30 0-9-2-14 4-14z" fill="#8d7358" />
-        <path d="M118 106c6 8 8 20 7 30-5 2-11 2-15 1 2-10 0-21-6-29 5-2 9-3 14-2z" fill="#b45309" />
+        <path d="M118 106c6 8 8 20 7 30-5 2-11 2-15 1 2-10 0-21-6-29 5-2 9-3 14-2z" fill="var(--acento-fuerte)" />
         <circle cx="116" cy="138" r="4.3" fill="#e3d5c3" />
       </g>
     ),
   },
 };
 
-export function Luka({ pose = "rastreando", alto, descripcion = null, className = "" }: Props) {
+export function Luka({
+  pose = "rastreando",
+  alto,
+  descripcion = null,
+  paseando = false,
+  className = "",
+}: Props) {
   const { viewBox, dibujo } = POSES[pose];
   const estilo: CSSProperties | undefined =
     alto === undefined ? undefined : { height: alto, width: "auto" };
@@ -119,7 +142,12 @@ export function Luka({ pose = "rastreando", alto, descripcion = null, className 
       : { role: "img" as const, "aria-label": descripcion };
 
   return (
-    <svg viewBox={viewBox} style={estilo} className={`shrink-0 ${className}`} {...accesible}>
+    <svg
+      viewBox={viewBox}
+      style={estilo}
+      className={`shrink-0 ${paseando ? "luka-pasea" : ""} ${className}`}
+      {...accesible}
+    >
       {dibujo}
     </svg>
   );

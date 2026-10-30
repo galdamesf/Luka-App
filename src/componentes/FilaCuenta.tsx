@@ -70,11 +70,16 @@ export function FilaCuenta({
   }
 
   return (
-    <li className="border-b border-borde px-4 py-2.5 last:border-0">
-      {/* Todo en una linea en pantallas anchas: nombre, contexto, monto y
-          acciones. En angosto envuelve solo. Antes eran tres lineas por
-          cuenta y la tarjeta quedaba larga y vacia a la vez. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <li
+      className={`fila-viva border-b border-borde px-5 py-2 last:border-0 ${
+        pagada ? "viva-exito" : vencida ? "viva-peligro" : "viva-alerta"
+      }`}
+    >
+      {/* Una sola linea en pantallas anchas: nombre, vencimiento, el boton de
+          pagar, monto y acciones. Antes eran tres lineas por cuenta (el
+          boton y "con otra fecha o monto" iban debajo) y la lista de pagos
+          se hacia eterna. En angosto envuelve sola. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <p className="flex min-w-0 items-center gap-1.5 text-sm">
           {pagada && (
             <span className="shrink-0 text-exito">
@@ -92,9 +97,7 @@ export function FilaCuenta({
           )}
         </p>
 
-        {/* En celular toma su propia linea: apretado entre el nombre y el
-            monto quedaba en una columna de tres palabras de ancho. */}
-        <div className="flex basis-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-texto-tenue sm:flex-1 sm:basis-auto">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-texto-tenue">
           {pagada ? (
             <>
               <span>pagada el {fechaCorta(cuenta.pagadaEn as string)}</span>
@@ -118,12 +121,43 @@ export function FilaCuenta({
           )}
         </div>
 
-        {/* div y no span: adentro va un <form>, que no es contenido en
-            linea. No rompe la hidratacion pero es HTML invalido igual. */}
-        <div className="ml-auto flex shrink-0 items-center gap-1">
-          <span className={`cifra text-sm tabular-nums ${pagada ? "text-texto-tenue" : "font-medium"}`}>
+        {/* div y no span: adentro van <form>, que no son contenido en linea. */}
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <ControlEstadoPago
+            enLinea
+            pagado={pagada}
+            accionPagar={alMarcarPagada}
+            camposPagar={{ id: cuenta.id, hoy, monto: String(cuenta.monto) }}
+            accionRevertir={alRevertir}
+            camposRevertir={{ id: cuenta.id }}
+            queEs={`la cuenta de ${cuenta.nombre}`}
+            monto={cuenta.monto}
+            categoria={cuenta.categoria.nombre}
+          />
+
+          <span className={`cifra min-w-[5.5rem] text-right text-sm tabular-nums ${pagada ? "text-texto-tenue" : "font-semibold"}`}>
             {formatearCLP(cuenta.monto)}
           </span>
+
+          {/* Ancho fijo para los tres botones: asi los montos de todas las
+              filas quedan en columna, tengan uno o tres botones. */}
+          <div className="flex w-[6.5rem] items-center justify-end gap-1">
+          {/* Para cuando el monto real no fue el esperado o se pago otro dia.
+              Antes era un enlace de texto en su propia linea. */}
+          {!pagada && (
+            <button
+              type="button"
+              onClick={() => abrirPago(!pagando)}
+              aria-expanded={pagando}
+              title="Pagar con otra fecha o monto"
+              className={`inline-flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors duration-150 hover:bg-superficie-tenue hover:text-texto ${
+                pagando ? "bg-superficie-tenue text-texto" : "text-texto-tenue"
+              }`}
+            >
+              <Icono nombre="calendar" tamano={14} />
+              <span className="sr-only">Pagar {cuenta.nombre} con otra fecha o monto</span>
+            </button>
+          )}
 
           {/* Editar solo mientras este pendiente: una vez pagada, su gasto ya
               existe y cambiarle el monto dejaria las dos cifras peleadas. */}
@@ -132,6 +166,7 @@ export function FilaCuenta({
               type="button"
               onClick={() => abrirEdicion(!abiertoEditar)}
               aria-expanded={abiertoEditar}
+              title="Editar"
               className={`inline-flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors duration-150 hover:bg-superficie-tenue hover:text-texto ${
                 abiertoEditar ? "bg-superficie-tenue text-texto" : "text-texto-tenue"
               }`}
@@ -145,37 +180,16 @@ export function FilaCuenta({
             <input type="hidden" name="id" value={cuenta.id} />
             <button
               type="submit"
+              title="Eliminar"
               className="inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-texto-tenue transition-colors duration-150 hover:bg-superficie-tenue hover:text-peligro"
             >
               <Icono nombre="trash" tamano={14} />
               <span className="sr-only">Eliminar la cuenta {cuenta.nombre}</span>
             </button>
           </form>
+          </div>
         </div>
       </div>
-
-      <ControlEstadoPago
-        pagado={pagada}
-        accionPagar={alMarcarPagada}
-        camposPagar={{ id: cuenta.id, hoy, monto: String(cuenta.monto) }}
-        accionRevertir={alRevertir}
-        camposRevertir={{ id: cuenta.id }}
-        queEs={`la cuenta de ${cuenta.nombre}`}
-        monto={cuenta.monto}
-        categoria={cuenta.categoria.nombre}
-      />
-
-      {/* Para cuando el monto real no fue el esperado o se pago otro dia. */}
-      {!pagada && (
-        <button
-          type="button"
-          onClick={() => abrirPago(!pagando)}
-          aria-expanded={pagando}
-          className="mt-1.5 ml-2 cursor-pointer rounded text-xs text-texto-tenue underline-offset-2 transition-colors duration-150 hover:text-texto hover:underline"
-        >
-          con otra fecha o monto
-        </button>
-      )}
 
       {!pagada && pagando && (
         <div>

@@ -37,11 +37,11 @@ export function DesgloseCategorias({ resumen, detalles }: Props) {
   return (
     <section
       aria-labelledby="titulo-categorias"
-      className="rounded-lg border border-borde bg-superficie p-4"
+      className="tarjeta-viva rounded-xl border border-borde bg-superficie p-5 shadow-sm"
     >
-      <h2 id="titulo-categorias" className="text-sm font-semibold">
+      <h3 id="titulo-categorias" className="text-base font-bold">
         Por categoría
-      </h2>
+      </h3>
 
       {porCategoria.length === 0 ? (
         <p className="py-8 text-center text-sm text-texto-tenue">
@@ -55,12 +55,14 @@ export function DesgloseCategorias({ resumen, detalles }: Props) {
             return (
               <li
                 key={linea.categoria.id}
-                className="group relative rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foco"
+                className="fila-viva group relative -mx-2 rounded-md px-2 py-1.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foco"
                 tabIndex={detalle === undefined ? undefined : 0}
               >
                 <div className="flex items-baseline justify-between gap-3 text-sm">
                   <span className="flex min-w-0 items-center gap-2">
-                    <Icono nombre={linea.categoria.icono} className="shrink-0" />
+                    <span className="shrink-0" style={{ color: linea.categoria.color }}>
+                      <Icono nombre={linea.categoria.icono} />
+                    </span>
                     <span className="truncate">{linea.categoria.nombre}</span>
                   </span>
                   <span className="shrink-0 whitespace-nowrap">

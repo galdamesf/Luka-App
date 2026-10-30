@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  agruparPendientes,
   estaPagada,
   fechaDeVencimiento,
   mensualesQueFaltan,
@@ -206,5 +207,31 @@ describe("mensualesQueFaltan", () => {
 
   test("sin mes anterior no propone nada", () => {
     expect(mensualesQueFaltan([], [])).toEqual([]);
+  });
+});
+
+describe("agruparPendientes", () => {
+  const vencida = cuenta({ nombre: "Agua", diaVencimiento: 25 });
+  const hoyMismo = cuenta({ nombre: "Luz", diaVencimiento: 29 });
+  const enSiete = cuenta({ nombre: "Internet", diaVencimiento: 31 });
+  const sinFecha = cuenta({ nombre: "Gimnasio" });
+  const yaPagada = pagada({ nombre: "Arriendo", diaVencimiento: 5 });
+
+  test("separa lo vencido, lo de esta semana y lo demas, y deja fuera lo pagado", () => {
+    const resumen = resumirCuentas([vencida, hoyMismo, enSiete, sinFecha, yaPagada], "2026-10", 31, "2026-10-29");
+    const g = agruparPendientes(resumen, 31, "2026-10-29");
+    expect(g.vencidas.map((c) => c.nombre)).toEqual(["Agua"]);
+    expect(g.porVencer.map((c) => c.nombre)).toEqual(["Luz", "Internet"]);
+    expect(g.programadas.map((c) => c.nombre)).toEqual(["Gimnasio"]);
+  });
+
+  test("a ocho dias ya no es 'por vencer'", () => {
+    const resumen = resumirCuentas(
+      [cuenta({ nombre: "A", diaVencimiento: 17 }), cuenta({ nombre: "B", diaVencimiento: 18 })],
+      "2026-10", 31, "2026-10-10",
+    );
+    const g = agruparPendientes(resumen, 31, "2026-10-10");
+    expect(g.porVencer.map((c) => c.nombre)).toEqual(["A"]);
+    expect(g.programadas.map((c) => c.nombre)).toEqual(["B"]);
   });
 });

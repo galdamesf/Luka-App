@@ -6,6 +6,8 @@ import { FilaCuenta } from "./FilaCuenta";
 import { FilaCuotaPago } from "./FilaCuotaPago";
 import { Icono } from "./Icono";
 import { formatearCLP, nombreDelMes } from "./formato";
+import { agruparPendientes } from "@/dominio/cuentas";
+import { diasEnMesISO } from "@/lib/fecha";
 
 type Props = {
   resumen: ResumenCuentas;
@@ -24,39 +26,68 @@ type Props = {
   children?: React.ReactNode;
 };
 
-function Columna({
-  titulo, total, vacio, children,
+function Grupo({
+  titulo, tono, total, cantidad, plegado, children,
 }: {
   titulo: string;
+  tono: "peligro" | "alerta" | "neutro";
   total: number;
-  vacio: string;
+  cantidad: number;
+  /** Se muestra cerrado, con su cantidad y total a la vista. */
+  plegado?: boolean;
   children: React.ReactNode;
 }) {
-  const hayAlgo = Array.isArray(children) ? children.flat().length > 0 : Boolean(children);
+  if (cantidad === 0) return null;
+  const color = tono === "peligro" ? "text-peligro" : tono === "alerta" ? "text-alerta" : "text-texto-tenue";
+  const punto = tono === "peligro" ? "bg-peligro" : tono === "alerta" ? "bg-alerta" : "bg-texto-tenue";
+  const encabezado = (
+    <>
+      <span aria-hidden="true" className={`size-2 rounded-full ${punto}`} />
+      {titulo}
+      <span className="font-normal normal-case tracking-normal text-texto-tenue">
+        {cantidad} · {formatearCLP(total)}
+      </span>
+    </>
+  );
+  const clases = `cifra flex flex-wrap items-center gap-2 border-b border-borde px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] ${color}`;
+
+  // Lo que no apura va plegado: con ocho cuentas programadas la lista se
+  // hacia eterna y lo urgente quedaba enterrado. Se abre con un clic.
+  if (plegado !== undefined) {
+    return (
+      <details className="group/grupo" open={!plegado}>
+        <summary
+          className={`${clases} min-h-11 cursor-pointer list-none transition-colors duration-150 hover:bg-superficie-tenue [&::-webkit-details-marker]:hidden`}
+        >
+          {encabezado}
+          <span className="ml-auto flex items-center gap-1 font-normal normal-case tracking-normal text-texto-tenue">
+            <span className="group-open/grupo:hidden">ver</span>
+            <span className="hidden group-open/grupo:inline">ocultar</span>
+            <span className="transition-transform duration-150 group-open/grupo:rotate-180">
+              <Icono nombre="chevron-down" tamano={14} />
+            </span>
+          </span>
+        </summary>
+        <ul>{children}</ul>
+      </details>
+    );
+  }
 
   return (
-    <div className="min-w-0">
-      <p className="flex flex-wrap items-baseline justify-between gap-2 border-b border-borde px-4 py-2 text-xs font-medium tracking-wide text-texto-tenue uppercase">
-        <span>{titulo}</span>
-        <span className="cifra normal-case">{formatearCLP(total)}</span>
-      </p>
-
-      {hayAlgo ? (
-        <ul>{children}</ul>
-      ) : (
-        <p className="px-4 py-6 text-center text-xs text-texto-tenue">{vacio}</p>
-      )}
+    <div>
+      <h4 className={clases}>{encabezado}</h4>
+      <ul>{children}</ul>
     </div>
   );
 }
 
 /**
- * Todo lo que hay que pagar este mes, en dos columnas: lo pendiente y lo
- * pagado.
+ * Todo lo que hay que pagar este mes, ordenado por urgencia: vencidas, por
+ * vencer esta semana y programadas. Lo ya pagado queda plegado al final.
  *
  * Mezcla cuentas y cuotas de deuda a proposito: a fin de mes lo que importa
- * es que falta por pagar, no de que tabla sale cada cosa. Los botones mueven
- * cada item de una columna a la otra.
+ * es que falta por pagar, no de que tabla sale cada cosa. Las cuotas no
+ * tienen dia de vencimiento, asi que van con las programadas.
  *
  * La seccion de Deudas sigue existiendo para administrar las deudas en si
  * (agregar, editar, ver el avance); aqui solo se pagan sus cuotas.
@@ -110,70 +141,137 @@ export function PagosDelMes({
     />
   );
 
+  const grupos = agruparPendientes(resumen, diasEnMesISO(resumen.mes), hoy);
+  const suma = (lista: readonly { monto: number }[]) => lista.reduce((s, c) => s + c.monto, 0);
+  const totalProgramado =
+    suma(grupos.programadas) + cuotasPendientes.reduce((s, x) => s + x.cuota.deuda.montoCuota, 0);
+  const cantidadPagadas = pagadas.length + cuotasPagadas.length;
+
   return (
     <section
       aria-labelledby="titulo-pagos"
-      className="rounded-lg border border-borde bg-superficie"
+      className={`tarjeta-viva flex min-w-0 flex-col rounded-xl border border-borde bg-superficie shadow-sm ${
+        vencidas.length > 0 ? "viva-peligro" : "viva-alerta"
+      }`}
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2 p-4 pb-3">
-        <h2 id="titulo-pagos" className="text-sm font-semibold">
-          Pagos de <span className="capitalize">{nombreDelMes(resumen.mes)}</span>
-        </h2>
+      <div className="flex flex-wrap items-start justify-between gap-3 p-5 pb-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={`inline-flex size-10 shrink-0 items-center justify-center rounded-lg ${
+              vencidas.length > 0 ? "bg-peligro/15 text-peligro" : "bg-alerta/15 text-alerta"
+            }`}
+          >
+            <Icono nombre="receipt" tamano={20} />
+          </span>
+          <div className="min-w-0">
+            {/* h3: vive dentro de la seccion 02 del dashboard, que ya tiene su h2. */}
+            <h3 id="titulo-pagos" className="text-base font-bold">
+              Pagos de <span className="capitalize">{nombreDelMes(resumen.mes).split(" ")[0]}</span>
+            </h3>
+            <p className="text-[13px] text-texto-tenue">
+              {!hayAlgo
+                ? "Sin cuentas ni cuotas este mes"
+                : [
+                    grupos.vencidas.length > 0 &&
+                      `${grupos.vencidas.length} ${grupos.vencidas.length === 1 ? "vencida" : "vencidas"}`,
+                    grupos.porVencer.length > 0 && `${grupos.porVencer.length} por vencer`,
+                    grupos.programadas.length + cuotasPendientes.length > 0 &&
+                      `${grupos.programadas.length + cuotasPendientes.length} ${
+                        grupos.programadas.length + cuotasPendientes.length === 1 ? "programada" : "programadas"
+                      }`,
+                    cantidadPagadas > 0 &&
+                      `${cantidadPagadas} ${cantidadPagadas === 1 ? "pagada" : "pagadas"}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+            </p>
+          </div>
+        </div>
         {hayAlgo && (
-          <p className="text-xs text-texto-tenue">
+          <div className="text-right">
+            <p className="text-xs text-texto-tenue">{totalPendiente > 0 ? "Falta pagar" : "Este mes"}</p>
             {totalPendiente > 0 ? (
-              <>
-                falta pagar{" "}
-                <span className="cifra font-medium text-texto">
-                  {formatearCLP(totalPendiente)}
-                </span>
-              </>
+              <p className="cifra text-xl font-bold tracking-tight">{formatearCLP(totalPendiente)}</p>
             ) : (
-              <span className="text-exito">todo pagado</span>
+              <p className="text-base font-bold text-exito">todo pagado</p>
             )}
-          </p>
+          </div>
         )}
       </div>
 
       {vencidas.length > 0 && (
-        <p className="mx-4 mb-3 flex items-center gap-2 rounded-md bg-superficie-tenue px-3 py-2 text-xs text-peligro">
-          <Icono nombre="alert" tamano={14} />
+        <p
+          role="status"
+          className="mx-5 mb-4 flex items-start gap-2 rounded-lg border border-peligro/40 bg-peligro/10 px-3 py-2.5 text-[13px] text-peligro"
+        >
+          <span className="mt-px shrink-0">
+            <Icono nombre="alert" tamano={15} />
+          </span>
           <span>
             {vencidas.length === 1
-              ? "Hay una cuenta vencida sin pagar."
-              : `Hay ${vencidas.length} cuentas vencidas sin pagar.`}
+              ? `Tienes una cuenta vencida por ${formatearCLP(suma(grupos.vencidas))}.`
+              : `Tienes ${vencidas.length} cuentas vencidas por ${formatearCLP(suma(grupos.vencidas))}.`}{" "}
+            Págala{vencidas.length === 1 ? "" : "s"} hoy para evitar intereses y cobros por mora.
           </span>
         </p>
       )}
 
       {!hayAlgo ? (
-        <p className="border-t border-borde px-4 py-8 text-center text-sm text-texto-tenue">
+        <p className="border-t border-borde px-5 py-8 text-center text-sm text-texto-tenue">
           No tienes cuentas ni cuotas en este mes.
         </p>
       ) : (
-        <div className="grid border-t border-borde lg:grid-cols-2 lg:divide-x lg:divide-borde">
-          <Columna
-            titulo="Pendientes"
-            total={totalPendiente}
-            vacio="No queda nada por pagar este mes."
-          >
-            {[
-              ...pendientes.map((c) => fila(c, vencidasPorId.has(c.id))),
-              ...cuotasPendientes.map(filaCuota),
-            ]}
-          </Columna>
+        <div className="border-t border-borde">
+          {totalPendiente === 0 && (
+            <p className="flex items-center gap-2 px-5 py-4 text-sm text-exito">
+              <Icono nombre="check" tamano={16} />
+              Estás al día: no queda nada por pagar este mes.
+            </p>
+          )}
 
-          <Columna
-            titulo="Pagadas"
-            total={totalPagado}
-            vacio="Todavía no pagas nada este mes."
+          <Grupo titulo="Vencidas" tono="peligro" cantidad={grupos.vencidas.length} total={suma(grupos.vencidas)}>
+            {grupos.vencidas.map((c) => fila(c, true))}
+          </Grupo>
+
+          <Grupo titulo="Por vencer · 7 días" tono="alerta" cantidad={grupos.porVencer.length} total={suma(grupos.porVencer)}>
+            {grupos.porVencer.map((c) => fila(c, false))}
+          </Grupo>
+
+          <Grupo
+            titulo="Programadas"
+            tono="neutro"
+            cantidad={grupos.programadas.length + cuotasPendientes.length}
+            total={totalProgramado}
+            plegado={grupos.vencidas.length + grupos.porVencer.length > 0}
           >
-            {[...pagadas.map((c) => fila(c, false)), ...cuotasPagadas.map(filaCuota)]}
-          </Columna>
+            {[...grupos.programadas.map((c) => fila(c, false)), ...cuotasPendientes.map(filaCuota)]}
+          </Grupo>
+
+          {cantidadPagadas > 0 && (
+            <details className="group border-t border-borde">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 text-sm font-semibold text-texto-tenue transition-colors duration-150 hover:bg-exito/5 hover:text-texto [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2">
+                  <span className="text-exito">
+                    <Icono nombre="check" tamano={15} />
+                  </span>
+                  Pagadas este mes · {cantidadPagadas}
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="cifra font-normal">{formatearCLP(totalPagado)}</span>
+                  <span className="transition-transform duration-150 group-open:rotate-180">
+                    <Icono nombre="chevron-down" tamano={16} />
+                  </span>
+                </span>
+              </summary>
+              <ul className="border-t border-borde">
+                {[...pagadas.map((c) => fila(c, false)), ...cuotasPagadas.map(filaCuota)]}
+              </ul>
+            </details>
+          )}
         </div>
       )}
 
-      {children}
+      <div className="mt-auto px-1 pb-1">{children}</div>
     </section>
   );
 }
