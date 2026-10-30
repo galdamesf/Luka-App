@@ -29,8 +29,9 @@ export function FilaCuotaPago({
   const pagada = cuota.pagada;
 
   return (
-    <li className="border-b border-borde px-4 py-2.5 last:border-0">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <li className={`fila-viva border-b border-borde px-5 py-2 last:border-0 ${pagada ? "viva-exito" : "viva-avance"}`}>
+      {/* Una sola linea: nombre, numero de cuota, el boton y el monto. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <p className="flex min-w-0 items-center gap-1.5 text-sm">
           {pagada && (
             <span className="shrink-0 text-exito">
@@ -46,7 +47,7 @@ export function FilaCuotaPago({
           </span>
         </p>
 
-        <div className="flex basis-full flex-wrap items-center gap-x-3 text-xs text-texto-tenue sm:flex-1 sm:basis-auto">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 text-xs text-texto-tenue">
           <span className="whitespace-nowrap">
             cuota <span className="cifra">{cuota.numero}</span> de{" "}
             <span className="cifra">{deuda.cuotasTotales}</span>
@@ -56,25 +57,30 @@ export function FilaCuotaPago({
           )}
         </div>
 
-        <span
-          className={`cifra ml-auto shrink-0 text-sm tabular-nums ${
-            pagada ? "text-texto-tenue" : "font-medium"
-          }`}
-        >
-          {formatearCLP(cuota.montoPagado ?? deuda.montoCuota)}
-        </span>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <ControlEstadoPago
+            enLinea
+            pagado={pagada}
+            accionPagar={alMarcarPagada}
+            camposPagar={{ deudaId: deuda.id, mes, hoy, monto: String(deuda.montoCuota) }}
+            accionRevertir={alRevertir}
+            camposRevertir={{ deudaId: deuda.id, mes }}
+            queEs={`la cuota de ${deuda.nombre}`}
+            monto={cuota.montoPagado ?? deuda.montoCuota}
+            categoria={CATEGORIA_CUOTAS}
+          />
+          <span
+            className={`cifra min-w-[5.5rem] text-right text-sm tabular-nums ${
+              pagada ? "text-texto-tenue" : "font-semibold"
+            }`}
+          >
+            {formatearCLP(cuota.montoPagado ?? deuda.montoCuota)}
+          </span>
+          {/* Mismo ancho que los tres botones de una cuenta, para que los
+              montos queden en columna. Las cuotas se editan en Deudas. */}
+          <span aria-hidden="true" className="w-[6.5rem] shrink-0" />
+        </div>
       </div>
-
-      <ControlEstadoPago
-        pagado={pagada}
-        accionPagar={alMarcarPagada}
-        camposPagar={{ deudaId: deuda.id, mes, hoy, monto: String(deuda.montoCuota) }}
-        accionRevertir={alRevertir}
-        camposRevertir={{ deudaId: deuda.id, mes }}
-        queEs={`la cuota de ${deuda.nombre}`}
-        monto={cuota.montoPagado ?? deuda.montoCuota}
-        categoria={CATEGORIA_CUOTAS}
-      />
     </li>
   );
 }

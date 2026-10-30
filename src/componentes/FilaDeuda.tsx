@@ -66,7 +66,7 @@ export function FilaDeuda({
   const pagada = cuota?.pagada === true;
 
   return (
-    <li className="border-b border-borde pb-3 last:border-0 last:pb-0">
+    <li className="fila-viva viva-avance -mx-5 border-b border-borde px-5 py-3 first:pt-2 last:border-0">
       <div className="flex items-baseline justify-between gap-3">
         <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
           {pagada && (

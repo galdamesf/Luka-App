@@ -35,21 +35,36 @@
   --primario: #1e293b;
   --primario-texto: #ffffff;
 
-  /* Dos verdes a proposito: el sobrio para texto, el fuerte para rellenos y
-     barras. En claro el fuerte es green-600 y no green-500: #22c55e sobre
-     blanco da 2.28:1 y no alcanza el 3:1 que pide WCAG 1.4.11 para elementos
-     graficos. En oscuro #22c55e si rinde (6.88:1).
+  /* Las senales siguen al mockup del dashboard: esmeralda para lo sano,
+     ambar para la advertencia y coral (rose) para lo urgente. Dos tonos de
+     cada una a proposito: el sobrio para texto, el fuerte para rellenos y
+     barras.
 
-     Los dos valores del modo claro bajaron al oscurecer la card: sobre
-     #f2f4f7, #16a34a daba 2.99:1 y #dc2626 daba 4.38:1 para texto. Ahora
-     dan 3.75:1 y 4.72:1 sobre la card, y 3.42:1 y 4.44:1 sobre la pagina. Los atraparon los tests de contraste. */
-  --exito: #15803d;
-  --exito-fuerte: #13903e;
+     En claro van un paso mas oscuro que en el mockup, que era solo oscuro:
+     emerald-500 sobre blanco no llega al 3:1 que pide WCAG 1.4.11. Medidos:
+     #047857 da 4.98:1 sobre la card y 4.54:1 sobre la pagina para texto;
+     #059669 da 3.42:1 sobre la card y 3.12:1 sobre la pagina como relleno;
+     #be123c da 5.70:1 sobre la card. Los vigilan los tests de contraste. */
+  --exito: #047857;
+  --exito-fuerte: #059669;
   --alerta: #b45309;
-  --peligro: #d42121;
+  --peligro: #be123c;
   /* Azul de progreso (barras de deuda). No es --foco aunque se parezca: el
      anillo de foco tiene que poder distinguirse de un relleno cualquiera. */
   --avance: #1557c0;
+
+  /* La accion: botones principales, seleccion y CTAs. El indigo-violeta del
+     mockup del dashboard. Es color de ACCION, no de senal, y un test vigila
+     que no se parezca a ninguno de los cuatro. --accion rellena,
+     --accion-texto va encima, y --accion-tinta es el tono para texto e
+     iconos sobre las superficies.
+
+     Tira a violeta y no a indigo puro a proposito: #4f46e5 quedaba a 8.4 en
+     OKLab del azul de --avance, y un boton se leia como barra de deuda.
+     #7c3aed queda a 14.9 y con blanco encima da 5.70:1. */
+  --accion: #7c3aed;
+  --accion-texto: #ffffff;
+  --accion-tinta: #6d28d9;
 
   --foco: #1d4ed8;
 
@@ -107,11 +122,15 @@
     --primario: #f8fafc;
     --primario-texto: #0f172a;
 
-    --exito: #4ade80;
-    --exito-fuerte: #22c55e;
+    --exito: #34d399;
+    --exito-fuerte: #10b981;
     --alerta: #fbbf24;
-    --peligro: #f87171;
+    --peligro: #fb7185;
     --avance: #58a6ff;
+
+    --accion: #a78bfa;
+    --accion-texto: #0f172a;
+    --accion-tinta: #c4b5fd;
 
     --foco: #93c5fd;
 
@@ -133,11 +152,21 @@
   --primario: #f8fafc;
   --primario-texto: #0f172a;
 
-  --exito: #4ade80;
-  --exito-fuerte: #22c55e;
+  /* Las senales del mockup del dashboard, en su version para fondo oscuro:
+     emerald-400/500, amber-400 y rose-400. El coral no es red-500 (#ef4444):
+     sobre la card da 4.08:1 y no alcanza para texto; rose-400 da 5.82:1. */
+  --exito: #34d399;
+  --exito-fuerte: #10b981;
   --alerta: #fbbf24;
-  --peligro: #f87171;
+  --peligro: #fb7185;
   --avance: #58a6ff;
+
+  /* En oscuro el boton es violeta claro con tinta oscura, como --primario.
+     El indigo-600 del mockup daba 2.49:1 contra la card: el boton no se
+     separaba del fondo. #a78bfa da 5.76:1 y su tinta encima, 6.56:1. */
+  --accion: #a78bfa;
+  --accion-texto: #0f172a;
+  --accion-tinta: #c4b5fd;
 
   --foco: #93c5fd;
 
@@ -196,6 +225,9 @@
   --color-alerta: var(--alerta);
   --color-peligro: var(--peligro);
   --color-avance: var(--avance);
+  --color-accion: var(--accion);
+  --color-accion-texto: var(--accion-texto);
+  --color-accion-tinta: var(--accion-tinta);
   --color-pie: var(--pie);
   --color-pie-texto: var(--pie-texto);
   --color-foco: var(--foco);
@@ -215,6 +247,82 @@ body {
 :focus-visible {
   outline: 2px solid var(--foco);
   outline-offset: 2px;
+}
+
+/* Lo comprometido (cuentas y cuotas por pagar) se dibuja rayado, del color
+   del total proyectado: se distingue de lo gastado por el patron y no solo
+   por el color. */
+.rayas-exito,
+.rayas-alerta,
+.rayas-peligro {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--rayas) 0 3px,
+    color-mix(in oklab, var(--rayas) 22%, transparent) 3px 7px
+  );
+}
+.rayas-exito { --rayas: var(--exito-fuerte); }
+.rayas-alerta { --rayas: var(--alerta); }
+.rayas-peligro { --rayas: var(--peligro); }
+
+/* ---------------------------------------------------------------------------
+   Lo que responde al mouse y al teclado. Al pasar por una tarjeta o una fila,
+   se enciende del color de su seccion: asi se sabe donde se esta parado.
+   :focus-within hace lo mismo con el teclado, que es quien mas lo necesita.
+   El hover va dentro de (hover: hover): en celular un toque dejaria la
+   tarjeta encendida pegada.
+   --------------------------------------------------------------------------- */
+.tarjeta-viva {
+  transition: border-color 150ms, box-shadow 150ms, background-color 150ms;
+}
+.tarjeta-viva:focus-within {
+  border-color: color-mix(in oklab, var(--viva, var(--accion)) 60%, var(--borde));
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--viva, var(--accion)) 35%, transparent),
+    0 14px 30px -16px color-mix(in oklab, var(--viva, var(--accion)) 70%, transparent);
+}
+.fila-viva {
+  transition: background-color 150ms, box-shadow 150ms;
+}
+.fila-viva:focus-within {
+  background-color: color-mix(in oklab, var(--viva, var(--accion)) 9%, transparent);
+  box-shadow: inset 3px 0 0 var(--viva, var(--accion));
+}
+@media (hover: hover) {
+  .tarjeta-viva:hover {
+    border-color: color-mix(in oklab, var(--viva, var(--accion)) 60%, var(--borde));
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--viva, var(--accion)) 35%, transparent),
+      0 14px 30px -16px color-mix(in oklab, var(--viva, var(--accion)) 70%, transparent);
+  }
+  .fila-viva:hover {
+    background-color: color-mix(in oklab, var(--viva, var(--accion)) 9%, transparent);
+    box-shadow: inset 3px 0 0 var(--viva, var(--accion));
+  }
+}
+.viva-accion { --viva: var(--accion); }
+.viva-exito { --viva: var(--exito-fuerte); }
+.viva-alerta { --viva: var(--alerta); }
+.viva-peligro { --viva: var(--peligro); }
+.viva-avance { --viva: var(--avance); }
+.viva-acento { --viva: var(--acento); }
+
+/* El aviso flotante entra subiendo un poco. Con movimiento reducido, la
+   regla general de arriba lo deja aparecer sin animacion. */
+@keyframes aviso-entra {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.aviso-entra { animation: aviso-entra 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* El brillo de arriba del dashboard: dos manchas de color, violeta y
+   durazno, para que la pagina no sea un bloque oscuro parejo. Es fondo y
+   nada mas: no lleva informacion. */
+.fondo-panel {
+  background:
+    radial-gradient(55% 60% at 10% 0%, color-mix(in oklab, var(--accion) 24%, transparent), transparent 70%),
+    radial-gradient(40% 50% at 92% 4%, color-mix(in oklab, var(--acento) 20%, transparent), transparent 70%),
+    radial-gradient(35% 40% at 55% 30%, color-mix(in oklab, var(--avance) 10%, transparent), transparent 70%);
 }
 
 /* Las cifras en tablas se leen mejor con ancho fijo por digito. */

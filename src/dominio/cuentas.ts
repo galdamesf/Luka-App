@@ -1,4 +1,4 @@
-import { hoyISO } from "@/lib/fecha";
+import { fechaDesdeISO, hoyISO } from "@/lib/fecha";
 import type { CategoriaPlana } from "./resumen";
 
 export type CuentaPlana = {
@@ -124,4 +124,44 @@ export function mensualesQueFaltan(
       diaVencimiento: c.diaVencimiento,
       categoriaId: c.categoria.id,
     }));
+}
+
+/** Una cuenta que vence dentro de estos dias se avisa como "por vencer". */
+export const DIAS_POR_VENCER = 7;
+
+export type PendientesAgrupadas = {
+  /** Ya paso su fecha y sigue sin pagarse. */
+  vencidas: CuentaPlana[];
+  /** Vence hoy o dentro de DIAS_POR_VENCER. */
+  porVencer: CuentaPlana[];
+  /** Mas adelante, o sin dia de vencimiento. */
+  programadas: CuentaPlana[];
+};
+
+/**
+ * Lo pendiente del mes ordenado por urgencia, que es como se mira a fin de
+ * mes: primero lo atrasado, despues lo de esta semana, despues el resto. El
+ * orden dentro de cada grupo es el de resumirCuentas (por vencimiento).
+ */
+export function agruparPendientes(
+  resumen: ResumenCuentas,
+  diasDelMes: number,
+  hoy: string = hoyISO(),
+): PendientesAgrupadas {
+  const idsVencidas = new Set(resumen.vencidas.map((c) => c.id));
+  const porVencer: CuentaPlana[] = [];
+  const programadas: CuentaPlana[] = [];
+
+  for (const cuenta of resumen.pendientes) {
+    if (idsVencidas.has(cuenta.id)) continue;
+    const vence = fechaDeVencimiento(cuenta, diasDelMes);
+    const dias =
+      vence === null
+        ? null
+        : Math.round((fechaDesdeISO(vence).getTime() - fechaDesdeISO(hoy).getTime()) / 86_400_000);
+    if (dias !== null && dias >= 0 && dias <= DIAS_POR_VENCER) porVencer.push(cuenta);
+    else programadas.push(cuenta);
+  }
+
+  return { vencidas: resumen.pendientes.filter((c) => idsVencidas.has(c.id)), porVencer, programadas };
 }

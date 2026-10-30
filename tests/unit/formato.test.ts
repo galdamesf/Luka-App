@@ -6,6 +6,7 @@ import {
   nombreDelMesCorto,
   porcentajeLegible,
   listaLegible,
+  variacionLegible,
 } from "@/componentes/formato";
 
 describe("nombreDelMes", () => {
@@ -99,5 +100,27 @@ describe("listaLegible", () => {
 
   test("el tope se puede mover", () => {
     expect(listaLegible(["a", "b", "c"], 1)).toBe("a y 2 más");
+  });
+});
+
+describe("variacionLegible", () => {
+  test("lleva signo y coma decimal, con el menos tipografico", () => {
+    expect(variacionLegible(4.17)).toBe("+4,2%");
+    expect(variacionLegible(-4.17)).toBe("−4,2%");
+  });
+
+  test("desde 10 va sin decimales", () => {
+    expect(variacionLegible(12.6)).toBe("+13%");
+    expect(variacionLegible(-48.2)).toBe("−48%");
+  });
+
+  test("lo que redondea a cero no lleva signo", () => {
+    expect(variacionLegible(0)).toBe("0%");
+    expect(variacionLegible(0.04)).toBe("0%");
+    expect(variacionLegible(-0.04)).toBe("0%");
+  });
+
+  test("sin comparacion es una raya, no un cero", () => {
+    expect(variacionLegible(null)).toBe("—");
   });
 });

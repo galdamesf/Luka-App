@@ -22,13 +22,13 @@ export function CuotasPagadas({ cuotas, total }: Props) {
   return (
     <section
       aria-labelledby="titulo-cuotas-pagadas"
-      className="rounded-lg border border-borde bg-superficie p-4"
+      className="tarjeta-viva rounded-xl border border-borde bg-superficie p-5 shadow-sm"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="titulo-cuotas-pagadas" className="flex items-center gap-1.5 text-sm font-semibold">
+        <h3 id="titulo-cuotas-pagadas" className="flex items-center gap-1.5 text-base font-bold">
           <Icono nombre="credit-card" tamano={14} />
           Cuotas pagadas este mes
-        </h2>
+        </h3>
         <p className="text-xs text-texto-tenue">
           <span className="cifra font-medium text-texto">{formatearCLP(total)}</span>
         </p>
