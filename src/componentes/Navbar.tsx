@@ -76,7 +76,8 @@ export function Navbar() {
           <nav aria-label="Secciones" className={abajo ? "ml-1" : "ml-3 sm:ml-5"}>
             <ul className="flex items-center gap-0.5">
               {ENLACES.map(({ href, etiqueta }) => {
-                const activo = ruta === href;
+                // Informes queda marcado tambien en sus subpaginas (el reporte semanal).
+                const activo = href === "/" ? ruta === "/" : ruta === href || ruta.startsWith(`${href}/`);
                 return (
                   <li key={href}>
                     <Link

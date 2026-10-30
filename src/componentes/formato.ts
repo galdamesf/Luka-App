@@ -20,6 +20,20 @@ export function nombreDelMesCorto(mesISO: string): string {
   return `${nombre?.slice(0, 3) ?? mes} ${anio}`;
 }
 
+const DIAS_SEMANA = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"] as const;
+
+/** "2026-10-29" -> "jueves". Se calcula en UTC: la fecha ISO no tiene hora. */
+export function diaDeLaSemana(iso: string): string {
+  const [anio, mes, dia] = iso.split("-").map(Number);
+  return DIAS_SEMANA[new Date(Date.UTC(anio as number, (mes as number) - 1, dia as number)).getUTCDay()] as string;
+}
+
+/** "2026-10-29" -> "jueves 29 de octubre" */
+export function fechaLarga(iso: string): string {
+  const [, mes, dia] = iso.split("-");
+  return `${diaDeLaSemana(iso)} ${Number(dia)} de ${MESES[Number(mes) - 1] ?? mes}`;
+}
+
 /** "2026-10-27" -> "27 oct" */
 export function fechaCorta(iso: string): string {
   const [, mes, dia] = iso.split("-");

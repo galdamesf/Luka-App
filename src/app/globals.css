@@ -66,6 +66,19 @@
   --accion-texto: #ffffff;
   --accion-tinta: #6d28d9;
 
+  /* Tonos de identidad: distinguen datos que no son ni buenos ni malos (los
+     factores del Health Score, las cifras de la semana). Valen igual en los
+     dos temas, asi que el modo oscuro no los redefine: cada uno pasa 3:1
+     contra fondo, superficie y riel, claros y oscuros, y con un icono
+     blanco encima. Son para rellenos, barras e iconos, NUNCA para texto.
+     Siempre van con nombre o icono propio al lado: el color refuerza, no
+     identifica solo. Lo vigila tests/unit/tonos-identidad.test.ts. */
+  --tono-esmeralda: #059669;
+  --tono-violeta: #8b5cf6;
+  --tono-cielo: #0284c7;
+  --tono-fucsia: #c026d3;
+  --tono-naranja: #c2410c;
+
   --foco: #1d4ed8;
 
   /* El pie es una banda oscura en los dos temas: por eso tiene tokens
@@ -228,6 +241,11 @@
   --color-accion: var(--accion);
   --color-accion-texto: var(--accion-texto);
   --color-accion-tinta: var(--accion-tinta);
+  --color-tono-esmeralda: var(--tono-esmeralda);
+  --color-tono-violeta: var(--tono-violeta);
+  --color-tono-cielo: var(--tono-cielo);
+  --color-tono-fucsia: var(--tono-fucsia);
+  --color-tono-naranja: var(--tono-naranja);
   --color-pie: var(--pie);
   --color-pie-texto: var(--pie-texto);
   --color-foco: var(--foco);
@@ -306,6 +324,11 @@ body {
 .viva-peligro { --viva: var(--peligro); }
 .viva-avance { --viva: var(--avance); }
 .viva-acento { --viva: var(--acento); }
+.viva-esmeralda { --viva: var(--tono-esmeralda); }
+.viva-violeta { --viva: var(--tono-violeta); }
+.viva-cielo { --viva: var(--tono-cielo); }
+.viva-fucsia { --viva: var(--tono-fucsia); }
+.viva-naranja { --viva: var(--tono-naranja); }
 
 /* El aviso flotante entra subiendo un poco. Con movimiento reducido, la
    regla general de arriba lo deja aparecer sin animacion. */
@@ -314,16 +337,6 @@ body {
   to { opacity: 1; transform: none; }
 }
 .aviso-entra { animation: aviso-entra 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
-
-/* El brillo de arriba del dashboard: dos manchas de color, violeta y
-   durazno, para que la pagina no sea un bloque oscuro parejo. Es fondo y
-   nada mas: no lleva informacion. */
-.fondo-panel {
-  background:
-    radial-gradient(55% 60% at 10% 0%, color-mix(in oklab, var(--accion) 24%, transparent), transparent 70%),
-    radial-gradient(40% 50% at 92% 4%, color-mix(in oklab, var(--acento) 20%, transparent), transparent 70%),
-    radial-gradient(35% 40% at 55% 30%, color-mix(in oklab, var(--avance) 10%, transparent), transparent 70%);
-}
 
 /* Las cifras en tablas se leen mejor con ancho fijo por digito. */
 .cifra {

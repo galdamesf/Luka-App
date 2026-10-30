@@ -20,6 +20,7 @@ export type ClienteDb = Pick<
   | "cuenta"
   | "cuotaPagada"
   | "presupuesto"
+  | "ahorro"
   | "$queryRaw"
 >;
 

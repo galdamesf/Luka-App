@@ -262,6 +262,26 @@ export const esquemaEdicionPresupuestoFormulario = z.object({
 export type EdicionPresupuestoValidado = z.infer<typeof esquemaEdicionPresupuestoFormulario>;
 
 // ---------------------------------------------------------------------------
+// Ahorros
+// ---------------------------------------------------------------------------
+
+/** Un ahorro del mes: cuanto y, si se quiere, para que. */
+export const esquemaAhorroFormulario = z.object({
+  mes: esquemaMes,
+  monto: campoMonto(false),
+  nota: z
+    .string()
+    .trim()
+    .max(120, "La nota no puede pasar de 120 caracteres.")
+    .transform((valor) => (valor === "" ? null : valor))
+    .nullable()
+    .optional()
+    .transform((valor) => valor ?? null),
+});
+
+export type AhorroValidado = z.infer<typeof esquemaAhorroFormulario>;
+
+// ---------------------------------------------------------------------------
 // Cuentas por pagar
 // ---------------------------------------------------------------------------
 

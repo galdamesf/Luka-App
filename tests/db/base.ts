@@ -14,6 +14,6 @@ export function clienteDePrueba(): PrismaClient {
  */
 export async function limpiar(prisma: PrismaClient): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "gastos", "categorias", "sueldos", "deudas" RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE "gastos", "categorias", "sueldos", "deudas", "ahorros" RESTART IDENTITY CASCADE',
   );
 }

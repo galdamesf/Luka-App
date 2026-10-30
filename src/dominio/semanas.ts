@@ -153,6 +153,49 @@ export function ritmoSemanal(
   };
 }
 
+export type NivelSemana = "bajo" | "normal" | "alto" | "muy-alto";
+
+/**
+ * Donde corta cada nivel, como veces el ritmo discrecional del mes: hasta
+ * 0.85 es bajo, hasta 1.15 es normal (±15% es ruido de una semana a otra),
+ * hasta 1.5 es alto y de ahi para arriba, muy alto.
+ */
+export const CORTES_NIVEL = { bajo: 0.85, normal: 1.15, alto: 1.5 } as const;
+
+/**
+ * Que tan cargada fue una semana: su gasto discrecional por dia contra el
+ * del mes. Discrecional y no total porque el arriendo hace que la primera
+ * semana siempre parezca la peor, y eso no es algo que se pueda corregir.
+ *
+ * `veces` es la razon: 1 es exactamente el ritmo del mes.
+ *
+ * null si todavia no se puede decir: la semana no empieza, no tiene ningun
+ * gasto registrado (casi siempre es que no se anoto, no que no se gasto: no
+ * se puede llamar "baja"), el mes no tiene gasto discrecional, o la semana en
+ * curso aun no gasta nada discrecional (el primer dia del bloque se leeria
+ * como "bajo" sin serlo).
+ */
+export function nivelDeSemana(
+  semana: SemanaDelMes,
+  ritmo: Pick<RitmoSemanal, "discrecionalDiario">,
+): { nivel: NivelSemana; veces: number } | null {
+  if (semana.diasTranscurridos === 0 || semana.cantidad === 0) return null;
+  if (semana.enCurso && semana.discrecionales === 0) return null;
+  const delMes = ritmo.discrecionalDiario;
+  if (delMes === null || delMes === 0) return null;
+
+  const veces = semana.discrecionales / semana.diasTranscurridos / delMes;
+  const nivel: NivelSemana =
+    veces <= CORTES_NIVEL.bajo
+      ? "bajo"
+      : veces <= CORTES_NIVEL.normal
+        ? "normal"
+        : veces <= CORTES_NIVEL.alto
+          ? "alto"
+          : "muy-alto";
+  return { nivel, veces };
+}
+
 /**
  * Cuanto habras gastado al cerrar el mes si sigues igual.
  *

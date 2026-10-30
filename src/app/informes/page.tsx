@@ -24,6 +24,9 @@ import {
   TarjetaComparacion,
 } from "@/componentes/PiezasInforme";
 import { formatearCLP, nombreDelMes } from "@/componentes/formato";
+import { Icono } from "@/componentes/Icono";
+import { urlReporte } from "@/componentes/textos-reporte";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -70,8 +73,15 @@ export default async function Informes({ searchParams }: Props) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="no-imprimir">
-            <SelectorMes mes={mes} />
+            <SelectorMes mes={mes} ruta="/informes" />
           </div>
+          <Link
+            href={urlReporte(mes)}
+            className="no-imprimir inline-flex cursor-pointer items-center gap-2 rounded-md bg-accion px-3 py-2 text-sm font-bold text-accion-texto transition-[filter] duration-150 hover:brightness-110"
+          >
+            <Icono nombre="file-text" tamano={15} />
+            Reporte semanal
+          </Link>
           <BotonImprimir />
         </div>
       </header>

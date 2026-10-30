@@ -1,9 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import type { RitmoSemanal as Ritmo } from "@/dominio/semanas";
+import { nivelDeSemana, type RitmoSemanal as Ritmo, type SemanaDelMes } from "@/dominio/semanas";
 import { Icono } from "./Icono";
+import type { NombreIcono } from "./iconos";
 import { formatearCLP, variacionLegible } from "./formato";
+import { TONOS, type Tono } from "./tonos";
+import { NIVEL, NIVELES_LEYENDA } from "./niveles-semana";
+import { FichaTono } from "./FichaTono";
+import { urlPdfReporte, urlReporte } from "./textos-reporte";
 
 type Props = {
   ritmo: Ritmo;
@@ -18,6 +24,11 @@ const ALTO_BARRA = 180;
 function milesCorto(monto: number): string {
   return `$${new Intl.NumberFormat("es-CL").format(Math.round(monto / 1000))} mil`;
 }
+
+const UN_DECIMAL = new Intl.NumberFormat("es-CL", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+
+
 
 /**
  * El mes en bloques de 7 dias. Las barras y las pestanas eligen la misma
@@ -34,6 +45,11 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
 
   const semana = ritmo.semanas.find((s) => s.semana === elegida) ?? ritmo.semanas[0];
   if (semana === undefined) return null;
+
+  const nivelDe = (s: SemanaDelMes) => nivelDeSemana(s, ritmo);
+  const estiloDe = (s: SemanaDelMes) => NIVEL[nivelDe(s)?.nivel ?? "sin"];
+  const nivel = nivelDe(semana);
+  const estilo = NIVEL[nivel?.nivel ?? "sin"];
 
   const tope = soloDiscrecional ? ritmo.maximoDiscrecional : ritmo.maximo;
   const valorDe = (s: (typeof ritmo.semanas)[number]) => (soloDiscrecional ? s.discrecionales : s.total);
@@ -77,10 +93,14 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
                   type="button"
                   aria-pressed={activa}
                   onClick={() => setElegida(s.semana)}
-                  className={`min-h-10 cursor-pointer rounded-lg px-3 text-sm font-bold transition-colors duration-150 ${
-                    activa ? "bg-accion text-accion-texto" : "text-texto-tenue hover:text-texto"
+                  className={`inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold transition-colors duration-150 ${
+                    activa ? "bg-accion text-accion-texto" : "text-texto-tenue hover:bg-superficie hover:text-texto"
                   }`}
                 >
+                  <span
+                    aria-hidden="true"
+                    className={`size-2.5 rounded-full ${estiloDe(s).lleno} ${activa ? "ring-2 ring-accion-texto/80" : ""}`}
+                  />
                   Semana {s.semana}
                 </button>
               );
@@ -92,15 +112,15 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
           {/* --- Las barras --- */}
           <div className="min-w-0 flex-[5_1_26rem] space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-texto-tenue">
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
                 <span className="inline-flex items-center gap-1.5">
-                  <span aria-hidden="true" className="size-2.5 rounded-sm bg-accion" />
-                  Discrecional
+                  <span aria-hidden="true" className="size-2.5 rounded-sm bg-texto-tenue" />
+                  Lleno: discrecional
                 </span>
                 {!soloDiscrecional && (
                   <span className="inline-flex items-center gap-1.5">
-                    <span aria-hidden="true" className="size-2.5 rounded-sm bg-texto-tenue/60" />
-                    Esencial
+                    <span aria-hidden="true" className="size-2.5 rounded-sm bg-texto-tenue/35" />
+                    Suave: esencial
                   </span>
                 )}
               </div>
@@ -137,46 +157,62 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
                 const valor = valorDe(s);
                 const alto = tope === 0 || valor === 0 ? 2 : Math.max(4, Math.round((valor / tope) * ALTO_BARRA));
                 const esencial = soloDiscrecional ? 0 : s.esenciales;
+                const estiloBarra = estiloDe(s);
                 return (
                   <button
                     key={s.semana}
                     type="button"
                     onClick={() => setElegida(s.semana)}
                     aria-pressed={activa}
-                    aria-label={`Semana ${s.semana}, días ${s.desde} al ${s.hasta}: ${formatearCLP(valor)}`}
+                    aria-label={`Semana ${s.semana}, días ${s.desde} al ${s.hasta}: ${formatearCLP(valor)}, ritmo ${estiloBarra.nombre.toLowerCase()}`}
                     className={`flex h-full cursor-pointer flex-col items-center justify-end gap-2 rounded-t-lg border border-b-0 pt-2 transition-colors duration-150 ${
                       activa ? "border-accion/50 bg-accion/10" : "border-transparent hover:bg-superficie-tenue"
                     }`}
                   >
-                    <span className={`cifra text-[11px] font-semibold ${activa ? "text-texto" : "text-texto-tenue"}`}>
+                    <span className={`cifra text-[11px] font-bold ${estiloBarra.texto}`}>
                       {valor === 0 ? "—" : milesCorto(valor)}
                     </span>
                     <span
                       aria-hidden="true"
                       className={`flex w-3/5 flex-col overflow-hidden rounded-t-md transition-[height,opacity] duration-500 ${
-                        activa ? "opacity-100" : "opacity-55"
+                        activa ? "opacity-100" : "opacity-80"
                       }`}
                       style={{ height: alto }}
                     >
-                      <span className="block bg-accion" style={{ flex: `${s.discrecionales} 1 0px` }} />
-                      <span className="block bg-texto-tenue/60" style={{ flex: `${esencial} 1 0px` }} />
+                      <span className={`block ${estiloBarra.lleno}`} style={{ flex: `${s.discrecionales} 1 0px` }} />
+                      <span className={`block ${estiloBarra.suave}`} style={{ flex: `${esencial} 1 0px` }} />
                     </span>
                   </button>
                 );
               })}
             </div>
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${ritmo.semanas.length}, minmax(0, 1fr))` }}>
-              {ritmo.semanas.map((s) => (
-                <span key={s.semana} className="flex flex-col items-center text-center">
-                  <span className={`text-[13px] font-bold ${s.semana === semana.semana ? "text-texto" : "text-texto-tenue"}`}>
-                    Sem {s.semana}
+              {ritmo.semanas.map((s) => {
+                const estiloBarra = estiloDe(s);
+                return (
+                  <span key={s.semana} className="flex flex-col items-center text-center">
+                    <span className={`text-[13px] font-bold ${s.semana === semana.semana ? "text-texto" : "text-texto-tenue"}`}>
+                      Sem {s.semana}
+                    </span>
+                    <span className="text-[11px] text-texto-tenue">
+                      {s.desde}–{s.hasta}
+                    </span>
+                    {nivelDe(s) !== null && (
+                      <span className={`text-[11px] font-bold ${estiloBarra.texto}`}>{estiloBarra.nombre.toLowerCase()}</span>
+                    )}
                   </span>
-                  <span className="text-[11px] text-texto-tenue">
-                    {s.desde}–{s.hasta}
-                  </span>
+                );
+              })}
+            </div>
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-texto-tenue">
+              <span>Color según el gasto discrecional por día, contra tu promedio del mes:</span>
+              {NIVELES_LEYENDA.map((n) => (
+                <span key={n} className="inline-flex items-center gap-1">
+                  <span aria-hidden="true" className={`size-2 rounded-full ${NIVEL[n].lleno}`} />
+                  {NIVEL[n].nombre}
                 </span>
               ))}
-            </div>
+            </p>
           </div>
 
           {/* --- El detalle de la semana elegida --- */}
@@ -190,17 +226,34 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
                 {semana.enCurso && ` · van ${semana.diasTranscurridos} de ${totalDias}`}
               </p>
               <p className="cifra text-3xl font-bold tracking-tight">{formatearCLP(semana.total)}</p>
+              {nivel !== null && (
+                <p className={`inline-flex min-h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-bold ${estilo.pildora}`}>
+                  <span aria-hidden="true" className={`size-2 rounded-full ${estilo.lleno}`} />
+                  Ritmo {estilo.nombre.toLowerCase()} · {UN_DECIMAL.format(nivel.veces)}× tu promedio diario discrecional
+                </p>
+              )}
             </div>
 
+            {/* Promedio y esencial llevan su color fijo; lo discrecional, el
+                del ritmo de la semana, igual que la parte llena de la barra. */}
             <div className="grid grid-cols-3 gap-2">
               {[
-                ["Promedio diario", semana.promedioDiario === null ? "—" : formatearCLP(semana.promedioDiario)],
-                ["Esencial", formatearCLP(semana.esenciales)],
-                ["Discrecional", formatearCLP(semana.discrecionales)],
-              ].map(([nombre, valor]) => (
-                <div key={nombre} className="min-w-0 rounded-lg border border-borde bg-superficie-tenue px-3 py-2.5">
-                  <p className="text-[11px] text-texto-tenue">{nombre}</p>
-                  <p className="cifra truncate text-sm font-bold">{valor}</p>
+                {
+                  nombre: "Promedio diario",
+                  valor: semana.promedioDiario === null ? "—" : formatearCLP(semana.promedioDiario),
+                  franja: TONOS.violeta.barra,
+                  viva: TONOS.violeta.viva,
+                },
+                { nombre: "Esencial", valor: formatearCLP(semana.esenciales), franja: TONOS.cielo.barra, viva: TONOS.cielo.viva },
+                { nombre: "Discrecional", valor: formatearCLP(semana.discrecionales), franja: estilo.lleno, viva: estilo.viva },
+              ].map((t) => (
+                <div
+                  key={t.nombre}
+                  className={`tarjeta-viva ${t.viva} relative min-w-0 overflow-hidden rounded-lg border border-borde bg-superficie-tenue px-3 pb-2.5 pt-3.5`}
+                >
+                  <span aria-hidden="true" className={`absolute inset-x-0 top-0 h-1 ${t.franja}`} />
+                  <p className="text-[11px] text-texto-tenue">{t.nombre}</p>
+                  <p className="cifra truncate text-sm font-bold">{t.valor}</p>
                 </div>
               ))}
             </div>
@@ -274,44 +327,79 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
             ) : (
               <p className="border-t border-borde pt-3 text-sm text-texto-tenue">Sin gastos en esta semana.</p>
             )}
+
+            {/* El reporte completo de la semana elegida: cada gasto, en pantalla o en PDF. */}
+            <div className="no-imprimir flex flex-wrap gap-2 border-t border-borde pt-3">
+              <Link
+                href={urlReporte(ritmo.mes, semana.semana)}
+                className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-borde px-3 text-sm font-semibold transition-colors duration-150 hover:bg-superficie-tenue"
+              >
+                <Icono nombre="file-text" tamano={16} />
+                Ver reporte de la semana {semana.semana}
+              </Link>
+              <a
+                href={urlPdfReporte(ritmo.mes, semana.semana)}
+                download
+                className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg bg-accion px-3 text-sm font-bold text-accion-texto transition-[filter] duration-150 hover:brightness-110"
+              >
+                <Icono nombre="download" tamano={16} />
+                Descargar PDF
+              </a>
+            </div>
           </div>
         </div>
       </article>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          {
-            nombre: "Promedio por semana",
-            valor: ritmo.promedioSemanal === null ? "—" : formatearCLP(ritmo.promedioSemanal),
-            nota: "Lo de cada 7 días, sobre los días que van",
-            tono: "text-texto",
-          },
-          {
-            nombre: "Promedio diario",
-            valor: ritmo.promedioDiario === null ? "—" : formatearCLP(ritmo.promedioDiario),
-            nota: "Sin contar las cuotas de deudas",
-            tono: "text-texto",
-          },
-          {
-            nombre: "Semana más alta",
-            valor: masAlta === undefined ? "—" : `Semana ${masAlta.semana}`,
-            nota: masAlta === undefined ? "Todavía no hay gastos" : `${formatearCLP(masAlta.total)} · días ${masAlta.desde} al ${masAlta.hasta}`,
-            tono: "text-texto",
-          },
-          {
-            nombre: "Proyección al cierre",
-            valor: proyeccion === null ? "—" : formatearCLP(proyeccion),
-            nota:
-              proyeccion === null
-                ? "Solo para el mes en curso"
-                : `Si sigues igual${proyeccionPctSueldo === null ? "" : ` · ${Math.round(proyeccionPctSueldo)}% del sueldo`}`,
-            tono: proyeccion === null ? "text-texto" : tonoProyeccion,
-          },
-        ].map((t) => (
-          <div key={t.nombre} className="tarjeta-viva min-w-0 rounded-xl border border-borde bg-superficie p-4 shadow-sm">
-            <p className="text-xs text-texto-tenue">{t.nombre}</p>
-            <p className={`cifra mt-1 text-xl font-bold tracking-tight ${t.tono}`}>{t.valor}</p>
-            <p className="mt-0.5 text-xs text-texto-tenue">{t.nota}</p>
+        {(
+          [
+            {
+              nombre: "Promedio por semana",
+              valor: ritmo.promedioSemanal === null ? "—" : formatearCLP(ritmo.promedioSemanal),
+              nota: "Lo de cada 7 días, sobre los días que van",
+              color: "text-texto",
+              tono: "cielo",
+              icono: "calendar",
+            },
+            {
+              nombre: "Promedio diario",
+              valor: ritmo.promedioDiario === null ? "—" : formatearCLP(ritmo.promedioDiario),
+              nota: "Sin contar las cuotas de deudas",
+              color: "text-texto",
+              tono: "violeta",
+              icono: "clock",
+            },
+            {
+              nombre: "Semana más alta",
+              valor: masAlta === undefined ? "—" : `Semana ${masAlta.semana}`,
+              nota: masAlta === undefined ? "Todavía no hay gastos" : `${formatearCLP(masAlta.total)} · días ${masAlta.desde} al ${masAlta.hasta}`,
+              color: "text-texto",
+              tono: "fucsia",
+              icono: "trending-up",
+            },
+            {
+              nombre: "Proyección al cierre",
+              valor: proyeccion === null ? "—" : formatearCLP(proyeccion),
+              nota:
+                proyeccion === null
+                  ? "Solo para el mes en curso"
+                  : `Si sigues igual${proyeccionPctSueldo === null ? "" : ` · ${Math.round(proyeccionPctSueldo)}% del sueldo`}`,
+              color: proyeccion === null ? "text-texto" : tonoProyeccion,
+              tono: "naranja",
+              icono: "arrow-right",
+            },
+          ] satisfies { nombre: string; valor: string; nota: string; color: string; tono: Tono; icono: NombreIcono }[]
+        ).map((t) => (
+          <div
+            key={t.nombre}
+            className={`tarjeta-viva ${TONOS[t.tono].viva} flex min-w-0 items-start gap-3 rounded-xl border border-borde bg-superficie p-4 shadow-sm`}
+          >
+            <FichaTono tono={t.tono} icono={t.icono} />
+            <div className="min-w-0">
+              <p className="text-xs text-texto-tenue">{t.nombre}</p>
+              <p className={`cifra mt-1 text-xl font-bold tracking-tight ${t.color}`}>{t.valor}</p>
+              <p className="mt-0.5 text-xs text-texto-tenue">{t.nota}</p>
+            </div>
           </div>
         ))}
       </div>

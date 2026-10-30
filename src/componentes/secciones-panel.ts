@@ -1,11 +1,20 @@
 /**
- * Las seis secciones del dashboard, en orden. El indice de arriba y los
+ * Las secciones del dashboard, en orden. El indice de arriba y los
  * encabezados de cada seccion salen de aca, asi no se desordenan entre si.
  */
 export const SECCIONES_PANEL = {
+  queda: {
+    id: "queda",
+    numero: "01",
+    etiqueta: "Lo que queda",
+    color: "exito",
+    icono: "piggy-bank",
+    titulo: "Lo que te queda y lo que ahorras",
+    bajada: "Tu sueldo menos todo lo que ya tiene destino: pagos, cuentas, cuotas, presupuestos y ahorro.",
+  },
   resumen: {
     id: "resumen",
-    numero: "01",
+    numero: "02",
     etiqueta: "Resumen",
     color: "accion",
     icono: "trending-up",
@@ -14,7 +23,7 @@ export const SECCIONES_PANEL = {
   },
   registro: {
     id: "registro",
-    numero: "02",
+    numero: "03",
     etiqueta: "Registro y pagos",
     color: "acento",
     icono: "receipt",
@@ -23,7 +32,7 @@ export const SECCIONES_PANEL = {
   },
   salud: {
     id: "salud",
-    numero: "03",
+    numero: "04",
     etiqueta: "Salud financiera",
     color: "exito",
     icono: "heart-pulse",
@@ -32,7 +41,7 @@ export const SECCIONES_PANEL = {
   },
   semanas: {
     id: "semanas",
-    numero: "04",
+    numero: "05",
     etiqueta: "Ritmo semanal",
     color: "avance",
     icono: "activity",
@@ -41,7 +50,7 @@ export const SECCIONES_PANEL = {
   },
   presupuestos: {
     id: "presupuestos",
-    numero: "05",
+    numero: "06",
     etiqueta: "Presupuestos",
     color: "alerta",
     icono: "wallet",
@@ -50,7 +59,7 @@ export const SECCIONES_PANEL = {
   },
   movimientos: {
     id: "movimientos",
-    numero: "06",
+    numero: "07",
     etiqueta: "Movimientos",
     color: "accion",
     icono: "table",

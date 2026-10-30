@@ -203,3 +203,24 @@ model Presupuesto {
   @@index([mes])
   @@map("presupuestos")
 }
+
+/// Plata que se aparta como ahorro en un mes.
+///
+/// Puede haber varios en el mismo mes (lo que se guarda al recibir el sueldo,
+/// lo que sobra a fin de mes...). Se descuentan de lo que te queda del mes y
+/// se suman al total ahorrado. No van a ninguna categoria porque no son un
+/// gasto: la plata sigue siendo tuya.
+model Ahorro {
+  id            String   @id @default(cuid())
+  /// Mes al que corresponde, guardado como el dia 1.
+  mes           DateTime @db.Date
+  /// Pesos chilenos enteros, mayor que cero (constraint en la migracion).
+  monto         Int
+  /// Para que es: "Fondo de emergencia", "Vacaciones". Opcional.
+  nota          String?  @db.VarChar(120)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@index([mes])
+  @@map("ahorros")
+}
