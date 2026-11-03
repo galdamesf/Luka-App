@@ -71,11 +71,13 @@ import { KpisDelMes } from "@/componentes/KpisDelMes";
 import { BarraDelMes } from "@/componentes/BarraDelMes";
 import { LoQueQueda } from "@/componentes/LoQueQueda";
 import { Ahorros } from "@/componentes/Ahorros";
+import { Bienvenida, type ResumenBienvenida } from "@/componentes/Bienvenida";
+import { auth } from "@/auth";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
-  searchParams: Promise<{ mes?: string }>;
+  searchParams: Promise<{ mes?: string; bienvenida?: string }>;
 };
 
 export default async function Home({ searchParams }: Props) {
@@ -238,8 +240,29 @@ export default async function Home({ searchParams }: Props) {
         ? "Mes cerrado: así terminó."
         : "Mes que viene: aquí ves lo que ya está programado.";
 
+  // El saludo, solo al volver del ingreso con Google: la pantalla de ingreso
+  // redirige a "/?bienvenida=1". Usa las mismas cifras del panel.
+  let bienvenida: ResumenBienvenida | null = null;
+  if (parametros.bienvenida === "1") {
+    const sesion = await auth();
+    const nombre = sesion?.user?.name?.trim().split(/\s+/)[0] ?? "";
+    bienvenida = {
+      nombre: nombre === "" ? null : nombre,
+      mes: nombreDelMes(mes).split(" ")[0] ?? nombreDelMes(mes),
+      rango: diaInicioMes === 1 ? null : rangoCorto(periodo.desde, periodo.hasta),
+      diasRestantes,
+      sinSueldo: panel.sinSueldo,
+      libre: queda.libre,
+      porPagar: panel.porPagar,
+      cuentasVencidas: panel.cuentasVencidas,
+      montoVencido: panel.montoVencido,
+      puntaje: salud.puntaje,
+    };
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+      {bienvenida !== null && <Bienvenida resumen={bienvenida} />}
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">

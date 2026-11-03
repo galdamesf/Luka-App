@@ -49,7 +49,8 @@ export default async function Ingresar({
           className="mt-6"
           action={async () => {
             "use server";
-            await signIn("google", { redirectTo: "/" });
+            // ?bienvenida=1 hace que el panel salude al llegar (y solo esta vez).
+            await signIn("google", { redirectTo: "/?bienvenida=1" });
           }}
         >
           <button type="submit" className="boton-google w-full cursor-pointer">
