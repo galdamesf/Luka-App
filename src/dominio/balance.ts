@@ -40,6 +40,10 @@ export type CuotaDelMes = {
   pagadaEn: string | null;
   /** Lo que se pago de verdad, que puede diferir de la cuota pactada. */
   montoPagado: number | null;
+  /** El gasto que se creo al pagarla: de ahi cuelga la boleta. null si sigue pendiente. */
+  gastoId: string | null;
+  /** La foto de la boleta del pago, si tiene. */
+  boletaArchivo: string | null;
 };
 
 /** Un pago de cuota ya registrado. */
@@ -50,6 +54,10 @@ export type PagoCuota = {
   /** Dia exacto del pago, "YYYY-MM-DD". */
   pagadaEn: string;
   monto: number;
+  /** El gasto que genero el pago, si sigue existiendo. */
+  gastoId?: string | null;
+  /** La foto de la boleta de ese gasto, si tiene. */
+  boletaArchivo?: string | null;
 };
 
 export type Balance = {
@@ -111,6 +119,8 @@ export function cuotaEnMes(deuda: DeudaPlana, mes: string): CuotaDelMes | null {
     pagada: false,
     pagadaEn: null,
     montoPagado: null,
+    gastoId: null,
+    boletaArchivo: null,
   };
 }
 
@@ -168,6 +178,8 @@ export function calcularBalance({
         pagada: pago !== undefined,
         pagadaEn: pago?.pagadaEn ?? null,
         montoPagado: pago?.monto ?? null,
+        gastoId: pago?.gastoId ?? null,
+        boletaArchivo: pago?.boletaArchivo ?? null,
       };
     })
     // De mayor a menor; a igual monto, por nombre, para que el orden no baile.

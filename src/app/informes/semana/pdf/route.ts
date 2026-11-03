@@ -3,6 +3,8 @@ import { listarGastosDelMes } from "@/datos/gastos";
 import { armarReporteSemanal } from "@/dominio/reporte-semanal";
 import { esquemaMes } from "@/dominio/esquemas";
 import { hoyISO } from "@/lib/fecha";
+import { periodoDe } from "@/lib/periodo";
+import { leerAjustes } from "@/datos/ajustes";
 import { generarPdfReporteSemanal, nombreArchivoReporte } from "@/lib/pdf-reporte-semanal";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +28,12 @@ export async function GET(peticion: Request) {
     return new Response("Mes o semana no válidos.", { status: 400 });
   }
 
-  const gastos = await listarGastosDelMes(mes.data);
-  const reporte = armarReporteSemanal(gastos, mes.data, semana, hoyISO());
+  // El mismo corte de mes que el dashboard: con dia 27, noviembre va del 27
+  // de octubre al 26 de noviembre.
+  const { diaInicioMes } = await leerAjustes();
+  const periodo = periodoDe(mes.data, diaInicioMes);
+  const gastos = await listarGastosDelMes(periodo);
+  const reporte = armarReporteSemanal(gastos, periodo, semana, hoyISO());
   if (reporte === null) return new Response("Esa semana no existe en el mes.", { status: 404 });
 
   const pdf = await generarPdfReporteSemanal(reporte);

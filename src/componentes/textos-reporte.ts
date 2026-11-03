@@ -1,5 +1,5 @@
 import type { ReporteSemanal } from "@/dominio/reporte-semanal";
-import { nombreDelMes, variacionLegible } from "./formato";
+import { nombreDelMes, rangoLargo, variacionLegible } from "./formato";
 
 /**
  * Las frases del reporte semanal que dicen lo mismo en la pagina y en el
@@ -9,10 +9,9 @@ import { nombreDelMes, variacionLegible } from "./formato";
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 const formatoCLP = new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
 
-/** "29 al 31 de octubre de 2026" */
+/** "29 al 31 de octubre de 2026", o "27 de octubre al 2 de noviembre de 2026" si cruza de mes. */
 export function rangoDeLaSemana(reporte: Pick<ReporteSemanal, "mes" | "fechaDesde" | "fechaHasta">): string {
-  const [mes, anio] = nombreDelMes(reporte.mes).split(" ");
-  return `${Number(reporte.fechaDesde.slice(8, 10))} al ${Number(reporte.fechaHasta.slice(8, 10))} de ${mes} de ${anio}`;
+  return rangoLargo(reporte.fechaDesde, reporte.fechaHasta);
 }
 
 /** "luka-reporte-semana-5-octubre-2026.pdf": sin tildes ni espacios, para cualquier sistema. */

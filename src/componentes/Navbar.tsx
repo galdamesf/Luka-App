@@ -4,13 +4,17 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { InterruptorTema } from "./InterruptorTema";
+import { Icono } from "./Icono";
+import type { NombreIcono } from "./iconos";
 import { Luka } from "./Luka";
 import { usarDesplazamiento } from "./usarDesplazamiento";
 
-const ENLACES = [
+const ENLACES: readonly { href: string; etiqueta: string; icono?: NombreIcono }[] = [
   { href: "/", etiqueta: "Inicio" },
   { href: "/informes", etiqueta: "Informes" },
-] as const;
+  // En celular va solo el icono: con el texto completo, el navbar no cabe.
+  { href: "/como-usar", etiqueta: "¿Cómo usar?", icono: "circle-help" },
+];
 
 /**
  * Navbar flotante, con el mismo diseno que el de Vitalia: arriba va ancho y
@@ -53,7 +57,7 @@ export function Navbar() {
           className={`navbar-luka pointer-events-auto mx-auto flex items-center border transition-[max-width,height,padding,gap,border-radius,border-color,background-color,backdrop-filter] duration-300 ease-out print:border-0 print:bg-transparent ${
             abajo
               ? "h-16 max-w-[640px] gap-1 rounded-full border-borde bg-superficie/90 px-2 backdrop-blur-md sm:max-w-[880px]"
-              : "h-[4.5rem] max-w-6xl gap-3 rounded-[28px] border-transparent bg-transparent px-0 backdrop-blur-none"
+              : "h-[4.5rem] max-w-6xl gap-2 rounded-[28px] sm:gap-3 border-transparent bg-transparent px-0 backdrop-blur-none"
           }`}
         >
           {/* La marca: el dibujo y el nombre son un solo enlace a inicio. */}
@@ -70,12 +74,15 @@ export function Navbar() {
                 abajo ? "h-10 sm:h-11" : "h-10 sm:h-12"
               }`}
             />
-            Luka
+            {/* En celular va solo el dibujo: con tres enlaces, el nombre no
+                cabe y empujaba "Salir" fuera de la pantalla. El nombre lo
+                sigue diciendo el aria-label del enlace. */}
+            <span className="max-sm:sr-only">Luka</span>
           </Link>
 
-          <nav aria-label="Secciones" className={abajo ? "ml-1" : "ml-3 sm:ml-5"}>
+          <nav aria-label="Secciones" className={abajo ? "ml-1" : "ml-1 sm:ml-5"}>
             <ul className="flex items-center gap-0.5">
-              {ENLACES.map(({ href, etiqueta }) => {
+              {ENLACES.map(({ href, etiqueta, icono }) => {
                 // Informes queda marcado tambien en sus subpaginas (el reporte semanal).
                 const activo = href === "/" ? ruta === "/" : ruta === href || ruta.startsWith(`${href}/`);
                 return (
@@ -84,14 +91,24 @@ export function Navbar() {
                       href={`${href}${sufijo}`}
                       aria-current={activo ? "page" : undefined}
                       className={`inline-flex cursor-pointer items-center rounded-full py-2 text-sm font-semibold transition-[color,background-color,padding] duration-300 ${
-                        abajo ? "px-2.5" : "px-3"
+                        // En celular, un poco menos de aire entre enlaces: son tres.
+                        abajo ? "px-2 sm:px-2.5" : "px-2 sm:px-3"
                       } ${
                         activo
                           ? "bg-(--nav-activo) text-(--nav-tinta)"
                           : "text-(--nav-tinta-suave) hover:bg-(--nav-encima) hover:text-(--nav-tinta)"
                       }`}
                     >
-                      {etiqueta}
+                      {icono === undefined ? (
+                        etiqueta
+                      ) : (
+                        <>
+                          <span aria-hidden="true" className="sm:hidden">
+                            <Icono nombre={icono} tamano={18} />
+                          </span>
+                          <span className="sr-only sm:not-sr-only">{etiqueta}</span>
+                        </>
+                      )}
                     </Link>
                   </li>
                 );

@@ -8,7 +8,9 @@ import { calcularBalance } from "@/dominio/balance";
 import { resumirCuentas } from "@/dominio/cuentas";
 import { analizarHistorico } from "@/dominio/estadisticas";
 import { esquemaMes } from "@/dominio/esquemas";
-import { diasEnMesISO, hoyISO, mesActual, sumarMeses } from "@/lib/fecha";
+import { hoyISO } from "@/lib/fecha";
+import { periodoDe, periodoDeFecha, periodoVecino } from "@/lib/periodo";
+import { leerAjustes } from "@/datos/ajustes";
 import { SelectorMes } from "@/componentes/SelectorMes";
 import { BotonImprimir } from "@/componentes/BotonImprimir";
 import { SecuenciaBalance } from "@/componentes/SecuenciaBalance";
@@ -23,7 +25,7 @@ import {
   TablaMedios,
   TarjetaComparacion,
 } from "@/componentes/PiezasInforme";
-import { formatearCLP, nombreDelMes } from "@/componentes/formato";
+import { formatearCLP, nombreDelMes, rangoCorto } from "@/componentes/formato";
 import { Icono } from "@/componentes/Icono";
 import { urlReporte } from "@/componentes/textos-reporte";
 import Link from "next/link";
@@ -34,24 +36,27 @@ type Props = { searchParams: Promise<{ mes?: string }> };
 
 export default async function Informes({ searchParams }: Props) {
   const parametros = await searchParams;
+  const { diaInicioMes } = await leerAjustes();
+  const hoy = hoyISO();
   const elegido = esquemaMes.safeParse(parametros.mes);
-  const mes = elegido.success ? elegido.data : mesActual();
-  const anterior = sumarMeses(mes, -1);
+  const mes = elegido.success ? elegido.data : periodoDeFecha(hoy, diaInicioMes).mes;
+  const periodo = periodoDe(mes, diaInicioMes);
+  const periodoAnterior = periodoVecino(periodo, -1);
 
   const [gastos, gastosAnterior, sueldo, deudas, cuentas, serie] = await Promise.all([
-    listarGastosDelMes(mes),
-    listarGastosDelMes(anterior),
+    listarGastosDelMes(periodo),
+    listarGastosDelMes(periodoAnterior),
     sueldoDelMes(mes),
     listarDeudas(),
     listarCuentasDelMes(mes),
     // Doce meses hasta el elegido: suficiente para ver estacionalidad sin
     // que el eje se llene de etiquetas.
-    serieHistorica(mes, 12),
+    serieHistorica(mes, 12, undefined, diaInicioMes),
   ]);
 
-  const informe = armarInforme(gastos, gastosAnterior, mes);
+  const informe = armarInforme(gastos, gastosAnterior, periodo);
   const balance = calcularBalance({ mes, sueldo, resumen: informe.resumen, deudas });
-  const resumenCuentas = resumirCuentas(cuentas, mes, diasEnMesISO(mes), hoyISO());
+  const resumenCuentas = resumirCuentas(cuentas, periodo, hoy);
   const estadisticas = analizarHistorico(serie);
 
   return (
@@ -73,7 +78,11 @@ export default async function Informes({ searchParams }: Props) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="no-imprimir">
-            <SelectorMes mes={mes} ruta="/informes" />
+            <SelectorMes
+              mes={mes}
+              ruta="/informes"
+              rango={diaInicioMes === 1 ? undefined : rangoCorto(periodo.desde, periodo.hasta)}
+            />
           </div>
           <Link
             href={urlReporte(mes)}
@@ -117,7 +126,7 @@ export default async function Informes({ searchParams }: Props) {
 
         <div className="grid gap-4 lg:grid-cols-5">
           <div className="lg:col-span-3">
-            <SecuenciaBalance balance={balance} gastos={gastos} />
+            <SecuenciaBalance balance={balance} gastos={gastos} periodo={periodo} />
           </div>
           <div className="lg:col-span-2">
             <MayoresGastos gastos={informe.mayores} />

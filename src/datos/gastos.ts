@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { fechaDesdeISO, rangoDelMesISO } from "@/lib/fecha";
+import { fechaDesdeISO } from "@/lib/fecha";
+import { aPeriodo, rangoDelPeriodo, type Periodo } from "@/lib/periodo";
 import { aPlano, type GastoPlano } from "@/dominio/resumen";
 import type { GastoParcial, GastoValidado } from "@/dominio/esquemas";
 
@@ -21,6 +22,7 @@ export type ClienteDb = Pick<
   | "cuotaPagada"
   | "presupuesto"
   | "ahorro"
+  | "ajustes"
   | "$queryRaw"
 >;
 
@@ -30,7 +32,7 @@ export type ClienteDb = Pick<
  *
  * La cuota importa aunque casi nunca este: los gastos que vienen de pagar una
  * cuota no se suman con los demas (el balance ya descuenta las cuotas por su
- * lado) y se muestran en su propia seccion. Sin este include, aPlano los
+ * lado) y en Movimientos se marcan como cuota. Sin este include, aPlano los
  * daria como gastos normales y la cuota se restaria dos veces.
  */
 const CATEGORIA_INCLUIDA = {
@@ -40,6 +42,7 @@ const CATEGORIA_INCLUIDA = {
   cuota: {
     select: { deudaId: true, deuda: { select: { nombre: true } } },
   },
+  cuenta: { select: { id: true, nombre: true } },
 } as const;
 
 /** Lo que Prisma devuelve con esa inclusion. */
@@ -52,6 +55,7 @@ type FilaGasto = {
   notas: string | null;
   boletaArchivo: string | null;
   cuota: { deudaId: string; deuda: { nombre: string } | null } | null;
+  cuenta: { id: string; nombre: string } | null;
   categoria: {
     id: string;
     nombre: string;
@@ -61,12 +65,15 @@ type FilaGasto = {
   };
 };
 
-/** Gastos de un mes, del mas reciente al mas antiguo. */
+/**
+ * Gastos de un periodo, del mas reciente al mas antiguo. Con un "YYYY-MM"
+ * suelto, los del mes calendario.
+ */
 export async function listarGastosDelMes(
-  mes: string,
+  mes: string | Periodo,
   db: ClienteDb = prisma,
 ): Promise<GastoPlano[]> {
-  const { desde, hasta } = rangoDelMesISO(mes);
+  const { desde, hasta } = rangoDelPeriodo(aPeriodo(mes));
 
   const filas = (await db.gasto.findMany({
     where: { fecha: { gte: desde, lt: hasta } },
@@ -135,8 +142,21 @@ export async function actualizarGasto(
   return aPlano(fila);
 }
 
-export async function eliminarGasto(id: string, db: ClienteDb = prisma): Promise<void> {
-  await db.gasto.delete({ where: { id } });
+/**
+ * Borra un gasto.
+ *
+ * Si el gasto es el pago de una cuota o de una cuenta, ese pago se deshace:
+ * la cuota o la cuenta vuelve a quedar pendiente. Sin esto seguirian
+ * contando como pagadas sin ningun gasto que lo respalde, y lo que te queda
+ * subiria sin que nadie haya devuelto esa plata. Primero se suelta el enlace
+ * y despues se borra el gasto, igual que al revertir un pago.
+ */
+export async function eliminarGasto(id: string, db: typeof prisma = prisma): Promise<void> {
+  await db.$transaction([
+    db.cuotaPagada.deleteMany({ where: { gastoId: id } }),
+    db.cuenta.updateMany({ where: { gastoId: id }, data: { pagadaEn: null, gastoId: null } }),
+    db.gasto.delete({ where: { id } }),
+  ]);
 }
 
 /**

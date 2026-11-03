@@ -177,8 +177,22 @@ export async function listarPagosDelMes(
 ): Promise<PagoCuota[]> {
   const filas = (await db.cuotaPagada.findMany({
     where: { mes: rangoDelMesISO(mes).desde },
-    select: { deudaId: true, mes: true, pagadaEn: true, monto: true },
-  })) as { deudaId: string; mes: Date; pagadaEn: Date; monto: number }[];
+    select: {
+      deudaId: true,
+      mes: true,
+      pagadaEn: true,
+      monto: true,
+      gastoId: true,
+      gasto: { select: { boletaArchivo: true } },
+    },
+  })) as {
+    deudaId: string;
+    mes: Date;
+    pagadaEn: Date;
+    monto: number;
+    gastoId: string | null;
+    gasto: { boletaArchivo: string | null } | null;
+  }[];
 
   return filas.map((f) => ({
     deudaId: f.deudaId,
@@ -186,6 +200,8 @@ export async function listarPagosDelMes(
     mes: mesDesdeFecha(f.mes),
     pagadaEn: isoDesdeFecha(f.pagadaEn),
     monto: f.monto,
+    gastoId: f.gastoId,
+    boletaArchivo: f.gasto?.boletaArchivo ?? null,
   }));
 }
 

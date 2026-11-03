@@ -2,7 +2,7 @@ import type { Comparacion, LineaMedioPago, LineaSemana } from "@/dominio/informe
 import type { GastoPlano, ResumenMensual } from "@/dominio/resumen";
 import { ETIQUETA_MEDIO_PAGO } from "@/dominio/esquemas";
 import { Icono } from "./Icono";
-import { fechaCorta, formatearCLP, nombreDelMes, porcentajeLegible } from "./formato";
+import { fechaCorta, formatearCLP, nombreDelMes, porcentajeLegible, rangoLargo } from "./formato";
 
 const TARJETA = "rounded-lg border border-borde bg-superficie p-4";
 const TITULO = "text-sm font-semibold";
@@ -181,8 +181,7 @@ export function GraficoSemanas({ semanas }: { semanas: readonly LineaSemana[] })
           <li key={semana.semana}>
             <div className="flex items-baseline justify-between gap-3 text-xs">
               <span className="text-texto-tenue">
-                días <span className="cifra">{semana.desde}</span> a{" "}
-                <span className="cifra">{semana.hasta}</span>
+                {rangoLargo(semana.fechaDesde, semana.fechaHasta, false)}
               </span>
               <span className="cifra tabular-nums">
                 {formatearCLP(semana.total)}

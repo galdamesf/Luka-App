@@ -1,3 +1,4 @@
+import { aPeriodo, diaDelPeriodo, enPeriodo, fechaDelPeriodo, type Periodo } from "@/lib/periodo";
 import { esPagoDeCuota, type CategoriaPlana, type GastoPlano } from "./resumen";
 
 /**
@@ -78,9 +79,10 @@ const UMBRAL_LIMITE = 80;
 export function armarPresupuestos(
   presupuestos: readonly PresupuestoPlano[],
   gastos: readonly GastoPlano[],
-  mes: string,
+  mes: string | Periodo,
 ): ResumenPresupuestos {
-  const delMes = gastos.filter((g) => g.fecha.startsWith(mes) && !esPagoDeCuota(g));
+  const periodo = aPeriodo(mes);
+  const delMes = gastos.filter((g) => enPeriodo(g.fecha, periodo) && !esPagoDeCuota(g));
 
   const gastadoPorCategoria = new Map<string, number>();
   for (const g of delMes) {
@@ -90,7 +92,7 @@ export function armarPresupuestos(
     );
   }
 
-  const delMesPresupuestado = presupuestos.filter((p) => p.mes === mes);
+  const delMesPresupuestado = presupuestos.filter((p) => p.mes === periodo.mes);
 
   const lineas: LineaPresupuesto[] = delMesPresupuestado
     .map((presupuesto) => {
@@ -135,7 +137,7 @@ export function armarPresupuestos(
   const totalGastado = lineas.reduce((s, l) => s + l.gastado, 0);
 
   return {
-    mes,
+    mes: periodo.mes,
     lineas,
     totalPresupuestado,
     totalGastado,
@@ -156,11 +158,14 @@ export function armarPresupuestos(
 }
 
 export type SemanaDeCategoria = {
-  /** 1, 2, 3... contando desde el dia 1 del mes. */
+  /** 1, 2, 3... contando desde el primer dia del periodo. */
   semana: number;
-  /** Dia del mes en que empieza y termina el bloque. */
+  /** Dia del periodo en que empieza y termina el bloque (el primero es el 1). */
   desde: number;
   hasta: number;
+  /** Las mismas, como fechas "YYYY-MM-DD", para rotular. */
+  fechaDesde: string;
+  fechaHasta: string;
   total: number;
   gastos: GastoPlano[];
 };
@@ -180,9 +185,9 @@ export type DetalleDeCategoria = {
 /**
  * El desglose de una categoria: que se gasto, cuando y cuanto.
  *
- * Las semanas son bloques de 7 dias desde el dia 1, igual que en el informe:
- * no son semanas de calendario a proposito, para que no cambien de forma
- * segun en que dia caiga el primero.
+ * Las semanas son bloques de 7 dias desde el primer dia del periodo, igual
+ * que en el informe: no son semanas de calendario a proposito, para que no
+ * cambien de forma segun en que dia caiga el primero.
  *
  * Los pagos de cuota quedan fuera, igual que en el presupuesto que este
  * desglose explica: si entraran, la suma del detalle no calzaria con la
@@ -191,13 +196,14 @@ export type DetalleDeCategoria = {
 export function detalleDeCategoria(
   gastos: readonly GastoPlano[],
   categoriaId: string,
-  mes: string,
-  diasDelMes: number,
+  mes: string | Periodo,
 ): DetalleDeCategoria {
+  const periodo = aPeriodo(mes);
+  const diasDelMes = periodo.dias;
   const delMes = gastos
     .filter(
       (g) =>
-        g.fecha.startsWith(mes) && g.categoria.id === categoriaId && !esPagoDeCuota(g),
+        enPeriodo(g.fecha, periodo) && g.categoria.id === categoriaId && !esPagoDeCuota(g),
     )
     // Del mas nuevo al mas viejo; a igual fecha, el mas caro primero, y el id
     // como ultimo desempate para que el orden no baile entre renders.
@@ -213,13 +219,15 @@ export function detalleDeCategoria(
       semana: i + 1,
       desde: i * 7 + 1,
       hasta: Math.min((i + 1) * 7, diasDelMes),
+      fechaDesde: fechaDelPeriodo(periodo, i * 7 + 1),
+      fechaHasta: fechaDelPeriodo(periodo, Math.min((i + 1) * 7, diasDelMes)),
       total: 0,
       gastos: [],
     }),
   );
 
   for (const gasto of delMes) {
-    const dia = Number(gasto.fecha.slice(8, 10));
+    const dia = diaDelPeriodo(gasto.fecha, periodo);
     const indice = Math.min(Math.max(Math.floor((dia - 1) / 7), 0), cantidadSemanas - 1);
     const semana = semanas[indice] as SemanaDeCategoria;
     semana.total += gasto.monto;

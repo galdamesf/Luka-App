@@ -4,6 +4,7 @@ import { Luka } from "./Luka";
 const ENLACES = [
   { href: "/", etiqueta: "Inicio" },
   { href: "/informes", etiqueta: "Informes" },
+  { href: "/como-usar", etiqueta: "¿Cómo usar?" },
 ] as const;
 
 /**

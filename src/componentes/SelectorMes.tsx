@@ -6,6 +6,8 @@ type Props = {
   mes: string;
   /** A que pagina llevan las flechas. Por omision, el dashboard. */
   ruta?: string;
+  /** Las fechas del periodo ("27 oct – 26 nov"), cuando el mes no parte el 1. */
+  rango?: string;
 };
 
 /**
@@ -13,7 +15,7 @@ type Props = {
  * mes tiene su propia URL, funciona el boton atras del navegador y se puede
  * compartir o marcar un mes concreto.
  */
-export function SelectorMes({ mes, ruta = "/" }: Props) {
+export function SelectorMes({ mes, ruta = "/", rango }: Props) {
   const anterior = mesVecino(mes, -1);
   const siguiente = mesVecino(mes, 1);
 
@@ -27,11 +29,9 @@ export function SelectorMes({ mes, ruta = "/" }: Props) {
         <span className="sr-only">Ir a {nombreDelMes(anterior)}</span>
       </Link>
 
-      <span
-        aria-live="polite"
-        className="min-w-[10.5rem] text-center text-sm font-medium capitalize"
-      >
-        {nombreDelMes(mes)}
+      <span aria-live="polite" className="flex min-w-[10.5rem] flex-col items-center text-center leading-tight">
+        <span className="text-sm font-medium capitalize">{nombreDelMes(mes)}</span>
+        {rango !== undefined && <span className="cifra text-[11px] text-texto-tenue">{rango}</span>}
       </span>
 
       <Link

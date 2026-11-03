@@ -1,5 +1,6 @@
 import type { Balance } from "@/dominio/balance";
 import { repartirGastos, type GastoPlano } from "@/dominio/resumen";
+import type { Periodo } from "@/lib/periodo";
 import { LineaGastosDesplegable } from "./LineaGastosDesplegable";
 import { formatearCLP, nombreDelMes, porcentajeLegible } from "./formato";
 
@@ -7,6 +8,8 @@ type Props = {
   balance: Balance;
   /** Los gastos del mes, para poder abrir cada linea y ver de que esta hecha. */
   gastos: readonly GastoPlano[];
+  /** El periodo del balance. Sin el, el mes calendario de `balance.mes`. */
+  periodo?: Periodo;
   /** El formulario de sueldo, que es componente de cliente. */
   children?: React.ReactNode;
 };
@@ -47,8 +50,8 @@ function Linea({
   );
 }
 
-export function SecuenciaBalance({ balance, gastos, children }: Props) {
-  const { esenciales, resto } = repartirGastos(gastos, balance.mes);
+export function SecuenciaBalance({ balance, gastos, periodo, children }: Props) {
+  const { esenciales, resto } = repartirGastos(gastos, periodo ?? balance.mes);
   const {
     sueldo, gastosBasicos, cuotas, gastosDiscrecionales,
     disponible, saldo, enRojo, sinSueldo, porcentajeComprometido, cuotasDelMes,

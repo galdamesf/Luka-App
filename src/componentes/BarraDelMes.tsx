@@ -1,6 +1,6 @@
-import type { ResumenPanel, Tono } from "@/dominio/panel";
+import { TRAMOS_SUELDO, type PedazoBarra, type ResumenPanel, type Tono } from "@/dominio/panel";
 import { Icono } from "./Icono";
-import { formatearCLP, nombreDelMes, porcentajeLegible } from "./formato";
+import { fechaCorta, formatearCLP, nombreDelMes, porcentajeLegible } from "./formato";
 
 type Props = {
   panel: ResumenPanel;
@@ -29,18 +29,46 @@ const PILDORA: Record<Tono, string> = {
   peligro: "border-peligro/40 bg-peligro/10 text-peligro",
 };
 
+// Los tramos, tenues, en el fondo de la barra: se ve donde empieza el
+// siguiente color antes de llegar a el.
+const FONDO_TRAMO = [
+  { desde: 0, hasta: TRAMOS_SUELDO.atencion, clase: "bg-exito/10" },
+  { desde: TRAMOS_SUELDO.atencion, hasta: TRAMOS_SUELDO.cuidado, clase: "bg-alerta/15" },
+  { desde: TRAMOS_SUELDO.cuidado, hasta: 100, clase: "bg-peligro/15" },
+];
+
 const numero = (valor: number) => valor.toFixed(1).replace(".", ",");
+
+function Pedazos({ pedazos, clases }: { pedazos: PedazoBarra[]; clases: Record<Tono, string> }) {
+  return pedazos.map((p) => (
+    <span
+      key={p.desde}
+      className={`absolute inset-y-0 block transition-[left,width] duration-500 ${clases[p.tono]}`}
+      style={{ left: `${p.desde}%`, width: `${p.hasta - p.desde}%` }}
+    />
+  ));
+}
 
 /**
  * El sueldo del mes en una barra: lo que ya salio, lo que falta pagar
  * (rayado) y lo que queda libre. La raya vertical es el dia de hoy: si lo
  * gastado termina antes que ella, vas bajo el ritmo del mes.
  *
+ * Se pinta por tramos del sueldo (TRAMOS_SUELDO): verde hasta el 50%, ambar
+ * hasta el 80% y rojo desde ahi. Un mismo rayado puede pasar de verde a
+ * ambar: se ve en que tramo vas a terminar el mes.
+ *
  * Todo lo que dice la barra esta tambien escrito en la leyenda: la barra
  * ayuda a verlo de un golpe, pero no es la unica forma de saberlo.
  */
 export function BarraDelMes({ panel, mes }: Props) {
   const { sinSueldo, sueldo, gastado, porPagar, barra } = panel;
+  // Con el mes calendario "dia 29" se entiende solo; si el mes parte el 27,
+  // el dia del periodo no calza con el del calendario y va la fecha.
+  const hoyLegible =
+    barra.fechaDeHoy !== null && panel.periodo.diaInicio !== 1
+      ? fechaCorta(barra.fechaDeHoy)
+      : `día ${barra.diaDeHoy}`;
   const nombre = nombreDelMes(mes).split(" ")[0];
 
   if (sinSueldo) {
@@ -55,18 +83,18 @@ export function BarraDelMes({ panel, mes }: Props) {
     );
   }
 
-  const anchoGastado = Math.min(barra.gastadoPct, 100);
-  const anchoComprometido = Math.max(0, Math.min(barra.comprometidoPct, 100 - anchoGastado));
   const proyectado = barra.gastadoPct + barra.comprometidoPct;
 
   const estado =
     barra.libre < 0
       ? `No alcanza: faltan ${formatearCLP(-barra.libre)}`
-      : barra.tono === "alerta"
-        ? `Atención: ${porcentajeLegible(proyectado)} comprometido`
+      : proyectado >= 100
+        ? "Sueldo agotado"
         : barra.tono === "peligro"
-          ? "Sueldo agotado"
-          : "Vas bien";
+          ? `Cuidado: ${porcentajeLegible(proyectado)} comprometido`
+          : barra.tono === "alerta"
+            ? `Atención: ${porcentajeLegible(proyectado)} comprometido`
+            : "Vas bien";
 
   const marcador = barra.marcadorDia;
   const etiquetaAlaIzquierda = marcador !== null && marcador > 50;
@@ -98,40 +126,62 @@ export function BarraDelMes({ panel, mes }: Props) {
         </span>
       </div>
 
-      <div className="relative pb-7">
+      <div className="relative pt-4 pb-7">
+        {/* Donde cambia el color, sobre la barra. */}
+        {[TRAMOS_SUELDO.atencion, TRAMOS_SUELDO.cuidado].map((corte) => (
+          <span
+            key={corte}
+            aria-hidden="true"
+            className="cifra absolute top-0 -translate-x-1/2 text-[10px] leading-none text-texto-tenue"
+            style={{ left: `${corte}%` }}
+          >
+            {corte}%
+          </span>
+        ))}
         <div
           role="img"
           aria-label={`Gastado ${porcentajeLegible(barra.gastadoPct)} del sueldo, por pagar ${porcentajeLegible(
             barra.comprometidoPct,
-          )}, libre ${porcentajeLegible(barra.librePct)}${
-            barra.diaDeHoy !== null ? `. Hoy es el día ${barra.diaDeHoy}` : ""
+          )}, libre ${porcentajeLegible(barra.librePct)}. Verde hasta el ${TRAMOS_SUELDO.atencion}% del sueldo, ámbar hasta el ${
+            TRAMOS_SUELDO.cuidado
+          }% y rojo desde ahí${
+            barra.diaDeHoy !== null ? `. Hoy es el día ${barra.diaDeHoy} de ${panel.periodo.dias}` : ""
           }`}
-          className="flex h-3.5 overflow-hidden rounded-full border border-borde bg-superficie-tenue"
+          className="relative h-3.5 overflow-hidden rounded-full border border-borde bg-superficie-tenue"
         >
-          <span
-            className={`block h-full transition-[width] duration-500 ${RELLENO[barra.tonoGastado]}`}
-            style={{ width: `${anchoGastado}%` }}
-          />
-          <span
-            className={`block h-full transition-[width] duration-500 ${RAYAS[barra.tono]}`}
-            style={{ width: `${anchoComprometido}%` }}
-          />
+          {FONDO_TRAMO.map((t) => (
+            <span
+              key={t.desde}
+              className={`absolute inset-y-0 block ${t.clase}`}
+              style={{ left: `${t.desde}%`, width: `${t.hasta - t.desde}%` }}
+            />
+          ))}
+          <Pedazos pedazos={barra.pedazos.gastado} clases={RELLENO} />
+          <Pedazos pedazos={barra.pedazos.porPagar} clases={RAYAS} />
+          {/* Los cortes entre tramos, como una raya fina. */}
+          {[TRAMOS_SUELDO.atencion, TRAMOS_SUELDO.cuidado].map((corte) => (
+            <span
+              key={corte}
+              className="absolute inset-y-0 w-px bg-superficie/70"
+              style={{ left: `${corte}%` }}
+            />
+          ))}
         </div>
         {marcador !== null && (
           <>
             <span
               aria-hidden="true"
-              className="absolute -top-1.5 h-7 w-0.5 -translate-x-1/2 rounded-full bg-texto"
+              className="absolute top-2.5 h-7 w-0.5 -translate-x-1/2 rounded-full bg-texto"
               style={{ left: `${marcador}%` }}
             />
             <span
               aria-hidden="true"
-              className={`cifra absolute top-6 whitespace-nowrap text-[11px] text-texto-tenue ${
+              className={`cifra absolute top-10 whitespace-nowrap text-[11px] text-texto-tenue ${
                 etiquetaAlaIzquierda ? "-translate-x-full pr-2" : "pl-2"
               }`}
               style={{ left: `${marcador}%` }}
             >
-              Hoy · día {barra.diaDeHoy}
+              Hoy · {hoyLegible}
             </span>
           </>
         )}

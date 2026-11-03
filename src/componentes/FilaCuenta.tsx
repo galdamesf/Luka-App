@@ -8,11 +8,18 @@ import { Icono } from "./Icono";
 import { ControlEstadoPago } from "./ControlEstadoPago";
 import { VisorBoleta } from "./VisorBoleta";
 import { CampoBoleta } from "./CampoBoleta";
+import { AdjuntarBoleta } from "./AdjuntarBoleta";
 import { fechaCorta, formatearCLP } from "./formato";
 
 type Props = {
   cuenta: CuentaPlana;
   vencida: boolean;
+  /**
+   * La fecha en que vence dentro del mes, "YYYY-MM-DD". Con un mes que parte
+   * el 27, en noviembre (27 oct – 26 nov) la cuenta que vence el 30 vence el
+   * 30 de octubre: por eso se muestra la fecha y no solo el numero de dia.
+   */
+  vence?: string | null;
   /** Dia de hoy, para proponerlo como fecha de pago. */
   hoy: string;
   categorias: readonly CategoriaPlana[];
@@ -22,6 +29,8 @@ type Props = {
   alMarcarPagada: AccionFormulario;
   alEliminar: (datos: FormData) => void;
   alRevertir: AccionFormulario;
+  /** Adjunta la boleta al gasto de una cuenta ya pagada. */
+  accionBoleta?: AccionFormulario;
 };
 
 const CAMPO =
@@ -38,8 +47,8 @@ function Error({ mensajes }: { mensajes?: string[] }) {
 }
 
 export function FilaCuenta({
-  cuenta, vencida, hoy, categorias, accionPagar, accionEditar, alMarcarPagada,
-  alEliminar, alRevertir,
+  cuenta, vencida, vence = null, hoy, categorias, accionPagar, accionEditar, alMarcarPagada,
+  alEliminar, alRevertir, accionBoleta,
 }: Props) {
   const [estado, pagar, pendiente] = useActionState(accionPagar, ESTADO_INICIAL);
   const [estadoEdicion, editar, editando] = useActionState(accionEditar, ESTADO_INICIAL);
@@ -102,6 +111,11 @@ export function FilaCuenta({
             <>
               <span>pagada el {fechaCorta(cuenta.pagadaEn as string)}</span>
               <VisorBoleta archivo={cuenta.boletaArchivo} descripcion={cuenta.nombre} />
+              {/* Sin boleta todavia: se adjunta al gasto del pago, y la
+                  cuenta se queda con la misma foto. */}
+              {cuenta.boletaArchivo === null && cuenta.gastoId !== null && accionBoleta !== undefined && (
+                <AdjuntarBoleta gastoId={cuenta.gastoId} descripcion={cuenta.nombre} accion={accionBoleta} />
+              )}
             </>
           ) : (
             <>
@@ -112,7 +126,7 @@ export function FilaCuenta({
                       <Icono nombre="alert" tamano={12} />
                     </span>
                   )}
-                  vence el {cuenta.diaVencimiento}
+                  vence el {vence !== null ? fechaCorta(vence) : cuenta.diaVencimiento}
                   {vencida && " · vencida"}
                 </span>
               )}
@@ -122,7 +136,7 @@ export function FilaCuenta({
         </div>
 
         {/* div y no span: adentro van <form>, que no son contenido en linea. */}
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1.5">
           <ControlEstadoPago
             enLinea
             pagado={pagada}
@@ -149,13 +163,13 @@ export function FilaCuenta({
               type="button"
               onClick={() => abrirPago(!pagando)}
               aria-expanded={pagando}
-              title="Pagar con otra fecha o monto"
+              title="Pagar con boleta, otra fecha o monto"
               className={`inline-flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors duration-150 hover:bg-superficie-tenue hover:text-texto ${
                 pagando ? "bg-superficie-tenue text-texto" : "text-texto-tenue"
               }`}
             >
               <Icono nombre="calendar" tamano={14} />
-              <span className="sr-only">Pagar {cuenta.nombre} con otra fecha o monto</span>
+              <span className="sr-only">Pagar {cuenta.nombre} con boleta, otra fecha o monto</span>
             </button>
           )}
 
@@ -358,6 +372,11 @@ export function FilaCuenta({
             />
             Se repite todos los meses
           </label>
+
+          <CampoBoleta
+            id={`ed-boleta-${cuenta.id}`}
+            etiqueta={cuenta.boletaArchivo === null ? "Foto de la boleta" : "Reemplazar la foto de la boleta"}
+          />
 
           <div className="flex gap-2 pt-1">
             <button

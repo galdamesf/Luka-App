@@ -1,4 +1,5 @@
 import { fechaDesdeISO, hoyISO } from "@/lib/fecha";
+import { aPeriodo, periodoDe, vencimientoEnPeriodo, type Periodo } from "@/lib/periodo";
 import type { CategoriaPlana } from "./resumen";
 
 export type CuentaPlana = {
@@ -20,6 +21,8 @@ export type CuentaPlana = {
 
 export type ResumenCuentas = {
   mes: string;
+  /** El periodo del resumen: de el salen las fechas de vencimiento. */
+  periodo: Periodo;
   pendientes: CuentaPlana[];
   pagadas: CuentaPlana[];
   /** Pendientes cuyo dia de vencimiento ya paso. Solo para el mes en curso. */
@@ -37,24 +40,30 @@ export function estaPagada(cuenta: CuentaPlana): boolean {
 /**
  * Fecha de vencimiento como "YYYY-MM-DD", o null si la cuenta no tiene dia.
  *
+ * El dia cae dentro del periodo de la cuenta: con dia de inicio 27, una
+ * cuenta de octubre que vence el 5 vence el 5 de noviembre. Con el mes
+ * calendario (dia 1) es el mismo dia del mes de la cuenta.
+ *
  * Si el dia no existe en ese mes (un vencimiento el 31 en febrero) se corre al
  * ultimo dia del mes, que es lo que hacen las empresas de servicios.
  */
-export function fechaDeVencimiento(cuenta: CuentaPlana, diasDelMes: number): string | null {
+export function fechaDeVencimiento(cuenta: CuentaPlana, diaInicio = 1): string | null {
   if (cuenta.diaVencimiento === null) return null;
-  const dia = Math.min(cuenta.diaVencimiento, diasDelMes);
-  return `${cuenta.mes}-${String(dia).padStart(2, "0")}`;
+  return vencimientoEnPeriodo(periodoDe(cuenta.mes, diaInicio), cuenta.diaVencimiento);
 }
 
 /**
  * Ordena las cuentas como conviene mirarlas: primero lo que falta pagar, y
  * dentro de eso lo que vence antes. Las sin fecha de vencimiento van al final
- * de su grupo, no al principio.
+ * de su grupo, no al principio. Se ordena por fecha y no por numero de dia:
+ * con dia de inicio 27, el 30 de octubre va antes que el 5 de noviembre.
  */
-function porVencimiento(a: CuentaPlana, b: CuentaPlana): number {
-  const diaA = a.diaVencimiento ?? 99;
-  const diaB = b.diaVencimiento ?? 99;
-  return diaA - diaB || a.nombre.localeCompare(b.nombre, "es");
+function porVencimiento(diaInicio: number) {
+  return (a: CuentaPlana, b: CuentaPlana): number => {
+    const fechaA = fechaDeVencimiento(a, diaInicio) ?? "9999";
+    const fechaB = fechaDeVencimiento(b, diaInicio) ?? "9999";
+    return fechaA.localeCompare(fechaB) || a.nombre.localeCompare(b.nombre, "es");
+  };
 }
 
 /** Las pagadas se miran al reves: lo ultimo que pagaste, primero. */
@@ -65,19 +74,19 @@ function porPago(a: CuentaPlana, b: CuentaPlana): number {
 
 export function resumirCuentas(
   cuentas: readonly CuentaPlana[],
-  mes: string,
-  diasDelMes: number,
+  mes: string | Periodo,
   hoy: string = hoyISO(),
 ): ResumenCuentas {
-  const delMes = cuentas.filter((c) => c.mes === mes);
+  const periodo = aPeriodo(mes);
+  const delMes = cuentas.filter((c) => c.mes === periodo.mes);
 
-  const pendientes = delMes.filter((c) => !estaPagada(c)).sort(porVencimiento);
+  const pendientes = delMes.filter((c) => !estaPagada(c)).sort(porVencimiento(periodo.diaInicio));
   const pagadas = delMes.filter(estaPagada).sort(porPago);
 
   // Vencida es la que ya paso su fecha y sigue sin pagarse. Para un mes
   // futuro esto siempre da vacio, que es lo correcto.
   const vencidas = pendientes.filter((c) => {
-    const vence = fechaDeVencimiento(c, diasDelMes);
+    const vence = fechaDeVencimiento(c, periodo.diaInicio);
     return vence !== null && vence < hoy;
   });
 
@@ -85,7 +94,8 @@ export function resumirCuentas(
   const totalPagado = pagadas.reduce((s, c) => s + c.monto, 0);
 
   return {
-    mes,
+    mes: periodo.mes,
+    periodo,
     pendientes,
     pagadas,
     vencidas,
@@ -145,7 +155,6 @@ export type PendientesAgrupadas = {
  */
 export function agruparPendientes(
   resumen: ResumenCuentas,
-  diasDelMes: number,
   hoy: string = hoyISO(),
 ): PendientesAgrupadas {
   const idsVencidas = new Set(resumen.vencidas.map((c) => c.id));
@@ -154,7 +163,7 @@ export function agruparPendientes(
 
   for (const cuenta of resumen.pendientes) {
     if (idsVencidas.has(cuenta.id)) continue;
-    const vence = fechaDeVencimiento(cuenta, diasDelMes);
+    const vence = fechaDeVencimiento(cuenta, resumen.periodo.diaInicio);
     const dias =
       vence === null
         ? null

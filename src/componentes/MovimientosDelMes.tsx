@@ -5,6 +5,12 @@ import type { CategoriaPlana, GastoPlano } from "@/dominio/resumen";
 import type { AccionFormulario } from "@/dominio/formulario";
 import { ETIQUETA_MEDIO_PAGO } from "@/dominio/esquemas";
 import { TablaGastos } from "./TablaGastos";
+
+/**
+ * Cuantos movimientos se ven sin apretar "Ver todos". Vienen del mas reciente
+ * al mas antiguo: lo de esta semana siempre esta a la vista.
+ */
+export const MOVIMIENTOS_VISIBLES = 10;
 import { Icono } from "./Icono";
 import { formatearCLP } from "./formato";
 
@@ -28,6 +34,7 @@ function normalizar(texto: string): string {
 export function MovimientosDelMes({ gastos, categorias, alEliminar, accionBoleta }: Props) {
   const [busqueda, setBusqueda] = useState("");
   const [categoriaId, setCategoriaId] = useState("todas");
+  const [verTodos, setVerTodos] = useState(false);
 
   // Solo las categorias que tienen gastos este mes: filtrar por una vacia
   // no sirve de nada.
@@ -44,12 +51,41 @@ export function MovimientosDelMes({ gastos, categorias, alEliminar, accionBoleta
         (q === "" ||
           normalizar(g.descripcion).includes(q) ||
           normalizar(g.categoria.nombre).includes(q) ||
-          normalizar(ETIQUETA_MEDIO_PAGO[g.medioPago]).includes(q)),
+          normalizar(ETIQUETA_MEDIO_PAGO[g.medioPago]).includes(q) ||
+          (g.cuota !== null && "cuota de deuda".includes(q))),
     );
   }, [gastos, busqueda, categoriaId]);
 
   const filtrando = busqueda.trim() !== "" || categoriaId !== "todas";
   const total = filtrados.reduce((s, g) => s + g.monto, 0);
+  const cuotas = gastos.filter((g) => g.cuota !== null).length;
+
+  // El total y el contador de arriba son de todo lo filtrado; solo la lista
+  // se recorta. Si sobraria uno solo, se muestran todos.
+  const sobran = filtrados.length > MOVIMIENTOS_VISIBLES + 1;
+  const mostrados = sobran && !verTodos ? filtrados.slice(0, MOVIMIENTOS_VISIBLES) : filtrados;
+
+  const pie = sobran ? (
+    <div className="no-imprimir flex flex-wrap items-center justify-between gap-2 border-t border-borde px-5 py-1.5">
+      <p className="text-xs text-texto-tenue">
+        {verTodos
+          ? `${filtrados.length} movimientos, del más reciente al más antiguo`
+          : `Los ${MOVIMIENTOS_VISIBLES} más recientes de ${filtrados.length}`}
+      </p>
+      <button
+        type="button"
+        aria-expanded={verTodos}
+        aria-controls="lista-gastos tabla-gastos"
+        onClick={() => setVerTodos(!verTodos)}
+        className="inline-flex min-h-10 cursor-pointer items-center gap-1 rounded-md px-2 text-[13px] font-semibold text-accion-tinta transition-colors duration-150 hover:bg-superficie-tenue"
+      >
+        {verTodos ? "Ver menos" : `Ver todos (${filtrados.length})`}
+        <span className={`transition-transform duration-150 ${verTodos ? "rotate-180" : ""}`}>
+          <Icono nombre="chevron-down" tamano={14} />
+        </span>
+      </button>
+    </div>
+  ) : null;
 
   const herramientas =
     gastos.length === 0 ? null : (
@@ -103,12 +139,19 @@ export function MovimientosDelMes({ gastos, categorias, alEliminar, accionBoleta
             Limpiar filtros
           </button>
         )}
+        {cuotas > 0 && (
+          <p className="basis-full text-xs text-texto-tenue">
+            Incluye {cuotas === 1 ? "la cuota de deuda pagada" : `las ${cuotas} cuotas de deuda pagadas`} en
+            este mes. Si borras una, vuelve a quedar pendiente.
+          </p>
+        )}
       </div>
     );
 
   return (
     <TablaGastos
-      gastos={filtrados}
+      gastos={mostrados}
+      pie={pie}
       alEliminar={alEliminar}
       accionBoleta={accionBoleta}
       herramientas={herramientas}

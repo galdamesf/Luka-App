@@ -3,23 +3,23 @@
  * encabezados de cada seccion salen de aca, asi no se desordenan entre si.
  */
 export const SECCIONES_PANEL = {
-  queda: {
-    id: "queda",
-    numero: "01",
-    etiqueta: "Lo que queda",
-    color: "exito",
-    icono: "piggy-bank",
-    titulo: "Lo que te queda y lo que ahorras",
-    bajada: "Tu sueldo menos todo lo que ya tiene destino: pagos, cuentas, cuotas, presupuestos y ahorro.",
-  },
   resumen: {
     id: "resumen",
-    numero: "02",
+    numero: "01",
     etiqueta: "Resumen",
     color: "accion",
     icono: "trending-up",
     titulo: "Resumen del mes",
     bajada: "Lo que entró, lo que salió y lo que te queda antes de cerrar el mes.",
+  },
+  queda: {
+    id: "queda",
+    numero: "02",
+    etiqueta: "Lo que queda",
+    color: "exito",
+    icono: "piggy-bank",
+    titulo: "Lo que te queda y lo que ahorras",
+    bajada: "Cuánto tienes libre para el mes después de pagar todo, cuánto puedes ahorrar y la cuenta completa.",
   },
   registro: {
     id: "registro",
@@ -46,7 +46,7 @@ export const SECCIONES_PANEL = {
     color: "avance",
     icono: "activity",
     titulo: "Tus gastos, semana a semana",
-    bajada: "Bloques de siete días desde el 1. Elige uno para ver su detalle.",
+    bajada: "Bloques de siete días desde que empieza tu mes. Elige uno para ver su detalle.",
   },
   presupuestos: {
     id: "presupuestos",

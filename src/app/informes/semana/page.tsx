@@ -3,7 +3,10 @@ import { listarGastosDelMes } from "@/datos/gastos";
 import { armarReporteSemanal } from "@/dominio/reporte-semanal";
 import { nivelDeSemana, ritmoSemanal } from "@/dominio/semanas";
 import { esquemaMes } from "@/dominio/esquemas";
-import { hoyISO, mesActual } from "@/lib/fecha";
+import { hoyISO } from "@/lib/fecha";
+import { periodoDe, periodoDeFecha } from "@/lib/periodo";
+import { leerAjustes } from "@/datos/ajustes";
+import { rangoCorto, rangoDeDias } from "@/componentes/formato";
 import { SelectorMes } from "@/componentes/SelectorMes";
 import { Icono } from "@/componentes/Icono";
 import { NIVEL } from "@/componentes/niveles-semana";
@@ -27,15 +30,17 @@ type Props = { searchParams: Promise<{ mes?: string; semana?: string }> };
  */
 export default async function ReporteSemana({ searchParams }: Props) {
   const parametros = await searchParams;
-  const elegido = esquemaMes.safeParse(parametros.mes);
-  const mes = elegido.success ? elegido.data : mesActual();
+  const { diaInicioMes } = await leerAjustes();
   const hoy = hoyISO();
+  const elegido = esquemaMes.safeParse(parametros.mes);
+  const mes = elegido.success ? elegido.data : periodoDeFecha(hoy, diaInicioMes).mes;
+  const periodo = periodoDe(mes, diaInicioMes);
 
-  const gastos = await listarGastosDelMes(mes);
-  const ritmo = ritmoSemanal(gastos, mes, hoy);
+  const gastos = await listarGastosDelMes(periodo);
+  const ritmo = ritmoSemanal(gastos, periodo, hoy);
   const pedida = Number(parametros.semana);
   const semana = ritmo.semanas.some((s) => s.semana === pedida) ? pedida : ritmo.semanaInicial;
-  const reporte = armarReporteSemanal(gastos, mes, semana, hoy);
+  const reporte = armarReporteSemanal(gastos, periodo, semana, hoy);
   if (reporte === null) return null;
 
   return (
@@ -58,7 +63,11 @@ export default async function ReporteSemana({ searchParams }: Props) {
           </p>
         </div>
         <div className="no-imprimir flex flex-wrap items-center gap-3">
-          <SelectorMes mes={mes} ruta="/informes/semana" />
+          <SelectorMes
+            mes={mes}
+            ruta="/informes/semana"
+            rango={diaInicioMes === 1 ? undefined : rangoCorto(periodo.desde, periodo.hasta)}
+          />
           <a
             href={urlPdfReporte(mes, reporte.semana)}
             download
@@ -94,7 +103,7 @@ export default async function ReporteSemana({ searchParams }: Props) {
                   />
                   Semana {s.semana}
                   <span className={`cifra text-xs font-normal ${activa ? "text-accion-texto/80" : "text-texto-tenue"}`}>
-                    {s.desde}–{s.hasta}
+                    {rangoDeDias(s.fechaDesde, s.fechaHasta)}
                   </span>
                   {nivel !== null && <span className="sr-only">, ritmo {estilo.nombre.toLowerCase()}</span>}
                 </Link>

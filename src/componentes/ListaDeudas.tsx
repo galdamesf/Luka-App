@@ -14,13 +14,15 @@ type Props = {
   alMarcarPagada: AccionFormulario;
   alDesactivar?: (datos: FormData) => void;
   alRevertirCuota: AccionFormulario;
+  /** Adjunta la boleta a una cuota ya pagada. */
+  accionBoleta?: AccionFormulario;
   /** El formulario de deuda, que es componente de cliente. */
   children?: React.ReactNode;
 };
 
 export function ListaDeudas({
   deudas, balance, hoy, accionPagarCuota, accionEditar, alMarcarPagada, alDesactivar,
-  alRevertirCuota, children,
+  alRevertirCuota, accionBoleta, children,
 }: Props) {
   const activas = deudas.filter((d) => d.activa);
   const deudaTotal = activas.reduce((suma, d) => suma + saldoDesde(d, balance.mes), 0);
@@ -62,6 +64,7 @@ export function ListaDeudas({
               alMarcarPagada={alMarcarPagada}
               alDesactivar={alDesactivar}
               alRevertir={alRevertirCuota}
+              accionBoleta={accionBoleta}
             />
           ))}
         </ul>

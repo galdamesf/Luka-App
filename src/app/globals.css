@@ -788,3 +788,14 @@ body {
   transition: box-shadow 0.15s, background-color 0.15s;
 }
 .boton-google:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgb(0 0 0 / 0.18); }
+
+/* Las capturas de la guia (/como-usar): hay una por tema y se ve la del tema
+   puesto, con los mismos selectores que los colores de arriba. */
+.guia-claro { display: block; }
+.guia-oscuro { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .guia-claro { display: none; }
+  :root:not([data-theme="light"]) .guia-oscuro { display: block; }
+}
+:root[data-theme="dark"] .guia-claro { display: none; }
+:root[data-theme="dark"] .guia-oscuro { display: block; }

@@ -20,7 +20,7 @@ import {
   pagarCuenta,
   revertirPago,
 } from "@/datos/cuentas";
-import { guardarBoleta } from "@/lib/boletas";
+import { boletaDelFormulario } from "@/lib/boleta-formulario";
 
 function traducirError(error: unknown): string {
   const texto = error instanceof Error ? error.message : String(error);
@@ -35,21 +35,7 @@ function traducirError(error: unknown): string {
   return "No se pudo guardar. Intenta de nuevo.";
 }
 
-/**
- * Saca el archivo del formulario y lo guarda, si vino alguno.
- * Devuelve null si no se adjunto nada, o el motivo del rechazo.
- */
-async function procesarBoleta(
-  datos: FormData,
-): Promise<{ archivo: string | null } | { error: string }> {
-  const adjunto = datos.get("boleta");
-
-  if (adjunto === null || typeof adjunto === "string") return { archivo: null };
-  if (adjunto.size === 0) return { archivo: null };
-
-  const guardado = await guardarBoleta(adjunto);
-  return guardado.ok ? { archivo: guardado.archivo } : { error: guardado.motivo };
-}
+const procesarBoleta = boletaDelFormulario;
 
 export async function accionCrearCuenta(
   _previo: EstadoFormulario,
@@ -81,7 +67,10 @@ export async function accionCrearCuenta(
   return { ok: true, mensaje: "Cuenta agregada.", errores: {} };
 }
 
-/** Edita una cuenta pendiente. No toca las pagadas: ver actualizarCuenta. */
+/**
+ * Edita una cuenta pendiente, y le adjunta o reemplaza la boleta si viene una.
+ * No toca las pagadas: ver actualizarCuenta.
+ */
 export async function accionActualizarCuenta(
   _previo: EstadoFormulario,
   datos: FormData,
@@ -96,8 +85,14 @@ export async function accionActualizarCuenta(
     };
   }
 
+  // La foto va primero: si el archivo no sirve, no se guarda nada a medias y
+  // el formulario sigue abierto con el motivo a la vista.
+  const boleta = await procesarBoleta(datos);
+  if ("error" in boleta) return { ok: false, mensaje: boleta.error, errores: {} };
+
   try {
     await actualizarCuenta(resultado.data);
+    if (boleta.archivo !== null) await adjuntarBoletaACuenta(resultado.data.id, boleta.archivo);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }

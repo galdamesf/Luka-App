@@ -3,7 +3,7 @@ import { listarCategoriasActivas } from "@/datos/categorias";
 import { sueldoDelMes } from "@/datos/sueldos";
 import { listarDeudas } from "@/datos/deudas";
 import { listarCuentasDelMes, regenerarMensuales } from "@/datos/cuentas";
-import { esPagoDeCuota, resumirMes } from "@/dominio/resumen";
+import { resumirMes } from "@/dominio/resumen";
 import { detallesPorCategoria } from "@/dominio/detalle-categoria";
 import { armarPresupuestos } from "@/dominio/presupuestos";
 import { listarPagosDelMes } from "@/datos/deudas";
@@ -17,9 +17,12 @@ import { armarResumenPanel } from "@/dominio/panel";
 import { calcularSalud, META_AHORRO, puntajeDeSalud } from "@/dominio/salud";
 import { proyectarCierre, ritmoSemanal } from "@/dominio/semanas";
 import { esquemaMes } from "@/dominio/esquemas";
-import { diasEnMesISO, hoyISO, mesActual, sumarMeses } from "@/lib/fecha";
+import { hoyISO } from "@/lib/fecha";
+import { enPeriodo, periodoDe, periodoDeFecha, periodoVecino } from "@/lib/periodo";
+import { leerAjustes } from "@/datos/ajustes";
 import { accionCrearGasto, accionEliminarGasto } from "./acciones/gastos";
 import { accionCrearAhorro, accionEliminarAhorro } from "./acciones/ahorros";
+import { accionDefinirDiaInicio } from "./acciones/ajustes";
 import {
   accionActualizarDeuda,
   accionCrearDeuda,
@@ -45,7 +48,6 @@ import {
 } from "./acciones/presupuestos";
 import { SecuenciaBalance } from "@/componentes/SecuenciaBalance";
 import { ListaDeudas } from "@/componentes/ListaDeudas";
-import { CuotasPagadas } from "@/componentes/CuotasPagadas";
 import { Presupuestos } from "@/componentes/Presupuestos";
 import { FormularioPresupuesto } from "@/componentes/FormularioPresupuesto";
 import { FormularioSueldo } from "@/componentes/FormularioSueldo";
@@ -53,6 +55,7 @@ import { FormularioDeuda } from "@/componentes/FormularioDeuda";
 import { TarjetasResumen } from "@/componentes/TarjetasResumen";
 import { DesgloseCategorias } from "@/componentes/DesgloseCategorias";
 import { MovimientosDelMes } from "@/componentes/MovimientosDelMes";
+import { CifrasQueda } from "@/componentes/CifrasQueda";
 import { IndiceSecciones } from "@/componentes/IndiceSecciones";
 import { SaludFinanciera } from "@/componentes/SaludFinanciera";
 import { RitmoSemanal } from "@/componentes/RitmoSemanal";
@@ -61,7 +64,8 @@ import { SelectorMes } from "@/componentes/SelectorMes";
 import { FormularioGasto } from "@/componentes/FormularioGasto";
 import { PagosDelMes } from "@/componentes/PagosDelMes";
 import { FormularioCuenta } from "@/componentes/FormularioCuenta";
-import { nombreDelMes } from "@/componentes/formato";
+import { nombreDelMes, rangoCorto } from "@/componentes/formato";
+import { AjusteDiaInicio } from "@/componentes/AjusteDiaInicio";
 import { SeccionPanel } from "@/componentes/SeccionPanel";
 import { KpisDelMes } from "@/componentes/KpisDelMes";
 import { BarraDelMes } from "@/componentes/BarraDelMes";
@@ -77,24 +81,31 @@ type Props = {
 export default async function Home({ searchParams }: Props) {
   const parametros = await searchParams;
 
+  // El mes de gastos empieza el dia que eligio la persona (el de su pago).
+  // Con dia 27, el 2 de noviembre es noviembre: del 27 oct al 26 nov.
+  const { diaInicioMes } = await leerAjustes();
+  const hoy = hoyISO();
+
   // Un ?mes= invalido no es motivo para mostrar un error: se cae al mes actual.
   const elegido = esquemaMes.safeParse(parametros.mes);
-  const mes = elegido.success ? elegido.data : mesActual();
+  const mes = elegido.success ? elegido.data : periodoDeFecha(hoy, diaInicioMes).mes;
+  const periodo = periodoDe(mes, diaInicioMes);
+  const periodoAnterior = periodoVecino(periodo, -1);
 
   // Antes de leer: crear las cuentas mensuales que falten en este mes. Es
   // idempotente (indice unico por nombre y mes), asi que recargar no duplica.
   await regenerarMensuales(mes);
 
-  const mesAnterior = sumarMeses(mes, -1);
+  const mesAnterior = periodoAnterior.mes;
 
   const [
     gastos, gastosAnterior, pagos, presupuestos, categorias, sueldo, deudas, cuentas,
     sueldoAnterior, pagosAnterior, cuentasAnterior, presupuestosAnterior, ahorros,
   ] = await Promise.all([
-    listarGastosDelMes(mes),
+    listarGastosDelMes(periodo),
     // Para el detalle al pasar el mouse por una categoria, la variacion del
     // total y el Health Score del mes anterior.
-    listarGastosDelMes(mesAnterior),
+    listarGastosDelMes(periodoAnterior),
     listarPagosDelMes(mes),
     listarPresupuestosDelMes(mes),
     listarCategoriasActivas(),
@@ -110,26 +121,24 @@ export default async function Home({ searchParams }: Props) {
     listarAhorrosHasta(mes),
   ]);
 
-  const hoy = hoyISO();
-  const resumen = resumirMes(gastos, mes);
+  const resumen = resumirMes(gastos, periodo);
   const detalles = detallesPorCategoria(gastos, gastosAnterior);
-  const resumenPresupuestos = armarPresupuestos(presupuestos, gastos, mes);
+  const resumenPresupuestos = armarPresupuestos(presupuestos, gastos, periodo);
 
   // Para el selector del formulario: las categorias que aun no tienen techo.
   const conPresupuesto = new Set(presupuestos.map((p) => p.categoria.id));
   const sinPresupuesto = categorias.filter((c) => !conPresupuesto.has(c.id));
   const balance = calcularBalance({ mes, sueldo, resumen, deudas, pagos });
-  const resumenCuentas = resumirCuentas(cuentas, mes, diasEnMesISO(mes), hoy);
+  const resumenCuentas = resumirCuentas(cuentas, periodo, hoy);
 
-  // Si se mira un mes pasado, el formulario propone su dia 1 en vez de hoy.
-  const fechaInicial = mes === mesActual() ? hoy : `${mes}-01`;
+  // Si se mira otro mes, el formulario propone su primer dia en vez de hoy.
+  const fechaInicial = enPeriodo(hoy, periodo) ? hoy : periodo.desde;
 
   // Las cuatro cifras y la barra del sueldo. Junta lo que ya calcularon el
   // resumen, el balance y las cuentas: no vuelve a sumar gastos por su lado.
   const panel = armarResumenPanel({
-    mes,
+    mes: periodo,
     hoy,
-    diasDelMes: diasEnMesISO(mes),
     balance,
     resumen,
     cuentas: resumenCuentas,
@@ -146,8 +155,7 @@ export default async function Home({ searchParams }: Props) {
   });
   const puntajeAnterior = (() => {
     if (gastosAnterior.length === 0) return null;
-    const diasAnterior = diasEnMesISO(mesAnterior);
-    const resumenAnterior = resumirMes(gastosAnterior, mesAnterior);
+    const resumenAnterior = resumirMes(gastosAnterior, periodoAnterior);
     const balanceAnterior = calcularBalance({
       mes: mesAnterior,
       sueldo: sueldoAnterior,
@@ -157,21 +165,20 @@ export default async function Home({ searchParams }: Props) {
     });
     return puntajeDeSalud({
       panel: armarResumenPanel({
-        mes: mesAnterior,
+        mes: periodoAnterior,
         hoy,
-        diasDelMes: diasAnterior,
         balance: balanceAnterior,
         resumen: resumenAnterior,
-        cuentas: resumirCuentas(cuentasAnterior, mesAnterior, diasAnterior, hoy),
+        cuentas: resumirCuentas(cuentasAnterior, periodoAnterior, hoy),
         gastosMesAnterior: [],
       }),
-      presupuestos: armarPresupuestos(presupuestosAnterior, gastosAnterior, mesAnterior),
+      presupuestos: armarPresupuestos(presupuestosAnterior, gastosAnterior, periodoAnterior),
       cuotasDelMes: balanceAnterior.cuotasComprometidas,
     });
   })();
 
   // El mes en bloques de 7 dias, y como cerraria si sigues igual.
-  const ritmo = ritmoSemanal(gastos, mes, hoy);
+  const ritmo = ritmoSemanal(gastos, periodo, hoy);
   const proyeccion = proyectarCierre(
     panel.gastado,
     panel.porPagar,
@@ -189,7 +196,7 @@ export default async function Home({ searchParams }: Props) {
   // Lo que te quedaria: el sueldo menos todo lo que ya tiene destino, ahorro
   // incluido. Usa las mismas cifras que el resumen, asi no se contradicen.
   const ahorrosDelMes = ahorros.filter((a) => a.mes === mes);
-  const estadoDelMes = mes === hoy.slice(0, 7) ? "en-curso" : mes < hoy.slice(0, 7) ? "cerrado" : "futuro";
+  const estadoDelMes = enPeriodo(hoy, periodo) ? "en-curso" : hoy > periodo.hasta ? "cerrado" : "futuro";
   const queda = calcularLoQueQueda({
     sueldo: panel.sinSueldo ? null : panel.sueldo,
     gastos: resumen.total,
@@ -204,6 +211,8 @@ export default async function Home({ searchParams }: Props) {
     ahorros: ahorrosDelMes,
     diasRestantes: panel.barra.diasRestantes,
     estado: estadoDelMes,
+    metaAhorro: panel.sinSueldo ? null : Math.round((panel.sueldo * META_AHORRO) / 100),
+    gastosDelMes: gastos,
   });
 
   // Para la vista previa del formulario: como va cada presupuesto.
@@ -225,7 +234,7 @@ export default async function Home({ searchParams }: Props) {
   const fraseDelMes =
     diaDeHoy !== null
       ? `Quedan ${diasRestantes} ${diasRestantes === 1 ? "día" : "días"} para cerrar el mes, contando hoy.${avisoCuentas}`
-      : mes < mesActual()
+      : hoy > periodo.hasta
         ? "Mes cerrado: así terminó."
         : "Mes que viene: aquí ves lo que ya está programado.";
 
@@ -235,11 +244,20 @@ export default async function Home({ searchParams }: Props) {
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             <span className="capitalize">{nombreDelMes(mes)}</span>
+            {diaInicioMes !== 1 && (
+              <span className="cifra ml-3 align-middle text-sm font-semibold text-texto-tenue">
+                {rangoCorto(periodo.desde, periodo.hasta)}
+              </span>
+            )}
           </h1>
           <p className="max-w-[62ch] text-sm text-texto-tenue">{fraseDelMes}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <SelectorMes mes={mes} />
+          <SelectorMes
+            mes={mes}
+            rango={diaInicioMes === 1 ? undefined : rangoCorto(periodo.desde, periodo.hasta)}
+          />
+          <AjusteDiaInicio diaInicio={diaInicioMes} hoy={hoy} accion={accionDefinirDiaInicio} />
           {/* Abre el popup para registrar un gasto sin bajar hasta la seccion 02. */}
           <RegistrarGastoEmergente
             categorias={categorias}
@@ -255,12 +273,37 @@ export default async function Home({ searchParams }: Props) {
       </div>
 
       <main className="mt-8 space-y-14">
-        {/* 01 · Lo que te quedaria, con la cuenta completa, y al lado los
-            ahorros: dos tarjetas en la misma seccion. */}
+        {/* 01 · Las cuatro cifras, la barra del sueldo y la secuencia del
+            balance, que es el detalle de esas cifras. */}
+        <SeccionPanel seccion="resumen">
+          <KpisDelMes panel={panel} mes={mes} />
+          <BarraDelMes panel={panel} mes={mes} />
+          <div className="grid items-start gap-4 lg:grid-cols-5">
+            <div id="balance" className="scroll-mt-28 lg:col-span-3">
+              <SecuenciaBalance balance={balance} gastos={gastos} periodo={periodo}>
+                <FormularioSueldo mes={mes} sueldoActual={sueldo} accion={accionDefinirSueldo} />
+              </SecuenciaBalance>
+            </div>
+            <div className="lg:col-span-2">
+              <DesgloseCategorias resumen={resumen} detalles={detalles} />
+            </div>
+          </div>
+        </SeccionPanel>
+
+        {/* 02 · Arriba, a todo lo ancho, las tres cifras que importan: lo
+            libre para el mes, lo de los presupuestos y lo que puedes ahorrar.
+            Debajo la cuenta completa y, al lado, los ahorros. */}
         <SeccionPanel seccion="queda">
+          <CifrasQueda
+            queda={queda}
+            mes={mes}
+            estado={estadoDelMes}
+            diasRestantes={panel.barra.diasRestantes}
+            metaPct={META_AHORRO}
+          />
           <div className="grid items-stretch gap-4 lg:grid-cols-5">
             <div className="lg:col-span-3">
-              <LoQueQueda queda={queda} mes={mes} estado={estadoDelMes} diasRestantes={panel.barra.diasRestantes} />
+              <LoQueQueda queda={queda} mes={mes} estado={estadoDelMes} />
             </div>
             <div className="lg:col-span-2">
               <Ahorros
@@ -273,23 +316,6 @@ export default async function Home({ searchParams }: Props) {
                 accion={accionCrearAhorro}
                 alEliminar={accionEliminarAhorro}
               />
-            </div>
-          </div>
-        </SeccionPanel>
-
-        {/* 02 · Las cuatro cifras, la barra del sueldo y la secuencia del
-            balance, que es el detalle de esas cifras. */}
-        <SeccionPanel seccion="resumen">
-          <KpisDelMes panel={panel} mes={mes} />
-          <BarraDelMes panel={panel} mes={mes} />
-          <div className="grid items-start gap-4 lg:grid-cols-5">
-            <div id="balance" className="scroll-mt-28 lg:col-span-3">
-              <SecuenciaBalance balance={balance} gastos={gastos}>
-                <FormularioSueldo mes={mes} sueldoActual={sueldo} accion={accionDefinirSueldo} />
-              </SecuenciaBalance>
-            </div>
-            <div className="lg:col-span-2">
-              <DesgloseCategorias resumen={resumen} detalles={detalles} />
             </div>
           </div>
         </SeccionPanel>
@@ -319,8 +345,10 @@ export default async function Home({ searchParams }: Props) {
                 alMarcarCuentaPagada={accionMarcarPagada}
                 alEliminarCuenta={accionEliminarCuenta}
                 alRevertirCuenta={accionRevertirPago}
+                accionPagarCuota={accionPagarCuota}
                 alMarcarCuotaPagada={accionMarcarCuotaPagada}
                 alRevertirCuota={accionRevertirCuota}
+                accionBoleta={accionAdjuntarBoletaAGasto}
               >
                 <FormularioCuenta mes={mes} categorias={categorias} accion={accionCrearCuenta} />
               </PagosDelMes>
@@ -344,6 +372,7 @@ export default async function Home({ searchParams }: Props) {
                 accionEditar={accionActualizarDeuda}
                 alDesactivar={accionDesactivarDeuda}
                 alRevertirCuota={accionRevertirCuota}
+                accionBoleta={accionAdjuntarBoletaAGasto}
               >
                 <FormularioDeuda mes={mes} accion={accionCrearDeuda} />
               </ListaDeudas>
@@ -373,7 +402,7 @@ export default async function Home({ searchParams }: Props) {
           <Presupuestos
             resumen={resumenPresupuestos}
             gastos={gastos}
-            diasDelMes={diasEnMesISO(mes)}
+            periodo={periodo}
             accionEditar={accionActualizarPresupuesto}
             alEliminar={accionEliminarPresupuesto}
             comprometidoPorCategoria={comprometidoPorCategoria}
@@ -387,17 +416,17 @@ export default async function Home({ searchParams }: Props) {
           </Presupuestos>
         </SeccionPanel>
 
-        {/* 07 · La tabla de gastos con sus boletas, ahora con buscador. Los
-            pagos de cuota NO van en ella: el balance ya los descuenta como
-            cuotas, y mezclarlos aqui los restaria dos veces. Van aparte. */}
+        {/* 07 · La tabla de gastos con sus boletas, con buscador. Incluye los
+            pagos de cuota, marcados como tales: aqui solo se listan y se
+            suman para mostrar, no alimentan el balance, que las descuenta
+            por su lado. Por eso no se restan dos veces. */}
         <SeccionPanel seccion="movimientos">
           <MovimientosDelMes
-            gastos={gastos.filter((g) => !esPagoDeCuota(g))}
+            gastos={gastos}
             categorias={categorias}
             alEliminar={accionEliminarGasto}
             accionBoleta={accionAdjuntarBoletaAGasto}
           />
-          <CuotasPagadas cuotas={resumen.cuotasPagadas} total={resumen.totalCuotas} />
         </SeccionPanel>
       </main>
     </div>

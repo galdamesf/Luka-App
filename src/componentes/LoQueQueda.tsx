@@ -1,13 +1,13 @@
-import type { EstadoDelMes, LoQueQueda as Queda } from "@/dominio/lo-que-queda";
+import { Fragment } from "react";
+import type { DesglosePagado, EstadoDelMes, LoQueQueda as Queda } from "@/dominio/lo-que-queda";
 import { Icono } from "./Icono";
 import { TONOS, type Tono } from "./tonos";
-import { formatearCLP, nombreDelMes, porcentajeLegible } from "./formato";
+import { formatearCLP, nombreDelMes } from "./formato";
 
 type Props = {
   queda: Queda;
   mes: string;
   estado: EstadoDelMes;
-  diasRestantes: number;
 };
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
@@ -15,23 +15,74 @@ const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno
 const conSigno = (monto: number) => (monto < 0 ? `−${formatearCLP(-monto)}` : formatearCLP(monto));
 
 // Clases enteras: Tailwind solo genera las que ve escritas completas.
-const ESTADO = {
-  sobra: { texto: "text-exito", pildora: "border-exito/40 bg-exito/10 text-exito", icono: "check" },
-  ajustado: { texto: "text-alerta", pildora: "border-alerta/40 bg-alerta/10 text-alerta", icono: "alert" },
-  falta: { texto: "text-peligro", pildora: "border-peligro/40 bg-peligro/10 text-peligro", icono: "alert" },
-} as const;
+const COLOR_ESTADO = { sobra: "text-exito", ajustado: "text-alerta", falta: "text-peligro" } as const;
 
 type Linea = { clave: string; nombre: string; detalle: string; monto: number; tono: Tono; destino?: string };
 
 /**
- * La cuenta completa del mes, de arriba abajo: el sueldo, cada cosa que se
- * lleva una parte y lo que queda al final. La barra muestra lo mismo de un
- * vistazo: cada color se come un pedazo del sueldo y lo gris es lo libre.
+ * "Pagos realizados" abierto en tres. Lo de fuera de presupuesto va con sus
+ * gastos mas grandes: son los imprevistos, lo que se come el ahorro.
  */
-export function LoQueQueda({ queda, mes, estado, diasRestantes }: Props) {
+function DetallePagado({ detalle }: { detalle: DesglosePagado }) {
+  const fuera = detalle.fueraDePresupuesto;
+  const filas = [
+    { nombre: "Cuentas y cuotas pagadas", nota: "Lo que ya estaba previsto", monto: detalle.cuentasYCuotas },
+    { nombre: "Dentro de presupuesto", nota: "Súper, bencina y lo demás con presupuesto", monto: detalle.dentroDePresupuesto },
+    {
+      nombre: "Fuera de presupuesto",
+      nota: fuera.cantidad === 0 ? "Ningún imprevisto todavía" : `${plural(fuera.cantidad, "gasto", "gastos")} sin presupuesto: imprevistos y otros`,
+      monto: fuera.total,
+    },
+  ];
+  return (
+    <details className="mt-1.5 ml-[1.375rem]">
+      <summary className="cursor-pointer text-xs font-semibold text-accion-tinta">Ver detalle</summary>
+      <ul className="mt-2 space-y-2">
+        {filas.map((f) => (
+          <li key={f.nombre} className="flex items-baseline justify-between gap-3 text-xs">
+            <span className="min-w-0">
+              <span className="font-medium text-texto">{f.nombre}</span>
+              <span className="block text-texto-tenue">{f.nota}</span>
+            </span>
+            <span className="cifra shrink-0 font-semibold">{formatearCLP(f.monto)}</span>
+          </li>
+        ))}
+      </ul>
+      {fuera.mayores.length > 0 && (
+        <div className="mt-2.5 rounded-md bg-superficie-tenue p-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-texto-tenue">
+            Los más grandes fuera de presupuesto
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {fuera.mayores.map((g) => (
+              <li key={g.id} className="flex items-baseline justify-between gap-3 text-xs">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="shrink-0" style={{ color: g.categoria.color }}>
+                    <Icono nombre={g.categoria.icono} tamano={13} />
+                  </span>
+                  <span className="truncate">{g.descripcion}</span>
+                </span>
+                <span className="cifra shrink-0 font-semibold">{formatearCLP(g.monto)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </details>
+  );
+}
+
+/**
+ * La cuenta completa del mes, de arriba abajo: el sueldo, cada cosa que se
+ * lleva una parte y lo que queda al final, con un subtotal a mitad de camino
+ * (lo libre despues de pagar todo). La barra muestra lo mismo de un vistazo:
+ * cada color se come un pedazo del sueldo y lo gris es lo libre.
+ *
+ * Las cifras grandes viven en CifrasQueda, arriba: esta tarjeta es el detalle.
+ */
+export function LoQueQueda({ queda, mes, estado }: Props) {
   const [nombreMes] = nombreDelMes(mes).split(" ");
   const cerrado = estado === "cerrado";
-  const estilo = ESTADO[queda.estado];
 
   const lineas: Linea[] = [
     {
@@ -103,62 +154,23 @@ export function LoQueQueda({ queda, mes, estado, diasRestantes }: Props) {
       aria-labelledby="titulo-queda"
       className="tarjeta-viva viva-exito flex h-full min-w-0 flex-col gap-5 rounded-xl border border-borde bg-superficie p-5 shadow-sm"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <h3 id="titulo-queda" className="text-base font-bold">
-            {cerrado ? `Lo que te quedó en ${nombreMes}` : `Lo que te quedaría al cerrar ${nombreMes}`}
-          </h3>
-          <p className="max-w-[56ch] text-[13px] leading-snug text-texto-tenue">
-            {cerrado
-              ? "El sueldo menos todo lo que se pagó, lo que quedó pendiente y lo que ahorraste."
-              : estado === "futuro"
-                ? "Con lo que ya está programado para ese mes: cuentas, cuotas, presupuestos y ahorro."
-                : "Si pagas todo lo pendiente, gastas lo que queda de tus presupuestos y apartas tu ahorro."}
-          </p>
-        </div>
-        {!queda.sinSueldo && (
-          <span className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 text-sm font-bold ${estilo.pildora}`}>
-            <Icono nombre={estilo.icono} tamano={15} />
-            {queda.estado === "sobra"
-              ? "Te sobra"
-              : queda.estado === "ajustado"
-                ? "Ajustado"
-                : `No alcanza: faltan ${formatearCLP(-queda.quedaria)}`}
-          </span>
-        )}
+      <div className="min-w-0 space-y-1">
+        <h3 id="titulo-queda" className="text-base font-bold">
+          {cerrado ? `La cuenta de ${nombreMes}` : `La cuenta completa de ${nombreMes}`}
+        </h3>
+        <p className="max-w-[56ch] text-[13px] leading-snug text-texto-tenue">
+          {cerrado
+            ? "El sueldo menos todo lo que se pagó, lo que quedó pendiente y lo que ahorraste."
+            : estado === "futuro"
+              ? "Con lo que ya está programado para ese mes: cuentas, cuotas, presupuestos y ahorro."
+              : "Línea por línea: lo pagado, lo que falta pagar, lo que queda de tus presupuestos y tu ahorro."}
+        </p>
       </div>
 
-      {/* --- La cifra --- */}
-      {queda.sinSueldo ? (
+      {queda.sinSueldo && (
         <div className="rounded-lg border border-dashed border-borde p-4 text-sm text-texto-tenue">
-          <p className="text-lg font-bold text-texto">Falta tu sueldo</p>
-          Sin él no hay de dónde restar.{" "}
-          <a href="#balance" className="font-semibold text-accion-tinta underline-offset-2 hover:underline">
-            Defínelo en el balance
-          </a>
-          . Por ahora, lo comprometido este mes suma{" "}
+          Sin sueldo no hay de dónde restar. Por ahora, lo comprometido este mes suma{" "}
           <span className="cifra font-bold text-texto">{formatearCLP(queda.descuentos)}</span>.
-        </div>
-      ) : (
-        <div className="space-y-1">
-          <p className={`cifra text-4xl font-bold leading-none tracking-tight sm:text-5xl ${estilo.texto}`}>
-            {conSigno(queda.quedaria)}
-          </p>
-          <p className="text-sm text-texto-tenue">
-            {queda.porcentajeDelSueldo !== null && queda.quedaria >= 0 && (
-              <>
-                <span className="font-semibold text-texto">{porcentajeLegible(queda.porcentajeDelSueldo)}</span> de tu sueldo
-              </>
-            )}
-            {queda.porDia !== null && (
-              <>
-                {" "}· unos <span className="cifra font-semibold text-texto">{formatearCLP(queda.porDia)}</span> por día en los{" "}
-                {plural(diasRestantes, "día que queda", "días que quedan")}
-              </>
-            )}
-            {queda.estado === "ajustado" && " · menos del 10% del sueldo: poco margen para imprevistos"}
-            {queda.estado === "falta" && "Lo comprometido supera el sueldo: algo de lo de abajo tiene que bajar."}
-          </p>
         </div>
       )}
 
@@ -207,7 +219,8 @@ export function LoQueQueda({ queda, mes, estado, diasRestantes }: Props) {
           </li>
         )}
         {lineas.map((l) => (
-          <li key={l.clave} className={`fila-viva ${TONOS[l.tono].viva} -mx-2 rounded-md px-2 py-2.5`}>
+          <Fragment key={l.clave}>
+          <li className={`fila-viva ${TONOS[l.tono].viva} -mx-2 rounded-md px-2 py-2.5`}>
             <div className="grid grid-cols-[0.75rem_minmax(0,1fr)_auto] items-start gap-x-2.5">
               <span aria-hidden="true" className={`mt-1 size-3 rounded-sm ${TONOS[l.tono].barra}`} />
               <span className="min-w-0">
@@ -220,6 +233,9 @@ export function LoQueQueda({ queda, mes, estado, diasRestantes }: Props) {
                 {l.monto === 0 ? formatearCLP(0) : `−${formatearCLP(l.monto)}`}
               </span>
             </div>
+            {l.clave === "pagado" && queda.pagado.detalle !== null && queda.pagado.total > 0 && (
+              <DetallePagado detalle={queda.pagado.detalle} />
+            )}
             {l.clave === "presupuesto" && queda.presupuestoPorGastar.lineas.length > 0 && (
               <details className="mt-1.5 ml-[1.375rem]">
                 <summary className="cursor-pointer text-xs font-semibold text-accion-tinta">
@@ -249,10 +265,19 @@ export function LoQueQueda({ queda, mes, estado, diasRestantes }: Props) {
               </details>
             )}
           </li>
+          {/* Lo que hay para el mes una vez pagado todo lo comprometido: la
+              cifra "Libre para el mes" de arriba. */}
+          {l.clave === "cuotas" && !queda.sinSueldo && (
+            <li className="-mx-2 flex items-center justify-between gap-3 rounded-md bg-superficie-tenue px-2 py-2.5">
+              <span className="font-semibold">= Libre después de pagar todo</span>
+              <span className={`cifra font-bold ${queda.libre < 0 ? "text-peligro" : ""}`}>{conSigno(queda.libre)}</span>
+            </li>
+          )}
+          </Fragment>
         ))}
         <li className="flex items-center justify-between gap-3 pt-3 pb-1">
           <span className="text-base font-bold">{queda.sinSueldo ? "Comprometido este mes" : cerrado ? "Te quedó" : "Te quedaría"}</span>
-          <span className={`cifra text-xl font-bold ${queda.sinSueldo ? "" : estilo.texto}`}>
+          <span className={`cifra text-xl font-bold ${queda.sinSueldo ? "" : COLOR_ESTADO[queda.estado]}`}>
             {queda.sinSueldo ? formatearCLP(queda.descuentos) : conSigno(queda.quedaria)}
           </span>
         </li>

@@ -1,4 +1,5 @@
-import { diasEnMesISO, isoDesdeFecha, mesActual } from "@/lib/fecha";
+import { isoDesdeFecha } from "@/lib/fecha";
+import { aPeriodo, diaDelPeriodo, enPeriodo, type Periodo } from "@/lib/periodo";
 import type { MedioPago } from "./esquemas";
 
 export type CategoriaPlana = {
@@ -24,9 +25,15 @@ export type GastoPlano = {
    *
    * Los gastos de cuota NO se suman con los demas: el balance ya descuenta
    * las cuotas por su lado, y contarlas tambien aqui restaria la misma plata
-   * dos veces. Por eso viven en su propia seccion.
+   * dos veces. En Movimientos si se listan, marcados como cuota.
    */
   cuota: { deudaId: string; deudaNombre: string } | null;
+  /**
+   * La cuenta cuyo pago genero este gasto, si vino de ahi. Opcional: solo lo
+   * trae la lectura desde la base, y solo lo usan el desglose de lo pagado y
+   * el aviso al borrar (la cuenta vuelve a pendiente).
+   */
+  cuenta?: { cuentaId: string; nombre: string } | null;
 };
 
 /**
@@ -84,16 +91,17 @@ export type ResumenMensual = {
  * datos armados a mano y sin Postgres de por medio.
  *
  * @param gastos Gastos del mes. Se ignoran los que caigan fuera.
- * @param mes    "YYYY-MM".
+ * @param mes    El periodo, o un "YYYY-MM" suelto para el mes calendario.
  * @param hoy    Dia de referencia para el mes en curso. Inyectable para tests.
  */
 export function resumirMes(
   gastos: readonly GastoPlano[],
-  mes: string,
+  mes: string | Periodo,
   hoy: Date = new Date(),
   zona = "America/Santiago",
 ): ResumenMensual {
-  const todos = gastos.filter((g) => g.fecha.startsWith(mes));
+  const periodo = aPeriodo(mes);
+  const todos = gastos.filter((g) => enPeriodo(g.fecha, periodo));
 
   // Los pagos de cuota se apartan antes de sumar nada. Si entraran al total,
   // el balance restaria la cuota dos veces: una como cuota y otra como gasto.
@@ -133,12 +141,9 @@ export function resumirMes(
 
   const diasConGasto = new Set(delMes.map((g) => g.fecha)).size;
 
-  const mesDeHoy = mesActual(zona, hoy);
-  const mesEnCurso = mes === mesDeHoy;
-  const diasDelMes = diasEnMesISO(mes);
-  const diasConsiderados = mesEnCurso
-    ? Number(isoDesdeFechaLocal(hoy, zona).slice(8, 10))
-    : diasDelMes;
+  const hoyLocal = isoDesdeFechaLocal(hoy, zona);
+  const mesEnCurso = enPeriodo(hoyLocal, periodo);
+  const diasConsiderados = mesEnCurso ? diaDelPeriodo(hoyLocal, periodo) : periodo.dias;
 
   const mayorGasto =
     delMes.length === 0
@@ -146,7 +151,7 @@ export function resumirMes(
       : delMes.reduce((mayor, g) => (g.monto > mayor.monto ? g : mayor), delMes[0] as GastoPlano);
 
   return {
-    mes,
+    mes: periodo.mes,
     total,
     cantidad: delMes.length,
     esenciales,
@@ -173,7 +178,7 @@ function isoDesdeFechaLocal(momento: Date, zona: string): string {
 }
 
 /** Resumen vacio, para pintar un mes sin gastos sin ramificar en la interfaz. */
-export function resumenVacio(mes: string, hoy: Date = new Date()): ResumenMensual {
+export function resumenVacio(mes: string | Periodo, hoy: Date = new Date()): ResumenMensual {
   return resumirMes([], mes, hoy);
 }
 
@@ -188,6 +193,7 @@ export function aPlano(fila: {
   boletaArchivo?: string | null;
   categoria: { id: string; nombre: string; color: string; icono: string; esencial: boolean };
   cuota?: { deudaId: string; deuda?: { nombre: string } | null } | null;
+  cuenta?: { id: string; nombre: string } | null;
 }): GastoPlano {
   return {
     id: fila.id,
@@ -206,6 +212,10 @@ export function aPlano(fila: {
     notas: fila.notas,
     boletaArchivo: fila.boletaArchivo ?? null,
     categoria: fila.categoria,
+    cuenta:
+      fila.cuenta === undefined || fila.cuenta === null
+        ? null
+        : { cuentaId: fila.cuenta.id, nombre: fila.cuenta.nombre },
   };
 }
 
@@ -223,10 +233,11 @@ export function aPlano(fila: {
  */
 export function repartirGastos(
   gastos: readonly GastoPlano[],
-  mes: string,
+  mes: string | Periodo,
 ): { esenciales: GastoPlano[]; resto: GastoPlano[] } {
+  const periodo = aPeriodo(mes);
   const delMes = gastos
-    .filter((g) => g.fecha.startsWith(mes) && !esPagoDeCuota(g))
+    .filter((g) => enPeriodo(g.fecha, periodo) && !esPagoDeCuota(g))
     // Del mas nuevo al mas viejo, que es como uno los busca. Con empates se
     // desempata por monto y despues por id, para que el orden sea estable.
     .sort(

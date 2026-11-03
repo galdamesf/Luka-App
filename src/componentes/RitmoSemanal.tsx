@@ -5,7 +5,7 @@ import { useState } from "react";
 import { nivelDeSemana, type RitmoSemanal as Ritmo, type SemanaDelMes } from "@/dominio/semanas";
 import { Icono } from "./Icono";
 import type { NombreIcono } from "./iconos";
-import { formatearCLP, variacionLegible } from "./formato";
+import { formatearCLP, rangoDeDias, rangoLargo, variacionLegible } from "./formato";
 import { TONOS, type Tono } from "./tonos";
 import { NIVEL, NIVELES_LEYENDA } from "./niveles-semana";
 import { FichaTono } from "./FichaTono";
@@ -164,7 +164,7 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
                     type="button"
                     onClick={() => setElegida(s.semana)}
                     aria-pressed={activa}
-                    aria-label={`Semana ${s.semana}, días ${s.desde} al ${s.hasta}: ${formatearCLP(valor)}, ritmo ${estiloBarra.nombre.toLowerCase()}`}
+                    aria-label={`Semana ${s.semana}, del ${rangoLargo(s.fechaDesde, s.fechaHasta, false)}: ${formatearCLP(valor)}, ritmo ${estiloBarra.nombre.toLowerCase()}`}
                     className={`flex h-full cursor-pointer flex-col items-center justify-end gap-2 rounded-t-lg border border-b-0 pt-2 transition-colors duration-150 ${
                       activa ? "border-accion/50 bg-accion/10" : "border-transparent hover:bg-superficie-tenue"
                     }`}
@@ -195,7 +195,7 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
                       Sem {s.semana}
                     </span>
                     <span className="text-[11px] text-texto-tenue">
-                      {s.desde}–{s.hasta}
+                      {rangoDeDias(s.fechaDesde, s.fechaHasta)}
                     </span>
                     {nivelDe(s) !== null && (
                       <span className={`text-[11px] font-bold ${estiloBarra.texto}`}>{estiloBarra.nombre.toLowerCase()}</span>
@@ -222,7 +222,7 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
                 Semana {semana.semana} · {etiqueta}
               </p>
               <p className="text-sm text-texto-tenue">
-                Días {semana.desde} al {semana.hasta}
+                Del {rangoLargo(semana.fechaDesde, semana.fechaHasta, false)}
                 {semana.enCurso && ` · van ${semana.diasTranscurridos} de ${totalDias}`}
               </p>
               <p className="cifra text-3xl font-bold tracking-tight">{formatearCLP(semana.total)}</p>
@@ -372,7 +372,10 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
             {
               nombre: "Semana más alta",
               valor: masAlta === undefined ? "—" : `Semana ${masAlta.semana}`,
-              nota: masAlta === undefined ? "Todavía no hay gastos" : `${formatearCLP(masAlta.total)} · días ${masAlta.desde} al ${masAlta.hasta}`,
+              nota:
+                masAlta === undefined
+                  ? "Todavía no hay gastos"
+                  : `${formatearCLP(masAlta.total)} · ${rangoLargo(masAlta.fechaDesde, masAlta.fechaHasta, false)}`,
               color: "text-texto",
               tono: "fucsia",
               icono: "trending-up",

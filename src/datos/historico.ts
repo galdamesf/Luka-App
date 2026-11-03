@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { fechaDesdeISO, sumarMeses } from "@/lib/fecha";
+import { periodoDe, rangoDelPeriodo } from "@/lib/periodo";
 import { armarSerie, ventanaDeMeses } from "@/dominio/historico";
 import type { PuntoMes } from "@/dominio/estadisticas";
 import type { ClienteDb } from "./gastos";
@@ -17,13 +17,15 @@ export async function serieHistorica(
   mesFinal: string,
   cantidadMeses = 12,
   db: ClienteDb = prisma,
+  /** Dia en que empieza cada mes de gastos. 1 es el mes calendario. */
+  diaInicio = 1,
 ): Promise<PuntoMes[]> {
   const ventana = ventanaDeMeses(mesFinal, cantidadMeses);
 
-  // Rango semiabierto [inicio, fin): el primer dia del mes siguiente al final,
-  // asi entra completo el ultimo dia del mes final.
-  const desde = fechaDesdeISO(`${ventana[0]}-01`);
-  const hasta = fechaDesdeISO(`${sumarMeses(ventana.at(-1)!, 1)}-01`);
+  // Rango semiabierto [inicio, fin): desde el primer dia del periodo mas
+  // antiguo hasta el dia siguiente al ultimo del mas nuevo.
+  const { desde } = rangoDelPeriodo(periodoDe(ventana[0] as string, diaInicio));
+  const { hasta } = rangoDelPeriodo(periodoDe(ventana.at(-1) as string, diaInicio));
 
   // Se agrupa por fecha exacta y no por mes porque Prisma no sabe hacer
   // date_trunc; agrupar por dia deja a lo mas ~365 filas que se suman aqui.
@@ -47,5 +49,6 @@ export async function serieHistorica(
       monto: f._sum.monto ?? 0,
     })),
     sueldos as { monto: number; vigenteDesde: Date }[],
+    diaInicio,
   );
 }

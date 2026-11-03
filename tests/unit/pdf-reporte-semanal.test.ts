@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import { armarReporteSemanal, type ReporteSemanal } from "@/dominio/reporte-semanal";
 import type { GastoPlano } from "@/dominio/resumen";
 import { generarPdfReporteSemanal, nombreArchivoReporte, rangoDeLaSemana } from "@/lib/pdf-reporte-semanal";
+import { periodoDe } from "@/lib/periodo";
 
 const CAFE = { id: "c1", nombre: "Café", color: "#c38409", icono: "coffee", esencial: false };
 const REGALOS = { id: "c2", nombre: "Regalos", color: "#9c5ac9", icono: "gift", esencial: false };
@@ -126,5 +127,21 @@ describe("nombres", () => {
 
   test("el rango de la semana", () => {
     expect(rangoDeLaSemana({ mes: "2026-10", fechaDesde: "2026-10-01", fechaHasta: "2026-10-07" })).toBe("1 al 7 de octubre de 2026");
+  });
+});
+
+describe("con un mes que empieza el 27", () => {
+  test("la semana 1 cruza de octubre a noviembre y el PDF lo dice", async () => {
+    const r = armarReporteSemanal(
+      [gasto("2026-10-28", 12_000, CAFE, { descripcion: "Café del 28" }), gasto("2026-11-02", 3_000, CAFE, { descripcion: "Café del 2" })],
+      periodoDe("2026-11", 27),
+      1,
+      "2026-11-02",
+    );
+    if (r === null) throw new Error("la semana 1 existe");
+    const todo = (await textoDe(await generarPdfReporteSemanal(r, GENERADO))).join("\n");
+    expect(todo).toContain("Semana 1 · 27 de octubre al 2 de noviembre de 2026");
+    expect(todo).toContain("Café del 28");
+    expect(todo).toContain("Lunes 2 de noviembre");
   });
 });

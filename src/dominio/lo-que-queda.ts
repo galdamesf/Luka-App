@@ -1,4 +1,4 @@
-import type { CategoriaPlana } from "./resumen";
+import { esPagoDeCuota, type CategoriaPlana, type GastoPlano } from "./resumen";
 import type { ResumenPresupuestos } from "./presupuestos";
 
 /**
@@ -25,6 +25,11 @@ import type { ResumenPresupuestos } from "./presupuestos";
  *
  * En un mes cerrado el presupuesto que no se gasto ya no se va a gastar: no
  * se descuenta. Funcion pura, sin Prisma ni React.
+ *
+ * Ademas de la cifra final entrega dos que responden preguntas directas:
+ * "libre" (cuanto hay para el mes despues de pagar todo lo comprometido) y
+ * "puedes ahorrar" (lo que sobraria despues de gastar los presupuestos),
+ * comparado con la meta de ahorro.
  */
 
 export type EstadoDelMes = "en-curso" | "cerrado" | "futuro";
@@ -50,7 +55,47 @@ export type EntradaLoQueQueda = {
   /** Dias que quedan contando hoy (ResumenPanel.barra.diasRestantes). */
   diasRestantes: number;
   estado: EstadoDelMes;
+  /** Cuanto deberias apartar este mes (el % de meta sobre el sueldo). null sin meta. */
+  metaAhorro?: number | null;
+  /**
+   * Los gastos del mes, para abrir "pagos realizados" en sus partes. Sin
+   * ellos no hay desglose. Cada gasto tiene que traer `cuenta` (si es el
+   * pago de una cuenta), que es lo que viene de la base.
+   */
+  gastosDelMes?: readonly GastoPlano[];
 };
+
+/** Un gasto fuera de presupuesto, de los mas grandes, para nombrarlo. */
+export type GastoDestacado = { id: string; descripcion: string; monto: number; categoria: CategoriaPlana };
+
+/**
+ * "Pagos realizados" abierto en tres: suman exactamente lo mismo.
+ * Lo que se come el ahorro sin aviso es lo de fuera de presupuesto.
+ */
+export type DesglosePagado = {
+  /** Cuentas pagadas este mes mas cuotas pagadas: lo que ya estaba previsto. */
+  cuentasYCuotas: number;
+  /** Gastos en categorias que tienen presupuesto (super, bencina...). */
+  dentroDePresupuesto: number;
+  /** Todo lo demas: imprevistos y gastos sin presupuesto. */
+  fueraDePresupuesto: { total: number; cantidad: number; mayores: GastoDestacado[] };
+};
+
+export type MetaAhorro = {
+  /** Lo que pide la meta este mes. */
+  monto: number;
+  /** Lo ya apartado este mes. */
+  apartado: number;
+  /** Lo que falta apartar para cumplirla. Cero si ya se cumplio. */
+  porApartar: number;
+  /** Si lo que puedes ahorrar alcanza para lo que falta. */
+  alcanza: boolean;
+  /** Si alcanza, lo que sobra despues de cumplirla; si no, lo que falta. */
+  diferencia: number;
+};
+
+/** Cuantos gastos de fuera de presupuesto se nombran. */
+export const MAYORES_FUERA = 3;
 
 export type LineaPorGastar = {
   categoria: CategoriaPlana;
@@ -65,7 +110,7 @@ export type LineaPorGastar = {
 export type LoQueQueda = {
   sinSueldo: boolean;
   sueldo: number;
-  pagado: { gastos: number; cuotas: number; total: number };
+  pagado: { gastos: number; cuotas: number; total: number; detalle: DesglosePagado | null };
   cuentasPorPagar: { total: number; cantidad: number };
   cuotasPorPagar: { total: number; cantidad: number };
   /** Solo las categorias a las que todavia les queda, de mayor a menor. */
@@ -73,8 +118,16 @@ export type LoQueQueda = {
   ahorro: { total: number; cantidad: number };
   /** Todo lo que se resta del sueldo. */
   descuentos: number;
+  /**
+   * sueldo - pagado - cuentas por pagar - cuotas por pagar: lo que hay para
+   * el mes una vez pagado todo lo comprometido, antes de presupuestos y ahorro.
+   */
+  libre: number;
   /** sueldo - descuentos. Negativo si no alcanza. */
   quedaria: number;
+  /** Lo que todavia podrias apartar: lo que quedaria, si es positivo. */
+  puedesAhorrar: number;
+  meta: MetaAhorro | null;
   /** quedaria como parte del sueldo. null sin sueldo o con sueldo cero. */
   porcentajeDelSueldo: number | null;
   /** Lo que quedaria repartido en los dias que faltan. null si no hay que repartir. */
@@ -88,6 +141,10 @@ export function calcularLoQueQueda(entrada: EntradaLoQueQueda): LoQueQueda {
     gastos: entrada.gastos,
     cuotas: entrada.cuotasPagadas,
     total: entrada.gastos + entrada.cuotasPagadas,
+    detalle:
+      entrada.gastosDelMes === undefined
+        ? null
+        : desglosarPagado(entrada.gastosDelMes, entrada.cuotasPagadas, entrada.presupuestos),
   };
 
   const lineas: LineaPorGastar[] =
@@ -113,8 +170,10 @@ export function calcularLoQueQueda(entrada: EntradaLoQueQueda): LoQueQueda {
     cantidad: entrada.ahorros.length,
   };
 
+  const libre = sueldo - pagado.total - entrada.cuentasPorPagar.total - entrada.cuotasPorPagar.total;
   const descuentos = pagado.total + entrada.cuentasPorPagar.total + entrada.cuotasPorPagar.total + porGastar + ahorro.total;
   const quedaria = sueldo - descuentos;
+  const puedesAhorrar = Math.max(0, quedaria);
   const porcentajeDelSueldo = sueldo === 0 ? null : (quedaria / sueldo) * 100;
 
   return {
@@ -126,7 +185,10 @@ export function calcularLoQueQueda(entrada: EntradaLoQueQueda): LoQueQueda {
     presupuestoPorGastar: { total: porGastar, lineas },
     ahorro,
     descuentos,
+    libre,
     quedaria,
+    puedesAhorrar,
+    meta: armarMeta(entrada.metaAhorro ?? null, ahorro.total, puedesAhorrar),
     porcentajeDelSueldo,
     porDia:
       entrada.estado !== "cerrado" && quedaria > 0 && entrada.diasRestantes > 0
@@ -138,5 +200,53 @@ export function calcularLoQueQueda(entrada: EntradaLoQueQueda): LoQueQueda {
         : porcentajeDelSueldo === null || porcentajeDelSueldo < UMBRAL_AJUSTADO
           ? "ajustado"
           : "sobra",
+  };
+}
+
+function armarMeta(monto: number | null, apartado: number, puedesAhorrar: number): MetaAhorro | null {
+  if (monto === null || monto <= 0) return null;
+  const porApartar = Math.max(0, monto - apartado);
+  const alcanza = puedesAhorrar >= porApartar;
+  return {
+    monto,
+    apartado,
+    porApartar,
+    alcanza,
+    diferencia: alcanza ? puedesAhorrar - porApartar : porApartar - puedesAhorrar,
+  };
+}
+
+/**
+ * Abre lo pagado en sus tres partes. Las cuotas no estan entre los gastos
+ * (el balance las lleva aparte) y entran con su total; los pagos de cuenta
+ * se reconocen por su enlace, aunque su categoria tenga presupuesto, para
+ * que la luz pagada no aparezca como gasto "dentro de presupuesto".
+ */
+export function desglosarPagado(
+  gastos: readonly GastoPlano[],
+  cuotasPagadas: number,
+  presupuestos: Pick<ResumenPresupuestos, "lineas">,
+): DesglosePagado {
+  const conPresupuesto = new Set(presupuestos.lineas.map((l) => l.presupuesto.categoria.id));
+  let cuentas = 0;
+  let dentro = 0;
+  const fuera: GastoPlano[] = [];
+
+  for (const g of gastos) {
+    if (esPagoDeCuota(g)) continue;
+    if (g.cuenta != null) cuentas += g.monto;
+    else if (conPresupuesto.has(g.categoria.id)) dentro += g.monto;
+    else fuera.push(g);
+  }
+
+  const mayores = [...fuera]
+    .sort((a, b) => b.monto - a.monto || b.fecha.localeCompare(a.fecha))
+    .slice(0, MAYORES_FUERA)
+    .map((g) => ({ id: g.id, descripcion: g.descripcion, monto: g.monto, categoria: g.categoria }));
+
+  return {
+    cuentasYCuotas: cuentas + cuotasPagadas,
+    dentroDePresupuesto: dentro,
+    fueraDePresupuesto: { total: fuera.reduce((s, g) => s + g.monto, 0), cantidad: fuera.length, mayores },
   };
 }

@@ -1,4 +1,4 @@
-import { diasEnMesISO, sumarMeses } from "@/lib/fecha";
+import { aPeriodo, diaDelPeriodo, enPeriodo, fechaDelPeriodo, periodoVecino, type Periodo } from "@/lib/periodo";
 import type { GastoPlano, ResumenMensual, CategoriaPlana } from "./resumen";
 import { resumirMes } from "./resumen";
 import type { MedioPago } from "./esquemas";
@@ -42,12 +42,14 @@ export type Comparacion = {
 export function compararConMesAnterior(
   gastosActual: readonly GastoPlano[],
   gastosAnterior: readonly GastoPlano[],
-  mes: string,
+  mes: string | Periodo,
   hoy: Date = new Date(),
 ): Comparacion {
-  const mesAnterior = sumarMeses(mes, -1);
-  const actual = resumirMes(gastosActual, mes, hoy);
-  const anterior = resumirMes(gastosAnterior, mesAnterior, hoy);
+  const periodo = aPeriodo(mes);
+  const periodoAnterior = periodoVecino(periodo, -1);
+  const mesAnterior = periodoAnterior.mes;
+  const actual = resumirMes(gastosActual, periodo, hoy);
+  const anterior = resumirMes(gastosAnterior, periodoAnterior, hoy);
 
   const porCategoria = new Map<string, { categoria: CategoriaPlana; actual: number; anterior: number }>();
 
@@ -87,7 +89,7 @@ export function compararConMesAnterior(
     );
 
   return {
-    mes,
+    mes: periodo.mes,
     mesAnterior,
     totalActual: actual.total,
     totalAnterior: anterior.total,
@@ -109,9 +111,10 @@ export type LineaMedioPago = {
 /** Cuanto se gasto con cada medio de pago. */
 export function porMedioDePago(
   gastos: readonly GastoPlano[],
-  mes: string,
+  mes: string | Periodo,
 ): LineaMedioPago[] {
-  const delMes = gastos.filter((g) => g.fecha.startsWith(mes));
+  const periodo = aPeriodo(mes);
+  const delMes = gastos.filter((g) => enPeriodo(g.fecha, periodo));
   const total = delMes.reduce((s, g) => s + g.monto, 0);
 
   const acumulado = new Map<MedioPago, { total: number; cantidad: number }>();
@@ -135,9 +138,12 @@ export function porMedioDePago(
 export type LineaSemana = {
   /** 1 a 5: la semana del mes en que cae el gasto. */
   semana: number;
-  /** Dias que cubre, para poder rotularla. */
+  /** Dias del periodo que cubre (el primero es el 1). */
   desde: number;
   hasta: number;
+  /** Las mismas, como fechas "YYYY-MM-DD", para rotularla. */
+  fechaDesde: string;
+  fechaHasta: string;
   total: number;
   cantidad: number;
 };
@@ -149,21 +155,24 @@ export type LineaSemana = {
  * "primeros siete dias, segundos siete", que se alinea con como llega la
  * plata y como se gasta, y no cambia de forma segun en que dia caiga el 1.
  */
-export function porSemana(gastos: readonly GastoPlano[], mes: string): LineaSemana[] {
-  const delMes = gastos.filter((g) => g.fecha.startsWith(mes));
-  const dias = diasEnMesISO(mes);
+export function porSemana(gastos: readonly GastoPlano[], mes: string | Periodo): LineaSemana[] {
+  const periodo = aPeriodo(mes);
+  const delMes = gastos.filter((g) => enPeriodo(g.fecha, periodo));
+  const dias = periodo.dias;
   const cantidadSemanas = Math.ceil(dias / 7);
 
   const semanas: LineaSemana[] = Array.from({ length: cantidadSemanas }, (_, i) => ({
     semana: i + 1,
     desde: i * 7 + 1,
     hasta: Math.min((i + 1) * 7, dias),
+    fechaDesde: fechaDelPeriodo(periodo, i * 7 + 1),
+    fechaHasta: fechaDelPeriodo(periodo, Math.min((i + 1) * 7, dias)),
     total: 0,
     cantidad: 0,
   }));
 
   for (const gasto of delMes) {
-    const dia = Number(gasto.fecha.slice(8, 10));
+    const dia = diaDelPeriodo(gasto.fecha, periodo);
     const indice = Math.min(Math.floor((dia - 1) / 7), cantidadSemanas - 1);
     const semana = semanas[indice] as LineaSemana;
     semana.total += gasto.monto;
@@ -176,11 +185,12 @@ export function porSemana(gastos: readonly GastoPlano[], mes: string): LineaSema
 /** Los gastos mas grandes del mes, para la seccion "donde se fue la plata". */
 export function mayoresGastos(
   gastos: readonly GastoPlano[],
-  mes: string,
+  mes: string | Periodo,
   cuantos = 5,
 ): GastoPlano[] {
+  const periodo = aPeriodo(mes);
   return gastos
-    .filter((g) => g.fecha.startsWith(mes))
+    .filter((g) => enPeriodo(g.fecha, periodo))
     .sort((a, b) => b.monto - a.monto || a.descripcion.localeCompare(b.descripcion, "es"))
     .slice(0, cuantos);
 }
@@ -197,11 +207,11 @@ export type Informe = {
 export function armarInforme(
   gastosActual: readonly GastoPlano[],
   gastosAnterior: readonly GastoPlano[],
-  mes: string,
+  mes: string | Periodo,
   hoy: Date = new Date(),
 ): Informe {
   return {
-    mes,
+    mes: aPeriodo(mes).mes,
     resumen: resumirMes(gastosActual, mes, hoy),
     comparacion: compararConMesAnterior(gastosActual, gastosAnterior, mes, hoy),
     medios: porMedioDePago(gastosActual, mes),

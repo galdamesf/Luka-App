@@ -5,6 +5,8 @@ import type { CuotaDelMes, DeudaPlana } from "@/dominio/balance";
 import { saldoDesde, ultimoMesDe } from "@/dominio/balance";
 import { ESTADO_INICIAL, type AccionFormulario } from "@/dominio/formulario";
 import { ControlEstadoPago } from "./ControlEstadoPago";
+import { FormularioPagoCuota } from "./FormularioPagoCuota";
+import { BoletaDeCuota } from "./BoletaDeCuota";
 import { Icono } from "./Icono";
 import { fechaCorta, formatearCLP, nombreDelMesCorto } from "./formato";
 import { CATEGORIA_CUOTAS } from "@/dominio/categorias-base";
@@ -22,6 +24,8 @@ type Props = {
   alMarcarPagada: AccionFormulario;
   alDesactivar?: (datos: FormData) => void;
   alRevertir: AccionFormulario;
+  /** Adjunta la boleta a la cuota ya pagada. */
+  accionBoleta?: AccionFormulario;
 };
 
 const CAMPO =
@@ -37,9 +41,8 @@ function Error({ mensajes }: { mensajes?: string[] }) {
 
 export function FilaDeuda({
   deuda, cuota, mes, hoy, accionPagar, accionEditar, alMarcarPagada, alDesactivar,
-  alRevertir,
+  alRevertir, accionBoleta,
 }: Props) {
-  const [estadoPago, pagar, pagando] = useActionState(accionPagar, ESTADO_INICIAL);
   const [estadoEdicion, editar, editando] = useActionState(accionEditar, ESTADO_INICIAL);
 
   const [abiertoPago, setAbiertoPago] = useState(false);
@@ -175,83 +178,27 @@ export function FilaDeuda({
               aria-expanded={abiertoPago}
               className="mt-1.5 ml-2 cursor-pointer rounded text-xs text-texto-tenue underline-offset-2 transition-colors duration-150 hover:text-texto hover:underline"
             >
-              con otra fecha o monto
+              con boleta, otra fecha o monto
             </button>
           )}
 
+          {/* div y no p: la boleta abre un <dialog> o un <form>. */}
           {pagada && (
-            <p className="mt-1 text-xs text-texto-tenue">
-              pagada el {fechaCorta(cuota.pagadaEn as string)}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-texto-tenue">
+              <span>pagada el {fechaCorta(cuota.pagadaEn as string)}</span>
+              <BoletaDeCuota cuota={cuota} accion={accionBoleta} />
+            </div>
           )}
 
           {!pagada && abiertoPago && (
-            <form
-              action={pagar}
-              className="mt-2 max-w-md space-y-2 rounded-md bg-superficie-tenue p-3"
-            >
-              <input type="hidden" name="deudaId" value={deuda.id} />
-              <input type="hidden" name="mes" value={mes} />
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label htmlFor={`cuota-fecha-${deuda.id}`} className={ETIQUETA}>
-                    ¿Qué día la pagaste?
-                  </label>
-                  <input
-                    id={`cuota-fecha-${deuda.id}`}
-                    name="fechaPago"
-                    type="date"
-                    defaultValue={hoy}
-                    required
-                    className={`${CAMPO} cifra`}
-                  />
-                  <Error mensajes={estadoPago.errores.fechaPago} />
-                </div>
-                <div>
-                  <label htmlFor={`cuota-monto-${deuda.id}`} className={ETIQUETA}>
-                    Monto real
-                  </label>
-                  <input
-                    id={`cuota-monto-${deuda.id}`}
-                    name="monto"
-                    type="text"
-                    inputMode="numeric"
-                    defaultValue={String(deuda.montoCuota)}
-                    required
-                    className={`${CAMPO} cifra`}
-                  />
-                  <Error mensajes={estadoPago.errores.monto} />
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => abrirPago(false)}
-                  className={`${SECUNDARIO} shrink-0`}
-                >
-                  Cerrar
-                </button>
-                <button
-                  type="submit"
-                  disabled={pagando}
-                  className="flex-1 cursor-pointer rounded-md bg-primario px-3 py-2 text-xs font-medium text-primario-texto transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {pagando ? "Guardando…" : "Confirmar pago"}
-                </button>
-              </div>
-
-              <p className="text-xs text-texto-tenue">
-                Se va a crear el gasto y recién ahí baja tu disponible.
-              </p>
-
-              {estadoPago.mensaje !== null && !estadoPago.ok && (
-                <p role="status" className="text-xs text-peligro">
-                  {estadoPago.mensaje}
-                </p>
-              )}
-            </form>
+            <FormularioPagoCuota
+              deudaId={deuda.id}
+              mes={mes}
+              hoy={hoy}
+              montoSugerido={deuda.montoCuota}
+              accion={accionPagar}
+              alCerrar={() => abrirPago(false)}
+            />
           )}
         </>
       )}

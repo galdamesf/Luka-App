@@ -6,8 +6,7 @@ import { FilaCuenta } from "./FilaCuenta";
 import { FilaCuotaPago } from "./FilaCuotaPago";
 import { Icono } from "./Icono";
 import { formatearCLP, nombreDelMes } from "./formato";
-import { agruparPendientes } from "@/dominio/cuentas";
-import { diasEnMesISO } from "@/lib/fecha";
+import { agruparPendientes, fechaDeVencimiento } from "@/dominio/cuentas";
 
 type Props = {
   resumen: ResumenCuentas;
@@ -20,8 +19,12 @@ type Props = {
   alMarcarCuentaPagada: AccionFormulario;
   alEliminarCuenta: (datos: FormData) => void;
   alRevertirCuenta: AccionFormulario;
+  /** Pagar una cuota con boleta, otra fecha o monto. */
+  accionPagarCuota: AccionFormulario;
   alMarcarCuotaPagada: AccionFormulario;
   alRevertirCuota: AccionFormulario;
+  /** Adjunta la boleta a una cuota ya pagada. */
+  accionBoleta?: AccionFormulario;
   /** El formulario para agregar una cuenta, que es de cliente. */
   children?: React.ReactNode;
 };
@@ -95,7 +98,8 @@ function Grupo({
 export function PagosDelMes({
   resumen, balance, deudas, hoy, categorias,
   accionPagarCuenta, accionEditarCuenta, alMarcarCuentaPagada, alEliminarCuenta,
-  alRevertirCuenta, alMarcarCuotaPagada, alRevertirCuota, children,
+  alRevertirCuenta, accionPagarCuota, alMarcarCuotaPagada, alRevertirCuota, accionBoleta,
+  children,
 }: Props) {
   const { pendientes, pagadas, vencidas } = resumen;
   const vencidasPorId = new Set(vencidas.map((c) => c.id));
@@ -119,6 +123,7 @@ export function PagosDelMes({
       key={cuenta.id}
       cuenta={cuenta}
       vencida={vencida}
+      vence={fechaDeVencimiento(cuenta, resumen.periodo.diaInicio)}
       hoy={hoy}
       categorias={categorias}
       accionPagar={accionPagarCuenta}
@@ -126,6 +131,7 @@ export function PagosDelMes({
       alMarcarPagada={alMarcarCuentaPagada}
       alEliminar={alEliminarCuenta}
       alRevertir={alRevertirCuenta}
+      accionBoleta={accionBoleta}
     />
   );
 
@@ -136,12 +142,14 @@ export function PagosDelMes({
       cuota={cuota}
       mes={resumen.mes}
       hoy={hoy}
+      accionPagar={accionPagarCuota}
       alMarcarPagada={alMarcarCuotaPagada}
       alRevertir={alRevertirCuota}
+      accionBoleta={accionBoleta}
     />
   );
 
-  const grupos = agruparPendientes(resumen, diasEnMesISO(resumen.mes), hoy);
+  const grupos = agruparPendientes(resumen, hoy);
   const suma = (lista: readonly { monto: number }[]) => lista.reduce((s, c) => s + c.monto, 0);
   const totalProgramado =
     suma(grupos.programadas) + cuotasPendientes.reduce((s, x) => s + x.cuota.deuda.montoCuota, 0);

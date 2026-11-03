@@ -1,9 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { calcularBalance, type DeudaPlana, type PagoCuota } from "@/dominio/balance";
 import { resumirCuentas, type CuentaPlana } from "@/dominio/cuentas";
-import { armarResumenPanel, tonoDeUso, type EntradaPanel } from "@/dominio/panel";
+import { armarResumenPanel, pedazosPorTramo, tonoDeUso, tonoDelSueldo, type EntradaPanel } from "@/dominio/panel";
 import { resumirMes, type GastoPlano } from "@/dominio/resumen";
-import { diasEnMesISO } from "@/lib/fecha";
 
 const SUPER = { id: "c1", nombre: "Supermercado", color: "#15803d", icono: "shopping-cart", esencial: true };
 const RESTO = { id: "c2", nombre: "Restaurantes", color: "#c2410c", icono: "utensils", esencial: false };
@@ -55,12 +54,11 @@ function entrada({
   cuentas = [],
   anterior = [],
 }: Escenario = {}): EntradaPanel {
-  const diasDelMes = diasEnMesISO(mes);
   const resumen = resumirMes(gastos, mes, new Date(`${hoy}T15:00:00.000Z`));
   const balance = calcularBalance({ mes, sueldo, resumen, deudas, pagos });
   return {
-    mes, hoy, diasDelMes, balance, resumen,
-    cuentas: resumirCuentas(cuentas, mes, diasDelMes, hoy),
+    mes, hoy, balance, resumen,
+    cuentas: resumirCuentas(cuentas, mes, hoy),
     gastosMesAnterior: anterior,
   };
 }
@@ -133,7 +131,10 @@ describe("un mes con de todo", () => {
     expect(r.barra.comprometidoPct).toBeCloseTo(12, 6);
     expect(r.barra.librePct).toBeCloseTo(39.5, 6);
     expect(r.barra.libre).toBe(395_000);
-    expect(r.barra.tono).toBe("exito");
+    // Gastado 48,5% sigue en verde; con lo por pagar llega a 60,5%: ambar.
+    expect(r.barra.tonoGastado).toBe("exito");
+    expect(r.barra.tono).toBe("alerta");
+    expect(r.barra.pedazos.porPagar.map((p) => p.tono)).toEqual(["exito", "alerta"]);
   });
 
   test("marca el dia de hoy y reparte lo libre en los dias que quedan, contando hoy", () => {
@@ -180,7 +181,8 @@ describe("cuando no alcanza", () => {
   });
 
   test("el tono avisa por lo que va a pasar, no solo por lo gastado", () => {
-    expect(r.barra.tonoGastado).toBe("alerta");
+    // Gastado 90%: ya esta en el tramo rojo (desde el 80%), y con lo por pagar se pasa.
+    expect(r.barra.tonoGastado).toBe("peligro");
     expect(r.barra.tono).toBe("peligro");
     expect(r.barra.comprometidoPct).toBeCloseTo(24, 6);
   });
@@ -234,5 +236,34 @@ describe("sin datos", () => {
     expect(r.barra.librePct).toBe(0);
     expect(r.barra.ritmo).toBeNull();
     expect(Number.isNaN(r.barra.comprometidoPct)).toBe(false);
+  });
+});
+
+describe("los tramos de la barra del sueldo", () => {
+  test("verde hasta el 50%, ambar hasta el 80%, rojo desde ahi", () => {
+    expect(tonoDelSueldo(0)).toBe("exito");
+    expect(tonoDelSueldo(49.9)).toBe("exito");
+    expect(tonoDelSueldo(50)).toBe("alerta");
+    expect(tonoDelSueldo(79.9)).toBe("alerta");
+    expect(tonoDelSueldo(80)).toBe("peligro");
+    expect(tonoDelSueldo(140)).toBe("peligro");
+  });
+
+  test("el caso real: gastado 25% en verde; lo por pagar, verde hasta el 50% y ambar hasta el 79%", () => {
+    expect(pedazosPorTramo(0, 25)).toEqual([{ desde: 0, hasta: 25, tono: "exito" }]);
+    expect(pedazosPorTramo(25, 79)).toEqual([
+      { desde: 25, hasta: 50, tono: "exito" },
+      { desde: 50, hasta: 79, tono: "alerta" },
+    ]);
+  });
+
+  test("pasa por los tres tramos y no dibuja mas alla del 100%", () => {
+    expect(pedazosPorTramo(40, 130)).toEqual([
+      { desde: 40, hasta: 50, tono: "exito" },
+      { desde: 50, hasta: 80, tono: "alerta" },
+      { desde: 80, hasta: 100, tono: "peligro" },
+    ]);
+    expect(pedazosPorTramo(110, 140)).toEqual([]);
+    expect(pedazosPorTramo(30, 30)).toEqual([]);
   });
 });

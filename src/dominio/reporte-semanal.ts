@@ -1,3 +1,4 @@
+import { aPeriodo, diaDelPeriodo, enPeriodo, fechaDelPeriodo, type Periodo } from "@/lib/periodo";
 import { ETIQUETA_MEDIO_PAGO, type MedioPago } from "./esquemas";
 import { esPagoDeCuota, type CategoriaPlana, type GastoPlano } from "./resumen";
 import { nivelDeSemana, ritmoSemanal, type NivelSemana } from "./semanas";
@@ -85,7 +86,6 @@ export type ReporteSemanal = {
   totalCuotas: number;
 };
 
-const dosDigitos = (n: number) => String(n).padStart(2, "0");
 const porMonto = (a: GastoPlano, b: GastoPlano) =>
   b.monto - a.monto || a.descripcion.localeCompare(b.descripcion, "es");
 
@@ -97,23 +97,23 @@ const porMonto = (a: GastoPlano, b: GastoPlano) =>
  */
 export function armarReporteSemanal(
   gastos: readonly GastoPlano[],
-  mes: string,
+  mes: string | Periodo,
   semana: number,
   hoy: string,
 ): ReporteSemanal | null {
-  const ritmo = ritmoSemanal(gastos, mes, hoy);
+  const periodo = aPeriodo(mes);
+  const ritmo = ritmoSemanal(gastos, periodo, hoy);
   const bloque = ritmo.semanas.find((s) => s.semana === semana);
   if (bloque === undefined) return null;
   const previo = ritmo.semanas.find((s) => s.semana === semana - 1) ?? null;
 
-  const fechaDe = (dia: number) => `${mes}-${dosDigitos(dia)}`;
   const enBloque = (g: GastoPlano, desde: number, hasta: number) => {
-    if (!g.fecha.startsWith(mes)) return false;
-    const dia = Number(g.fecha.slice(8, 10));
+    if (!enPeriodo(g.fecha, periodo)) return false;
+    const dia = diaDelPeriodo(g.fecha, periodo);
     return dia >= desde && dia <= hasta;
   };
 
-  const delMes = gastos.filter((g) => g.fecha.startsWith(mes));
+  const delMes = gastos.filter((g) => enPeriodo(g.fecha, periodo));
   const deLaSemana = delMes.filter((g) => enBloque(g, bloque.desde, bloque.hasta));
   const normales = deLaSemana.filter((g) => !esPagoDeCuota(g));
   const cuotas = deLaSemana.filter(esPagoDeCuota).sort((a, b) => a.fecha.localeCompare(b.fecha) || porMonto(a, b));
@@ -159,7 +159,7 @@ export function armarReporteSemanal(
   const ultimoTranscurrido = bloque.desde + bloque.diasTranscurridos - 1;
   const dias: DiaDelReporte[] = [];
   for (let dia = bloque.desde; dia <= bloque.hasta; dia++) {
-    const fecha = fechaDe(dia);
+    const fecha = fechaDelPeriodo(periodo, dia);
     const delDia = normales.filter((g) => g.fecha === fecha).sort(porMonto);
     dias.push({
       fecha,
@@ -176,11 +176,11 @@ export function armarReporteSemanal(
   const totalDelMes = ritmo.semanas.reduce((suma, s) => suma + s.total, 0);
 
   return {
-    mes,
+    mes: periodo.mes,
     semana,
     semanasDelMes: ritmo.semanas.length,
-    fechaDesde: fechaDe(bloque.desde),
-    fechaHasta: fechaDe(bloque.hasta),
+    fechaDesde: bloque.fechaDesde,
+    fechaHasta: bloque.fechaHasta,
     estado: bloque.enCurso ? "en-curso" : bloque.diasTranscurridos === 0 ? "por-venir" : "cerrada",
     diasTranscurridos: bloque.diasTranscurridos,
     totalDias: bloque.hasta - bloque.desde + 1,

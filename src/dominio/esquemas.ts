@@ -353,3 +353,19 @@ export const esquemaPagoFormulario = z.object({
 });
 
 export type PagoValidado = z.infer<typeof esquemaPagoFormulario>;
+
+// ---------------------------------------------------------------------------
+// Ajustes
+// ---------------------------------------------------------------------------
+
+/** El dia en que empieza el mes de gastos: 1 a 31. */
+export const esquemaDiaInicioFormulario = z.object({
+  diaInicioMes: z
+    .string()
+    .trim()
+    .regex(/^\d{1,2}$/, "Elige un día entre 1 y 31.")
+    .transform(Number)
+    .refine((dia) => dia >= 1 && dia <= 31, "Elige un día entre 1 y 31."),
+});
+
+export type DiaInicioValidado = z.infer<typeof esquemaDiaInicioFormulario>;

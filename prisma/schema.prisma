@@ -224,3 +224,17 @@ model Ahorro {
   @@index([mes])
   @@map("ahorros")
 }
+
+/// Ajustes de la app. Una sola fila, la de id "app".
+///
+/// Cuando cada usuario tenga sus propios datos (plan multiusuario), esto pasa
+/// a ser de cada usuario.
+model Ajustes {
+  id            String   @id @default("app") @db.VarChar(20)
+  /// Dia en que empieza tu mes de gastos: el dia en que te pagan. Con 27,
+  /// noviembre va del 27 de octubre al 26 de noviembre. 1 es el mes calendario.
+  diaInicioMes  Int      @default(1) @map("dia_inicio_mes")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@map("ajustes")
+}

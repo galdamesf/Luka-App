@@ -200,12 +200,20 @@ export async function adjuntarBoletaACuenta(
   await db.cuenta.update({ where: { id }, data: { boletaArchivo: archivo } });
 }
 
+/**
+ * Adjunta la boleta a un gasto. Si el gasto es el pago de una cuenta, la
+ * cuenta se queda con la misma foto: es la que se ve en Pagos del mes, y si
+ * no se copiara la boleta solo apareceria en Movimientos.
+ */
 export async function adjuntarBoletaAGasto(
   id: string,
   archivo: string,
-  db: ClienteDb = prisma,
+  db: typeof prisma = prisma,
 ): Promise<void> {
-  await db.gasto.update({ where: { id }, data: { boletaArchivo: archivo } });
+  await db.$transaction([
+    db.gasto.update({ where: { id }, data: { boletaArchivo: archivo } }),
+    db.cuenta.updateMany({ where: { gastoId: id }, data: { boletaArchivo: archivo } }),
+  ]);
 }
 
 /**

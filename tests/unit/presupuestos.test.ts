@@ -298,8 +298,7 @@ describe("detalleDeCategoria", () => {
         gasto(SUPER, 20_000, "2026-09-28"),
       ],
       SUPER.id,
-      "2026-10",
-      31,
+      "2026-10"
     );
 
     expect(d.cantidad).toBe(1);
@@ -314,8 +313,7 @@ describe("detalleDeCategoria", () => {
         gasto(SUPER, 3_000, "2026-10-11"),
       ],
       SUPER.id,
-      "2026-10",
-      31,
+      "2026-10"
     );
     expect(d.gastos.map((g) => g.fecha)).toEqual(["2026-10-20", "2026-10-11", "2026-10-02"]);
   });
@@ -323,8 +321,8 @@ describe("detalleDeCategoria", () => {
   test("a igual fecha, el más caro primero y con desempate estable", () => {
     const a = gasto(SUPER, 5_000, "2026-10-10");
     const b = gasto(SUPER, 9_000, "2026-10-10");
-    const uno = detalleDeCategoria([a, b], SUPER.id, "2026-10", 31).gastos.map((g) => g.monto);
-    const otro = detalleDeCategoria([b, a], SUPER.id, "2026-10", 31).gastos.map((g) => g.monto);
+    const uno = detalleDeCategoria([a, b], SUPER.id, "2026-10").gastos.map((g) => g.monto);
+    const otro = detalleDeCategoria([b, a], SUPER.id, "2026-10").gastos.map((g) => g.monto);
 
     expect(uno).toEqual([9_000, 5_000]);
     expect(otro).toEqual(uno);
@@ -339,8 +337,7 @@ describe("detalleDeCategoria", () => {
         gasto(SUPER, 8_000, "2026-10-31"),
       ],
       SUPER.id,
-      "2026-10",
-      31,
+      "2026-10"
     );
 
     expect(d.semanas[0]!.total).toBe(3_000);
@@ -351,19 +348,19 @@ describe("detalleDeCategoria", () => {
   });
 
   test("el último bloque se corta en el último día del mes", () => {
-    const d = detalleDeCategoria([], SUPER.id, "2026-02", 28);
+    const d = detalleDeCategoria([], SUPER.id, "2026-02");
     expect(d.semanas).toHaveLength(4);
     expect(d.semanas.at(-1)!.hasta).toBe(28);
   });
 
   test("un mes de 31 días tiene 5 bloques, el último de 3 días", () => {
-    const d = detalleDeCategoria([], SUPER.id, "2026-10", 31);
+    const d = detalleDeCategoria([], SUPER.id, "2026-10");
     expect(d.semanas).toHaveLength(5);
     expect(d.semanas.at(-1)).toMatchObject({ desde: 29, hasta: 31 });
   });
 
   test("las semanas sin gastos vienen igual, en cero", () => {
-    const d = detalleDeCategoria([gasto(SUPER, 1_000, "2026-10-01")], SUPER.id, "2026-10", 31);
+    const d = detalleDeCategoria([gasto(SUPER, 1_000, "2026-10-01")], SUPER.id, "2026-10");
     expect(d.semanas[1]!.total).toBe(0);
     expect(d.semanas[1]!.gastos).toEqual([]);
   });
@@ -376,8 +373,7 @@ describe("detalleDeCategoria", () => {
         gasto(SUPER, 4_000, "2026-10-25"),
       ],
       SUPER.id,
-      "2026-10",
-      31,
+      "2026-10"
     );
     expect(d.semanas.reduce((s, x) => s + x.total, 0)).toBe(d.total);
   });
@@ -387,8 +383,7 @@ describe("detalleDeCategoria", () => {
     const d = detalleDeCategoria(
       [conFoto, gasto(SUPER, 2_000, "2026-10-04")],
       SUPER.id,
-      "2026-10",
-      31,
+      "2026-10"
     );
     expect(d.conBoleta).toBe(1);
   });
@@ -400,8 +395,7 @@ describe("detalleDeCategoria", () => {
         gasto(SUPER, 50_000, "2026-10-03", { deudaId: "d1", deudaNombre: "Crédito" }),
       ],
       SUPER.id,
-      "2026-10",
-      31,
+      "2026-10"
     );
 
     expect(d.cantidad).toBe(1);
@@ -409,7 +403,7 @@ describe("detalleDeCategoria", () => {
   });
 
   test("una categoría sin gastos devuelve el esqueleto vacío", () => {
-    const d = detalleDeCategoria([], SUPER.id, "2026-10", 31);
+    const d = detalleDeCategoria([], SUPER.id, "2026-10");
     expect(d.total).toBe(0);
     expect(d.cantidad).toBe(0);
     expect(d.gastos).toEqual([]);
