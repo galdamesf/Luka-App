@@ -1,3 +1,4 @@
+import { aPeriodo, diaDelPeriodo, enPeriodo, periodoVecino, type Periodo } from "@/lib/periodo";
 import type { Balance } from "./balance";
 import { agruparPendientes, DIAS_POR_VENCER, type ResumenCuentas } from "./cuentas";
 import type { GastoPlano, ResumenMensual } from "./resumen";
@@ -25,15 +26,51 @@ export function tonoDeUso(porcentaje: number): Tono {
   return "exito";
 }
 
+/**
+ * Los tramos de la barra del sueldo: verde hasta la mitad, ambar hasta el
+ * 80% y rojo desde ahi. Son mas tempranos que los de un presupuesto (80 y
+ * 100) a proposito: el sueldo es todo lo que hay, y llegar al 80% con lo
+ * comprometido ya deja poco margen para el resto del mes.
+ */
+export const TRAMOS_SUELDO = { atencion: 50, cuidado: 80 } as const;
+
+export function tonoDelSueldo(porcentaje: number): Tono {
+  if (porcentaje >= TRAMOS_SUELDO.cuidado) return "peligro";
+  if (porcentaje >= TRAMOS_SUELDO.atencion) return "alerta";
+  return "exito";
+}
+
+/** Un pedazo de la barra, en % del sueldo, con el color de su tramo. */
+export type PedazoBarra = { desde: number; hasta: number; tono: Tono };
+
+/**
+ * Corta el tramo [desde, hasta] de la barra (en % del sueldo) donde cambia
+ * el color, para pintar cada pedazo con el suyo. Lo que pasa del 100% no se
+ * dibuja: la barra termina ahi, y pasarse ya lo dice el texto.
+ */
+export function pedazosPorTramo(desde: number, hasta: number): PedazoBarra[] {
+  const recortar = (n: number) => Math.min(100, Math.max(0, n));
+  const a = recortar(desde);
+  const b = recortar(hasta);
+  const cortes = [0, TRAMOS_SUELDO.atencion, TRAMOS_SUELDO.cuidado, 100];
+  const pedazos: PedazoBarra[] = [];
+  for (let i = 0; i < cortes.length - 1; i++) {
+    const inicio = Math.max(a, cortes[i]!);
+    const fin = Math.min(b, cortes[i + 1]!);
+    if (fin > inicio) pedazos.push({ desde: inicio, hasta: fin, tono: tonoDelSueldo(cortes[i]!) });
+  }
+  return pedazos;
+}
+
 export type EntradaPanel = {
-  mes: string;
+  /** El periodo, o un "YYYY-MM" suelto para el mes calendario. */
+  mes: string | Periodo;
   /** Hoy, "YYYY-MM-DD". */
   hoy: string;
-  diasDelMes: number;
   balance: Balance;
   resumen: ResumenMensual;
   cuentas: ResumenCuentas;
-  /** Gastos del mes anterior, cuotas incluidas, para comparar al mismo dia. */
+  /** Gastos del periodo anterior, cuotas incluidas, para comparar al mismo dia. */
   gastosMesAnterior: readonly GastoPlano[];
 };
 
@@ -46,13 +83,18 @@ export type BarraDelSueldo = {
   librePct: number;
   /** sueldo - gastado - por pagar. Negativo si no alcanza. */
   libre: number;
-  /** Tono de lo gastado solo. */
+  /** Tono de lo gastado solo, segun TRAMOS_SUELDO. */
   tonoGastado: Tono;
   /** Tono de lo gastado mas lo comprometido: como vas a terminar el mes. */
   tono: Tono;
+  /** Lo gastado y lo por pagar, cortados donde cambia el color. */
+  pedazos: { gastado: PedazoBarra[]; porPagar: PedazoBarra[] };
   /** Que parte del mes ya paso, 0 a 100. null si no es el mes en curso. */
   marcadorDia: number | null;
+  /** Que dia del periodo es hoy (el primero es el 1). null fuera del mes en curso. */
   diaDeHoy: number | null;
+  /** Hoy, "YYYY-MM-DD", si cae en el periodo. */
+  fechaDeHoy: string | null;
   /** Dias que quedan contando hoy. 0 en un mes cerrado. */
   diasRestantes: number;
   /** Lo libre repartido en los dias que quedan. null si no hay que repartir. */
@@ -65,6 +107,8 @@ export type BarraDelSueldo = {
 };
 
 export type ResumenPanel = {
+  /** El periodo que se resume: de que fecha a que fecha. */
+  periodo: Periodo;
   sinSueldo: boolean;
   sueldo: number;
   /** Gastos del mes mas cuotas ya pagadas: toda la plata que salio. */
@@ -88,27 +132,24 @@ export type ResumenPanel = {
    * en %. null si el mes anterior no tiene con que comparar.
    */
   variacion: number | null;
-  /** Hasta que dia se comparo con el mes anterior. */
+  /** Hasta que dia del periodo se comparo con el anterior. */
   diaComparado: number;
   barra: BarraDelSueldo;
 };
 
-function diaDe(iso: string): number {
-  return Number(iso.slice(8, 10));
-}
-
 export function armarResumenPanel({
   mes,
   hoy,
-  diasDelMes,
   balance,
   resumen,
   cuentas,
   gastosMesAnterior,
 }: EntradaPanel): ResumenPanel {
-  const mesDeHoy = hoy.slice(0, 7);
-  const enCurso = mes === mesDeHoy;
-  const cerrado = mes < mesDeHoy;
+  const periodo = aPeriodo(mes);
+  const anteriorPeriodo = periodoVecino(periodo, -1);
+  const diasDelMes = periodo.dias;
+  const enCurso = enPeriodo(hoy, periodo);
+  const cerrado = hoy > periodo.hasta;
 
   const sueldo = balance.sueldo;
   const cuotasPagadas = balance.cuotas;
@@ -118,16 +159,19 @@ export function armarResumenPanel({
   const cuotasPendientes = balance.cuotasDelMes.filter((c) => !c.pagada).length;
   const porPagar = cuentas.totalPendiente + balance.cuotasPorPagar;
 
-  const grupos = agruparPendientes(cuentas, diasDelMes, hoy);
+  const grupos = agruparPendientes(cuentas, hoy);
   const porVencer = grupos.porVencer.length;
   const programadas = grupos.programadas.length + cuotasPendientes;
 
   // Mes en curso: hasta hoy. Mes cerrado: el mes entero. Mes futuro: nada.
-  const diaComparado = enCurso ? diaDe(hoy) : cerrado ? diasDelMes : 0;
+  // Los dias se cuentan desde el inicio de cada periodo: el dia 7 de este se
+  // compara con el dia 7 del anterior.
+  const diaComparado = enCurso ? diaDelPeriodo(hoy, periodo) : cerrado ? diasDelMes : 0;
   // Un mes cerrado se compara con el anterior ENTERO, no hasta su ultimo dia:
   // septiembre tiene 30 y cortar ahi dejaria fuera el 31 de agosto.
   const anterior = gastosMesAnterior
-    .filter((g) => cerrado || diaDe(g.fecha) <= diaComparado)
+    .filter((g) => enPeriodo(g.fecha, anteriorPeriodo))
+    .filter((g) => cerrado || diaDelPeriodo(g.fecha, anteriorPeriodo) <= diaComparado)
     .reduce((suma, g) => suma + g.monto, 0);
   // Sin gasto en el mes anterior no se subio un 100%: no hay comparacion.
   const variacion = anterior === 0 ? null : ((gastado - anterior) / anterior) * 100;
@@ -136,11 +180,12 @@ export function armarResumenPanel({
   const gastadoPct = pct(gastado);
   const comprometidoPct = pct(porPagar);
   const libre = sueldo - gastado - porPagar;
-  const diaDeHoy = enCurso ? diaDe(hoy) : null;
-  const diasRestantes = enCurso ? diasDelMes - diaDe(hoy) + 1 : cerrado ? 0 : diasDelMes;
+  const diaDeHoy = enCurso ? diaDelPeriodo(hoy, periodo) : null;
+  const diasRestantes = diaDeHoy !== null ? diasDelMes - diaDeHoy + 1 : cerrado ? 0 : diasDelMes;
   const marcadorDia = diaDeHoy === null ? null : (diaDeHoy / diasDelMes) * 100;
 
   return {
+    periodo,
     sinSueldo: balance.sinSueldo,
     sueldo,
     gastado,
@@ -159,10 +204,15 @@ export function armarResumenPanel({
       comprometidoPct,
       librePct: sueldo === 0 ? 0 : Math.max(0, pct(libre)),
       libre,
-      tonoGastado: tonoDeUso(gastadoPct),
-      tono: tonoDeUso(gastadoPct + comprometidoPct),
+      tonoGastado: tonoDelSueldo(gastadoPct),
+      tono: tonoDelSueldo(gastadoPct + comprometidoPct),
+      pedazos: {
+        gastado: pedazosPorTramo(0, gastadoPct),
+        porPagar: pedazosPorTramo(gastadoPct, gastadoPct + comprometidoPct),
+      },
       marcadorDia,
       diaDeHoy,
+      fechaDeHoy: enCurso ? hoy : null,
       diasRestantes,
       librePorDia: libre > 0 && diasRestantes > 0 ? Math.floor(libre / diasRestantes) : null,
       ritmo: marcadorDia === null || sueldo === 0 ? null : marcadorDia - gastadoPct,

@@ -3,6 +3,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest"
 import { clienteDePrueba, limpiar } from "./base";
 import {
   actualizarCuenta,
+  adjuntarBoletaACuenta,
+  adjuntarBoletaAGasto,
   crearCuenta,
   eliminarCuenta,
   listarCuentasDelMes,
@@ -10,7 +12,7 @@ import {
   regenerarMensuales,
   revertirPago,
 } from "@/datos/cuentas";
-import { listarGastosDelMes, obtenerGasto } from "@/datos/gastos";
+import { eliminarGasto, listarGastosDelMes, obtenerGasto } from "@/datos/gastos";
 import type { CuentaValidada } from "@/dominio/esquemas";
 
 let prisma: PrismaClient;
@@ -385,5 +387,56 @@ describe("actualizarCuenta", () => {
         prisma,
       ),
     ).rejects.toThrow(/no existe/i);
+  });
+});
+
+describe("la boleta de una cuenta", () => {
+  test("adjuntada antes de pagar, pasa al gasto al marcarla pagada de un clic", async () => {
+    const cuenta = await crearCuenta(datos({ nombre: "Gimnasio" }), prisma);
+    await adjuntarBoletaACuenta(cuenta.id, "gimnasio.jpg", prisma);
+
+    const pagada = await pagarCuenta(cuenta.id, "2026-10-30", 31900, null, prisma);
+
+    expect(pagada.boletaArchivo).toBe("gimnasio.jpg");
+    const gasto = await obtenerGasto(pagada.gastoId as string, prisma);
+    expect(gasto?.boletaArchivo).toBe("gimnasio.jpg");
+  });
+
+  test("adjuntada despues al gasto del pago, la cuenta tambien la muestra", async () => {
+    const cuenta = await crearCuenta(datos({ nombre: "Gimnasio" }), prisma);
+    const pagada = await pagarCuenta(cuenta.id, "2026-10-30", 31900, null, prisma);
+
+    await adjuntarBoletaAGasto(pagada.gastoId as string, "despues.jpg", prisma);
+
+    const [enLaLista] = await listarCuentasDelMes("2026-10", prisma);
+    expect(enLaLista?.boletaArchivo).toBe("despues.jpg");
+    const gasto = await obtenerGasto(pagada.gastoId as string, prisma);
+    expect(gasto?.boletaArchivo).toBe("despues.jpg");
+  });
+});
+
+describe("borrar desde Movimientos el gasto de una cuenta pagada", () => {
+  test("la cuenta vuelve a quedar pendiente y se puede pagar de nuevo", async () => {
+    const cuenta = await crearCuenta(datos({ nombre: "Gimnasio" }), prisma);
+    const pagada = await pagarCuenta(cuenta.id, "2026-10-30", 31900, null, prisma);
+
+    await eliminarGasto(pagada.gastoId as string, prisma);
+
+    const [despues] = await listarCuentasDelMes("2026-10", prisma);
+    expect(despues?.pagadaEn).toBeNull();
+    expect(despues?.gastoId).toBeNull();
+    expect(await listarGastosDelMes("2026-10", prisma)).toEqual([]);
+
+    await pagarCuenta(cuenta.id, "2026-10-31", 31900, null, prisma);
+    const [otraVez] = await listarCuentasDelMes("2026-10", prisma);
+    expect(otraVez?.pagadaEn).toBe("2026-10-31");
+  });
+
+  test("el gasto trae el nombre de la cuenta que pago, para avisar al borrarlo", async () => {
+    const cuenta = await crearCuenta(datos({ nombre: "Gimnasio" }), prisma);
+    await pagarCuenta(cuenta.id, "2026-10-30", 31900, null, prisma);
+
+    const [gasto] = await listarGastosDelMes("2026-10", prisma);
+    expect(gasto?.cuenta).toEqual({ cuentaId: cuenta.id, nombre: "Gimnasio" });
   });
 });

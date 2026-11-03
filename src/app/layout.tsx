@@ -4,6 +4,7 @@ import { GUION_TEMA } from "@/componentes/InterruptorTema";
 import { Navbar } from "@/componentes/Navbar";
 import { PieDePagina } from "@/componentes/PieDePagina";
 import { SoloEnLaApp } from "@/componentes/SoloEnLaApp";
+import { VolverArriba } from "@/componentes/VolverArriba";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -48,6 +49,7 @@ export default function RootLayout({
         {children}
         <SoloEnLaApp>
           <PieDePagina />
+          <VolverArriba />
         </SoloEnLaApp>
       </body>
     </html>

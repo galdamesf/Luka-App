@@ -5,7 +5,7 @@ import type { DetalleDeCategoria, LineaPresupuesto } from "@/dominio/presupuesto
 import { ESTADO_INICIAL, type AccionFormulario } from "@/dominio/formulario";
 import { Icono } from "./Icono";
 import { VisorBoleta } from "./VisorBoleta";
-import { fechaCorta, formatearCLP } from "./formato";
+import { fechaCorta, formatearCLP, rangoLargo } from "./formato";
 
 type Props = {
   linea: LineaPresupuesto;
@@ -50,7 +50,7 @@ export function FilaPresupuesto({ linea, detalle, accionEditar, alEliminar, comp
 
   return (
     <li
-      className={`fila-viva ${agotado ? "viva-peligro" : alLimite ? "viva-alerta" : "viva-exito"} -mx-5 border-b border-borde px-5 py-3 last:border-0`}
+      className={`fila-viva ${agotado ? "viva-peligro" : alLimite ? "viva-alerta" : "viva-exito"} -mx-5 border-b border-borde px-5 py-2.5 last:border-0`}
     >
       <div className="flex items-baseline justify-between gap-3">
         {/* Toda la fila, menos los iconos de accion, abre el desglose. Los
@@ -128,7 +128,7 @@ export function FilaPresupuesto({ linea, detalle, accionEditar, alEliminar, comp
       </div>
 
       <div
-        className="mt-2 flex h-2 overflow-hidden rounded-full bg-superficie-tenue"
+        className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-superficie-tenue"
         aria-hidden="true"
       >
         <div
@@ -205,7 +205,7 @@ export function FilaPresupuesto({ linea, detalle, accionEditar, alEliminar, comp
                         <span>
                           Semana <span className="cifra">{semana.semana}</span>
                           <span className="opacity-70">
-                            {" "}· días {semana.desde} al {semana.hasta}
+                            {" "}· {rangoLargo(semana.fechaDesde, semana.fechaHasta, false)}
                           </span>
                         </span>
                         <span className="cifra tabular-nums">

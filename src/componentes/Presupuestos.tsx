@@ -1,4 +1,5 @@
 import { detalleDeCategoria, type ResumenPresupuestos } from "@/dominio/presupuestos";
+import type { Periodo } from "@/lib/periodo";
 import type { GastoPlano } from "@/dominio/resumen";
 import type { AccionFormulario } from "@/dominio/formulario";
 import type { CategoriaPlana } from "@/dominio/resumen";
@@ -10,7 +11,8 @@ type Props = {
   resumen: ResumenPresupuestos;
   /** Los gastos del mes, para el desglose de cada categoria. */
   gastos: readonly GastoPlano[];
-  diasDelMes: number;
+  /** El periodo: de el salen las semanas del desglose de cada categoria. */
+  periodo: Periodo;
   accionEditar: AccionFormulario;
   alEliminar: (datos: FormData) => void;
   /** Lo que falta pagar en cuentas, por id de categoria. */
@@ -57,7 +59,7 @@ function Aviso({
  * Se definen mes a mes. Un mes nuevo arranca sin presupuestos.
  */
 export function Presupuestos({
-  resumen, gastos, diasDelMes, accionEditar, alEliminar, comprometidoPorCategoria = {}, children,
+  resumen, gastos, periodo, accionEditar, alEliminar, comprometidoPorCategoria = {}, children,
 }: Props) {
   const { lineas, totalPresupuestado, totalGastado, totalRestante, alertas } = resumen;
 
@@ -120,7 +122,7 @@ export function Presupuestos({
         <ListaPresupuestos
           items={lineas.map((linea) => ({
             linea,
-            detalle: detalleDeCategoria(gastos, linea.presupuesto.categoria.id, resumen.mes, diasDelMes),
+            detalle: detalleDeCategoria(gastos, linea.presupuesto.categoria.id, periodo),
             comprometido: comprometidoPorCategoria[linea.presupuesto.categoria.id] ?? 0,
           }))}
           accionEditar={accionEditar}

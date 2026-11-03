@@ -1,4 +1,5 @@
-import { mesDesdeFecha, sumarMeses } from "@/lib/fecha";
+import { isoDesdeFecha, mesDesdeFecha, sumarMeses } from "@/lib/fecha";
+import { periodoDeFecha } from "@/lib/periodo";
 import { sueldoVigente } from "./balance";
 import type { PuntoMes } from "./estadisticas";
 
@@ -36,12 +37,16 @@ export function armarSerie(
   cantidadMeses: number,
   gastosPorDia: readonly GastoPorDia[],
   sueldos: readonly SueldoVigencia[],
+  /** Dia en que empieza cada mes de gastos. 1 es el mes calendario. */
+  diaInicio = 1,
 ): PuntoMes[] {
   const gastoPorMes = new Map<string, number>();
   for (const fila of gastosPorDia) {
-    // mesDesdeFecha lee con metodos UTC. Con metodos locales, en Chile el dia
+    // isoDesdeFecha lee con metodos UTC. Con metodos locales, en Chile el dia
     // 1 se iria al mes anterior y el gasto se contaria en el mes equivocado.
-    const mes = mesDesdeFecha(fila.fecha);
+    // Despues se busca el periodo de esa fecha: con dia 27, el 2 de
+    // noviembre suma en octubre.
+    const mes = periodoDeFecha(isoDesdeFecha(fila.fecha), diaInicio).mes;
     gastoPorMes.set(mes, (gastoPorMes.get(mes) ?? 0) + fila.monto);
   }
 

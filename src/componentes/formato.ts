@@ -20,6 +20,47 @@ export function nombreDelMesCorto(mesISO: string): string {
   return `${nombre?.slice(0, 3) ?? mes} ${anio}`;
 }
 
+const DIAS_SEMANA = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"] as const;
+
+/** "2026-10-29" -> "jueves". Se calcula en UTC: la fecha ISO no tiene hora. */
+export function diaDeLaSemana(iso: string): string {
+  const [anio, mes, dia] = iso.split("-").map(Number);
+  return DIAS_SEMANA[new Date(Date.UTC(anio as number, (mes as number) - 1, dia as number)).getUTCDay()] as string;
+}
+
+/** "2026-10-29" -> "jueves 29 de octubre" */
+export function fechaLarga(iso: string): string {
+  const [, mes, dia] = iso.split("-");
+  return `${diaDeLaSemana(iso)} ${Number(dia)} de ${MESES[Number(mes) - 1] ?? mes}`;
+}
+
+/** "2026-10-27", "2026-11-26" -> "27 oct – 26 nov". En el mismo mes: "1 – 31 oct". */
+export function rangoCorto(desde: string, hasta: string): string {
+  if (desde.slice(0, 7) === hasta.slice(0, 7)) return `${Number(desde.slice(8, 10))} – ${fechaCorta(hasta)}`;
+  return `${fechaCorta(desde)} – ${fechaCorta(hasta)}`;
+}
+
+/**
+ * Un rango de fechas para leer: "1 al 7 de octubre de 2026", "27 de octubre
+ * al 2 de noviembre de 2026" o, si cambia el ano, "29 de diciembre de 2026 al
+ * 4 de enero de 2027". Sin `conAnio`, el ano no va.
+ */
+export function rangoLargo(desde: string, hasta: string, conAnio = true): string {
+  const parte = (iso: string) => `${Number(iso.slice(8, 10))} de ${MESES[Number(iso.slice(5, 7)) - 1]}`;
+  const anioDesde = desde.slice(0, 4);
+  const anioHasta = hasta.slice(0, 4);
+  if (anioDesde !== anioHasta) {
+    return conAnio ? `${parte(desde)} de ${anioDesde} al ${parte(hasta)} de ${anioHasta}` : `${parte(desde)} al ${parte(hasta)}`;
+  }
+  const inicio = desde.slice(0, 7) === hasta.slice(0, 7) ? String(Number(desde.slice(8, 10))) : parte(desde);
+  return `${inicio} al ${parte(hasta)}${conAnio ? ` de ${anioHasta}` : ""}`;
+}
+
+/** Solo los numeros de dia, para rotulos angostos: "27–2". */
+export function rangoDeDias(desde: string, hasta: string): string {
+  return `${Number(desde.slice(8, 10))}–${Number(hasta.slice(8, 10))}`;
+}
+
 /** "2026-10-27" -> "27 oct" */
 export function fechaCorta(iso: string): string {
   const [, mes, dia] = iso.split("-");

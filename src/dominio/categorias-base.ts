@@ -64,13 +64,17 @@ export const GRUPOS_CATEGORICOS = [
 export const CATEGORIAS_BASE = [
   { nombre: "Arriendo",            grupo: "hogar",        icono: "house",          esencial: true  },
   { nombre: "Cuentas",             grupo: "hogar",        icono: "zap",            esencial: true  },
+  { nombre: "Agua",                grupo: "hogar",        icono: "droplet",        esencial: true  },
   { nombre: "Internet y teléfono", grupo: "hogar",        icono: "wifi",           esencial: true  },
   { nombre: "Supermercado",        grupo: "alimentacion", icono: "shopping-cart",  esencial: true  },
   { nombre: "Feria",               grupo: "alimentacion", icono: "shopping-basket", esencial: true  },
+  { nombre: "Alimentos",           grupo: "alimentacion", icono: "apple",          esencial: true  },
+  { nombre: "Huevos",              grupo: "alimentacion", icono: "egg",            esencial: true  },
   { nombre: "Restaurantes",        grupo: "alimentacion", icono: "utensils",       esencial: false },
   { nombre: "Café",                grupo: "alimentacion", icono: "coffee",         esencial: false },
   { nombre: "Transporte",          grupo: "movilidad",    icono: "bus",            esencial: true  },
   { nombre: "Bencina",             grupo: "movilidad",    icono: "fuel",           esencial: true  },
+  { nombre: "Viaje",               grupo: "movilidad",    icono: "plane",          esencial: false },
   { nombre: "Salud y farmacia",    grupo: "bienestar",    icono: "heart-pulse",    esencial: true  },
   { nombre: "Educación",           grupo: "bienestar",    icono: "graduation-cap", esencial: true  },
   { nombre: "Entretención",        grupo: "ocio",         icono: "film",           esencial: false },
@@ -78,6 +82,9 @@ export const CATEGORIAS_BASE = [
   { nombre: "Suscripciones",       grupo: "ocio",         icono: "repeat",         esencial: false },
   { nombre: "Regalos",             grupo: "ocio",         icono: "gift",           esencial: false },
   { nombre: "Deudas y créditos",   grupo: "otros",        icono: "credit-card",    esencial: true  },
+  // Imprevistos cuenta como esencial: no es plata que se elige gastar, asi
+  // que no infla el ritmo discrecional ni la proyeccion del mes.
+  { nombre: "Imprevistos",         grupo: "otros",        icono: "umbrella",       esencial: true  },
   { nombre: "Otros",               grupo: "otros",        icono: "ellipsis",       esencial: false },
 ] as const satisfies readonly {
   nombre: string;

@@ -358,3 +358,44 @@ describe("sueldoVigente", () => {
     expect(sueldoVigente(desordenados, "2026-12")).toBe(1200000);
   });
 });
+
+describe("la boleta de las cuotas en el balance", () => {
+  const resumen = resumirMes([], "2026-10", NOVIEMBRE);
+
+  test("la cuota pagada trae el gasto y la boleta del pago", () => {
+    const b = calcularBalance({
+      mes: "2026-10",
+      sueldo: 1200000,
+      resumen,
+      deudas: [deuda({ id: "d1", primeraCuota: "2026-08" })],
+      pagos: [{
+        deudaId: "d1", mes: "2026-10", pagadaEn: "2026-10-05", monto: 85000,
+        gastoId: "g-pago", boletaArchivo: "ripley.jpg",
+      }],
+    });
+
+    expect(b.cuotasDelMes[0]!.gastoId).toBe("g-pago");
+    expect(b.cuotasDelMes[0]!.boletaArchivo).toBe("ripley.jpg");
+  });
+
+  test("un pago sin esos datos (o una cuota pendiente) los deja en null", () => {
+    const pagada = calcularBalance({
+      mes: "2026-10",
+      sueldo: 1200000,
+      resumen,
+      deudas: [deuda({ id: "d1", primeraCuota: "2026-08" })],
+      pagos: [{ deudaId: "d1", mes: "2026-10", pagadaEn: "2026-10-05", monto: 85000 }],
+    });
+    expect(pagada.cuotasDelMes[0]!.gastoId).toBeNull();
+    expect(pagada.cuotasDelMes[0]!.boletaArchivo).toBeNull();
+
+    const pendiente = calcularBalance({
+      mes: "2026-10",
+      sueldo: 1200000,
+      resumen,
+      deudas: [deuda({ id: "d1", primeraCuota: "2026-08" })],
+    });
+    expect(pendiente.cuotasDelMes[0]!.gastoId).toBeNull();
+    expect(pendiente.cuotasDelMes[0]!.boletaArchivo).toBeNull();
+  });
+});

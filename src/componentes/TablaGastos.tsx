@@ -3,6 +3,7 @@ import { ETIQUETA_MEDIO_PAGO } from "@/dominio/esquemas";
 import { Icono } from "./Icono";
 import { VisorBoleta } from "./VisorBoleta";
 import { AdjuntarBoleta } from "./AdjuntarBoleta";
+import { ConfirmarEliminar } from "./ConfirmarEliminar";
 import type { AccionFormulario } from "@/dominio/formulario";
 import { fechaCorta, formatearCLP } from "./formato";
 
@@ -18,6 +19,8 @@ type Props = {
   mensajeVacio?: string;
   /** h2 suelta (el informe) o h3 dentro de una seccion (el dashboard). */
   nivelTitulo?: "h2" | "h3";
+  /** Lo que va al final de la tarjeta: el boton de "Ver todos". */
+  pie?: React.ReactNode;
 };
 
 /**
@@ -45,6 +48,17 @@ function PuntoCategoria({ gasto }: { gasto: GastoPlano }) {
   );
 }
 
+/** Lo que conviene saber antes de borrar un pago: lo que se deshace con el. */
+function avisoAlBorrar(gasto: GastoPlano): string | null {
+  if (gasto.cuota !== null) {
+    return `Es el pago de la cuota de ${gasto.cuota.deudaNombre}: la cuota vuelve a quedar pendiente en Pagos del mes.`;
+  }
+  if (gasto.cuenta != null) {
+    return `Es el pago de la cuenta «${gasto.cuenta.nombre}»: la cuenta vuelve a quedar pendiente en Pagos del mes.`;
+  }
+  return null;
+}
+
 function BotonEliminar({
   gasto,
   alEliminar,
@@ -60,21 +74,32 @@ function BotonEliminar({
   if (alEliminar === undefined) return null;
 
   return (
-    <form action={alEliminar}>
-      <input type="hidden" name="id" value={gasto.id} />
-      <button
-        type="submit"
-        className={`inline-flex cursor-pointer items-center justify-center rounded-md text-texto-tenue transition-colors duration-150 hover:bg-superficie-tenue hover:text-peligro ${
-          // 44x44 es el minimo tactil en celular; en escritorio basta 32.
-          compacto ? "size-8" : "size-11"
-        }`}
-      >
-        <Icono nombre="trash" />
-        <span className="sr-only">
-          Eliminar {gasto.descripcion} por {formatearCLP(gasto.monto)}
-        </span>
-      </button>
-    </form>
+    <ConfirmarEliminar
+      id={gasto.id}
+      accion={alEliminar}
+      compacto={compacto}
+      queEs={
+        <>
+          «{gasto.descripcion}» por <span className="cifra">{formatearCLP(gasto.monto)}</span>
+        </>
+      }
+      etiqueta={`Eliminar ${gasto.descripcion} por ${formatearCLP(gasto.monto)}`}
+      aviso={avisoAlBorrar(gasto)}
+    />
+  );
+}
+
+/**
+ * Marca los gastos que son el pago de una cuota de deuda. Borrar uno de esos
+ * deja la cuota pendiente otra vez, y conviene que se note antes de hacerlo.
+ */
+function MarcaCuota({ gasto }: { gasto: GastoPlano }) {
+  if (gasto.cuota === null) return null;
+  return (
+    <span className="inline-flex items-center gap-1 rounded bg-superficie-tenue px-1.5 py-0.5 text-[11px] font-medium text-texto-tenue">
+      <Icono nombre="credit-card" tamano={11} />
+      cuota de deuda
+    </span>
   );
 }
 
@@ -103,6 +128,7 @@ export function TablaGastos({
   gastos, alEliminar, accionBoleta, herramientas,
   mensajeVacio = "Todavía no hay gastos registrados en este mes.",
   nivelTitulo = "h2",
+  pie,
 }: Props) {
   const Titulo = nivelTitulo;
   return (
@@ -121,7 +147,7 @@ export function TablaGastos({
       ) : (
         <>
           {/* --- Celular: una tarjeta por gasto, sin scroll lateral --- */}
-          <ul className="sm:hidden">
+          <ul id="lista-gastos" className="sm:hidden">
             {gastos.map((gasto) => (
               <li
                 key={gasto.id}
@@ -132,6 +158,11 @@ export function TablaGastos({
                   <p className="cifra mt-0.5 text-xs text-texto-tenue">
                     {fechaCorta(gasto.fecha)} · {ETIQUETA_MEDIO_PAGO[gasto.medioPago]}
                   </p>
+                  {gasto.cuota !== null && (
+                    <div className="mt-1">
+                      <MarcaCuota gasto={gasto} />
+                    </div>
+                  )}
                   {/* div y no p: Boleta puede renderizar un <details> con un
                       <form> dentro, y HTML no admite bloques dentro de un
                       parrafo. El navegador cerraba el <p> solo y la
@@ -152,7 +183,7 @@ export function TablaGastos({
           </ul>
 
           {/* --- Escritorio: tabla --- */}
-          <table className="hidden w-full text-sm sm:table">
+          <table id="tabla-gastos" className="hidden w-full text-sm sm:table">
             <caption className="sr-only">
               Gastos del mes, del más reciente al más antiguo
             </caption>
@@ -181,8 +212,9 @@ export function TablaGastos({
                   </td>
                   <td className="px-4 py-2.5">
                     <span className="block">{gasto.descripcion}</span>
-                    <span className="text-xs text-texto-tenue">
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-texto-tenue">
                       {ETIQUETA_MEDIO_PAGO[gasto.medioPago]}
+                      <MarcaCuota gasto={gasto} />
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5">
@@ -205,6 +237,8 @@ export function TablaGastos({
           </table>
         </>
       )}
+
+      {pie}
     </section>
   );
 }

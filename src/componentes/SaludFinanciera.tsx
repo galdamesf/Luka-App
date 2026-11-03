@@ -1,6 +1,7 @@
 import type { BandaSalud, SaludFinanciera as Salud } from "@/dominio/salud";
 import { Icono } from "./Icono";
 import { nombreDelMes } from "./formato";
+import { IDENTIDAD_FACTOR, TONOS } from "./tonos";
 import { sumarMeses } from "@/lib/fecha";
 
 type Props = {
@@ -23,9 +24,9 @@ const BANDA: Record<BandaSalud, { nombre: string; trazo: string; pildora: string
 
 function tonoDeFactor(puntos: number, maximo: number) {
   const r = puntos / maximo;
-  if (r >= 0.8) return { barra: "bg-exito-fuerte", texto: "text-exito", ficha: "bg-exito/15 text-exito", viva: "viva-exito" };
-  if (r >= 0.5) return { barra: "bg-alerta", texto: "text-alerta", ficha: "bg-alerta/15 text-alerta", viva: "viva-alerta" };
-  return { barra: "bg-peligro", texto: "text-peligro", ficha: "bg-peligro/15 text-peligro", viva: "viva-peligro" };
+  if (r >= 0.8) return { barra: "bg-exito-fuerte", texto: "text-exito", viva: "viva-exito" };
+  if (r >= 0.5) return { barra: "bg-alerta", texto: "text-alerta", viva: "viva-alerta" };
+  return { barra: "bg-peligro", texto: "text-peligro", viva: "viva-peligro" };
 }
 
 /**
@@ -54,25 +55,40 @@ export function SaludFinanciera({ salud, mes, anterior }: Props) {
   const suman = factores.filter((f) => f.puntos / f.maximo >= 0.8);
   const restan = factores.filter((f) => f.puntos / f.maximo < 0.8);
 
+  // Cada factor lleva su propio color e icono (el ahorro es esmeralda, la
+  // deuda fucsia...). Lo que suma se pinta con ese color; lo que resta pasa
+  // la barra y la cifra a ambar o rojo, que es lo que tiene que saltar.
   const Factor = ({ f }: { f: (typeof factores)[number] }) => {
-    const tono = tonoDeFactor(f.puntos, f.maximo);
+    const senal = tonoDeFactor(f.puntos, f.maximo);
     const suma = f.puntos / f.maximo >= 0.8;
+    const identidad = IDENTIDAD_FACTOR[f.clave];
+    const tono = TONOS[identidad.tono];
     return (
-      <li className={`fila-viva ${tono.viva} -mx-3 grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-0.5 rounded-lg px-3 py-1.5`}>
-        <span className={`inline-flex size-7 items-center justify-center rounded-full ${tono.ficha}`}>
-          <Icono nombre={suma ? "check" : "alert"} tamano={14} />
+      <li
+        className={`fila-viva ${suma ? tono.viva : senal.viva} -mx-3 grid grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-0.5 rounded-lg px-3 py-1.5`}
+      >
+        <span aria-hidden="true" className={`inline-flex size-8 items-center justify-center rounded-lg shadow-sm ${tono.ficha}`}>
+          <Icono nombre={identidad.icono} tamano={16} />
         </span>
         <span className="space-y-0.5">
-          <span className="block text-sm font-semibold">{f.nombre}</span>
+          <span className="flex items-center gap-1.5 text-sm font-semibold">
+            {f.nombre}
+            {!suma && (
+              <span className={senal.texto}>
+                <Icono nombre="alert" tamano={14} />
+                <span className="sr-only">(necesita atención)</span>
+              </span>
+            )}
+          </span>
           <span className="block text-[13px] leading-snug text-texto-tenue">{f.detalle}</span>
           <span aria-hidden="true" className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-superficie-tenue">
             <span
-              className={`block h-full rounded-full ${tono.barra}`}
+              className={`block h-full rounded-full ${suma ? tono.barra : senal.barra}`}
               style={{ width: `${Math.max(2, (f.puntos / f.maximo) * 100)}%` }}
             />
           </span>
         </span>
-        <span className={`cifra whitespace-nowrap text-[13px] font-semibold ${tono.texto}`}>
+        <span className={`cifra whitespace-nowrap text-[13px] font-semibold ${suma ? "text-texto" : senal.texto}`}>
           {f.puntos}/{f.maximo}
         </span>
       </li>

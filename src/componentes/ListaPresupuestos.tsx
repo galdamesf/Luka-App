@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { DetalleDeCategoria, LineaPresupuesto } from "@/dominio/presupuestos";
 import type { AccionFormulario } from "@/dominio/formulario";
 import { FilaPresupuesto } from "./FilaPresupuesto";
+import { Icono } from "./Icono";
 
 type Item = {
   linea: LineaPresupuesto;
@@ -19,6 +20,12 @@ type Props = {
 
 type Filtro = "todas" | "agotadas" | "cerca" | "sanas";
 
+/**
+ * Cuantos presupuestos se ven sin apretar "Ver todas". Vienen ordenados de
+ * mas a menos usado, asi que los que quedan escondidos son los tranquilos.
+ */
+export const PRESUPUESTOS_VISIBLES = 5;
+
 const FILTROS: ReadonlyArray<{ id: Filtro; nombre: string; punto: string; cumple: (l: LineaPresupuesto) => boolean }> = [
   { id: "todas", nombre: "Todas", punto: "bg-texto-tenue", cumple: () => true },
   { id: "agotadas", nombre: "Agotadas", punto: "bg-peligro", cumple: (l) => l.agotado },
@@ -30,11 +37,17 @@ const FILTROS: ReadonlyArray<{ id: Filtro; nombre: string; punto: string; cumple
  * La lista de presupuestos con un filtro por estado. Cada fila es la misma
  * FilaPresupuesto de siempre: se despliega con sus gastos por semana y sus
  * boletas, y se edita o elimina igual que antes.
+ *
+ * Con muchos presupuestos la lista se hacia larga: se ven los 5 mas usados
+ * y el resto con "Ver todas". Si sobraria uno solo, se muestran todos.
  */
 export function ListaPresupuestos({ items, accionEditar, alEliminar }: Props) {
   const [filtro, setFiltro] = useState<Filtro>("todas");
+  const [verTodas, setVerTodas] = useState(false);
   const activo = FILTROS.find((f) => f.id === filtro) ?? FILTROS[0]!;
   const visibles = items.filter((i) => activo.cumple(i.linea));
+  const sobran = visibles.length > PRESUPUESTOS_VISIBLES + 1;
+  const mostrados = sobran && !verTodas ? visibles.slice(0, PRESUPUESTOS_VISIBLES) : visibles;
 
   return (
     <div className="border-t border-borde">
@@ -65,8 +78,8 @@ export function ListaPresupuestos({ items, accionEditar, alEliminar }: Props) {
       {visibles.length === 0 ? (
         <p className="px-5 py-6 text-center text-sm text-texto-tenue">Ningún presupuesto en este estado.</p>
       ) : (
-        <ul className="px-5">
-          {visibles.map((i) => (
+        <ul id="lista-presupuestos" className="px-5">
+          {mostrados.map((i) => (
             <FilaPresupuesto
               key={i.linea.presupuesto.id}
               linea={i.linea}
@@ -77,6 +90,28 @@ export function ListaPresupuestos({ items, accionEditar, alEliminar }: Props) {
             />
           ))}
         </ul>
+      )}
+
+      {sobran && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-borde px-5 py-1.5">
+          <p className="text-xs text-texto-tenue">
+            {verTodas
+              ? `${visibles.length} presupuestos, del más al menos usado`
+              : `Los ${PRESUPUESTOS_VISIBLES} más usados de ${visibles.length}`}
+          </p>
+          <button
+            type="button"
+            aria-expanded={verTodas}
+            aria-controls="lista-presupuestos"
+            onClick={() => setVerTodas(!verTodas)}
+            className="inline-flex min-h-10 cursor-pointer items-center gap-1 rounded-md px-2 text-[13px] font-semibold text-accion-tinta transition-colors duration-150 hover:bg-superficie-tenue"
+          >
+            {verTodas ? "Ver menos" : `Ver todas (${visibles.length})`}
+            <span className={`transition-transform duration-150 ${verTodas ? "rotate-180" : ""}`}>
+              <Icono nombre="chevron-down" tamano={14} />
+            </span>
+          </button>
+        </div>
       )}
     </div>
   );

@@ -44,22 +44,22 @@ describe("estaPagada", () => {
 
 describe("fechaDeVencimiento", () => {
   test("arma la fecha con el dia indicado", () => {
-    expect(fechaDeVencimiento(cuenta({ diaVencimiento: 20 }), 31)).toBe("2026-10-20");
-    expect(fechaDeVencimiento(cuenta({ diaVencimiento: 5 }), 31)).toBe("2026-10-05");
+    expect(fechaDeVencimiento(cuenta({ diaVencimiento: 20 }))).toBe("2026-10-20");
+    expect(fechaDeVencimiento(cuenta({ diaVencimiento: 5 }))).toBe("2026-10-05");
   });
 
   test("sin dia no hay vencimiento", () => {
-    expect(fechaDeVencimiento(cuenta(), 31)).toBeNull();
+    expect(fechaDeVencimiento(cuenta())).toBeNull();
   });
 
   test("un vencimiento el 31 en febrero se corre al ultimo dia", () => {
     const febrero = cuenta({ mes: "2026-02", diaVencimiento: 31 });
-    expect(fechaDeVencimiento(febrero, 28)).toBe("2026-02-28");
-    expect(fechaDeVencimiento(cuenta({ mes: "2028-02", diaVencimiento: 31 }), 29)).toBe("2028-02-29");
+    expect(fechaDeVencimiento(febrero)).toBe("2026-02-28");
+    expect(fechaDeVencimiento(cuenta({ mes: "2028-02", diaVencimiento: 31 }))).toBe("2028-02-29");
   });
 
   test("un vencimiento el 31 en un mes de 30 se corre al 30", () => {
-    expect(fechaDeVencimiento(cuenta({ mes: "2026-04", diaVencimiento: 31 }), 30)).toBe("2026-04-30");
+    expect(fechaDeVencimiento(cuenta({ mes: "2026-04", diaVencimiento: 31 }))).toBe("2026-04-30");
   });
 });
 
@@ -70,8 +70,7 @@ describe("resumirCuentas", () => {
         cuenta({ nombre: "Luz", monto: 38400 }),
         cuenta({ nombre: "Agua", monto: 22000 }),
         pagada({ nombre: "Internet", monto: 24990 }),
-      ],
-      "2026-10", 31, "2026-10-27",
+      ], "2026-10", "2026-10-27",
     );
 
     expect(r.pendientes.map((c) => c.nombre).sort()).toEqual(["Agua", "Luz"]);
@@ -83,8 +82,7 @@ describe("resumirCuentas", () => {
 
   test("deja fuera las de otros meses", () => {
     const r = resumirCuentas(
-      [cuenta({ monto: 10000 }), cuenta({ mes: "2026-09", monto: 99999 }), cuenta({ mes: "2026-11", monto: 88888 })],
-      "2026-10", 31, "2026-10-27",
+      [cuenta({ monto: 10000 }), cuenta({ mes: "2026-09", monto: 99999 }), cuenta({ mes: "2026-11", monto: 88888 })], "2026-10", "2026-10-27",
     );
     expect(r.total).toBe(10000);
   });
@@ -95,16 +93,14 @@ describe("resumirCuentas", () => {
         cuenta({ nombre: "Tarde", diaVencimiento: 28 }),
         cuenta({ nombre: "Temprano", diaVencimiento: 5 }),
         cuenta({ nombre: "Medio", diaVencimiento: 15 }),
-      ],
-      "2026-10", 31, "2026-10-01",
+      ], "2026-10", "2026-10-01",
     );
     expect(r.pendientes.map((c) => c.nombre)).toEqual(["Temprano", "Medio", "Tarde"]);
   });
 
   test("las sin fecha de vencimiento van al final, no al principio", () => {
     const r = resumirCuentas(
-      [cuenta({ nombre: "Sin fecha" }), cuenta({ nombre: "Con fecha", diaVencimiento: 20 })],
-      "2026-10", 31, "2026-10-01",
+      [cuenta({ nombre: "Sin fecha" }), cuenta({ nombre: "Con fecha", diaVencimiento: 20 })], "2026-10", "2026-10-01",
     );
     expect(r.pendientes.map((c) => c.nombre)).toEqual(["Con fecha", "Sin fecha"]);
   });
@@ -115,8 +111,7 @@ describe("resumirCuentas", () => {
         pagada({ nombre: "Primera", pagadaEn: "2026-10-03" }),
         pagada({ nombre: "Ultima", pagadaEn: "2026-10-25" }),
         pagada({ nombre: "Media", pagadaEn: "2026-10-14" }),
-      ],
-      "2026-10", 31, "2026-10-27",
+      ], "2026-10", "2026-10-27",
     );
     expect(r.pagadas.map((c) => c.nombre)).toEqual(["Ultima", "Media", "Primera"]);
   });
@@ -127,8 +122,7 @@ describe("resumirCuentas", () => {
         cuenta({ nombre: "Vencida", diaVencimiento: 5 }),
         cuenta({ nombre: "Por vencer", diaVencimiento: 28 }),
         cuenta({ nombre: "Justo hoy", diaVencimiento: 27 }),
-      ],
-      "2026-10", 31, "2026-10-27",
+      ], "2026-10", "2026-10-27",
     );
     // El dia del vencimiento todavia no esta vencida: tienes hasta hoy.
     expect(r.vencidas.map((c) => c.nombre)).toEqual(["Vencida"]);
@@ -136,23 +130,21 @@ describe("resumirCuentas", () => {
 
   test("una pagada no cuenta como vencida aunque la fecha haya pasado", () => {
     const r = resumirCuentas(
-      [pagada({ nombre: "Pague tarde", diaVencimiento: 5, pagadaEn: "2026-10-20" })],
-      "2026-10", 31, "2026-10-27",
+      [pagada({ nombre: "Pague tarde", diaVencimiento: 5, pagadaEn: "2026-10-20" })], "2026-10", "2026-10-27",
     );
     expect(r.vencidas).toEqual([]);
   });
 
   test("en un mes futuro nada esta vencido", () => {
     const r = resumirCuentas(
-      [cuenta({ mes: "2026-12", diaVencimiento: 5 })],
-      "2026-12", 31, "2026-10-27",
+      [cuenta({ mes: "2026-12", diaVencimiento: 5 })], "2026-12", "2026-10-27",
     );
     expect(r.vencidas).toEqual([]);
     expect(r.pendientes).toHaveLength(1);
   });
 
   test("un mes sin cuentas no explota", () => {
-    const r = resumirCuentas([], "2026-10", 31, "2026-10-27");
+    const r = resumirCuentas([], "2026-10", "2026-10-27");
     expect(r.total).toBe(0);
     expect(r.pendientes).toEqual([]);
     expect(r.pagadas).toEqual([]);
@@ -218,8 +210,8 @@ describe("agruparPendientes", () => {
   const yaPagada = pagada({ nombre: "Arriendo", diaVencimiento: 5 });
 
   test("separa lo vencido, lo de esta semana y lo demas, y deja fuera lo pagado", () => {
-    const resumen = resumirCuentas([vencida, hoyMismo, enSiete, sinFecha, yaPagada], "2026-10", 31, "2026-10-29");
-    const g = agruparPendientes(resumen, 31, "2026-10-29");
+    const resumen = resumirCuentas([vencida, hoyMismo, enSiete, sinFecha, yaPagada], "2026-10", "2026-10-29");
+    const g = agruparPendientes(resumen, "2026-10-29");
     expect(g.vencidas.map((c) => c.nombre)).toEqual(["Agua"]);
     expect(g.porVencer.map((c) => c.nombre)).toEqual(["Luz", "Internet"]);
     expect(g.programadas.map((c) => c.nombre)).toEqual(["Gimnasio"]);
@@ -227,10 +219,9 @@ describe("agruparPendientes", () => {
 
   test("a ocho dias ya no es 'por vencer'", () => {
     const resumen = resumirCuentas(
-      [cuenta({ nombre: "A", diaVencimiento: 17 }), cuenta({ nombre: "B", diaVencimiento: 18 })],
-      "2026-10", 31, "2026-10-10",
+      [cuenta({ nombre: "A", diaVencimiento: 17 }), cuenta({ nombre: "B", diaVencimiento: 18 })], "2026-10", "2026-10-10",
     );
-    const g = agruparPendientes(resumen, 31, "2026-10-10");
+    const g = agruparPendientes(resumen, "2026-10-10");
     expect(g.porVencer.map((c) => c.nombre)).toEqual(["A"]);
     expect(g.programadas.map((c) => c.nombre)).toEqual(["B"]);
   });

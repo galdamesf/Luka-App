@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { proyectarCierre, ritmoSemanal } from "@/dominio/semanas";
+import { CORTES_NIVEL, nivelDeSemana, proyectarCierre, ritmoSemanal } from "@/dominio/semanas";
 import type { GastoPlano } from "@/dominio/resumen";
 
 const ARRIENDO = { id: "c1", nombre: "Arriendo", color: "#0d9488", icono: "house", esencial: true };
@@ -155,5 +155,68 @@ describe("la semana en curso recien empezada", () => {
       "2026-10-29",
     );
     expect(cerrado.semanas[1]?.tendencia).toBeCloseTo(-100, 6);
+  });
+});
+
+describe("nivelDeSemana", () => {
+  // Discrecional del mes: 110.500 en 29 dias, unos 3.810 por dia.
+  const r = ritmoSemanal(
+    [
+      gasto("2026-10-01", 780_000, ARRIENDO),
+      gasto("2026-10-03", 14_000),
+      gasto("2026-10-10", 35_000),
+      gasto("2026-10-12", 21_000, BENCINA),
+      gasto("2026-10-27", 31_500),
+      gasto("2026-10-29", 9_000),
+    ],
+    "2026-10",
+    "2026-10-29",
+  );
+  const nivel = (i: number) => nivelDeSemana(r.semanas[i] as (typeof r.semanas)[number], r);
+
+  test("mide solo lo discrecional: el arriendo no hace alta a la primera semana", () => {
+    expect(nivel(0)?.nivel).toBe("bajo");
+    expect(nivel(0)?.veces).toBeCloseTo(2_000 / (110_500 / 29), 6);
+  });
+
+  test("reparte las semanas en niveles segun las veces del ritmo del mes", () => {
+    expect(nivel(1)?.nivel).toBe("muy-alto"); // 8.000 por dia, 2.1 veces
+    expect(nivel(3)?.nivel).toBe("alto"); // 4.500 por dia, 1.18 veces
+  });
+
+  test("una semana sin ningun gasto no tiene nivel: no se anoto nada, no es que fuera baja", () => {
+    expect(r.semanas[2]?.cantidad).toBe(0);
+    expect(nivel(2)).toBeNull();
+  });
+
+  test("una semana cerrada con gastos pero ninguno discrecional si es baja", () => {
+    const soloArriendo = ritmoSemanal(
+      [gasto("2026-10-01", 780_000, ARRIENDO), gasto("2026-10-10", 35_000)],
+      "2026-10",
+      "2026-10-20",
+    );
+    expect(nivelDeSemana(soloArriendo.semanas[0] as (typeof soloArriendo.semanas)[number], soloArriendo)).toEqual({ nivel: "bajo", veces: 0 });
+  });
+
+  test("los cortes son inclusivos hacia abajo", () => {
+    const base = r.semanas[1] as (typeof r.semanas)[number];
+    const conVeces = (veces: number) =>
+      nivelDeSemana({ ...base, enCurso: false, diasTranscurridos: 1, discrecionales: veces * 1_000 }, { discrecionalDiario: 1_000 })?.nivel;
+    expect(conVeces(CORTES_NIVEL.bajo)).toBe("bajo");
+    expect(conVeces(1)).toBe("normal");
+    expect(conVeces(CORTES_NIVEL.normal)).toBe("normal");
+    expect(conVeces(CORTES_NIVEL.alto)).toBe("alto");
+    expect(conVeces(1.51)).toBe("muy-alto");
+  });
+
+  test("sin dias, sin gasto discrecional en el mes o en curso sin gastar todavia, no hay nivel", () => {
+    const futuro = ritmoSemanal([gasto("2026-12-03", 5_000)], "2026-12", "2026-11-10");
+    expect(nivelDeSemana(futuro.semanas[0] as (typeof futuro.semanas)[number], futuro)).toBeNull();
+
+    const soloEsencial = ritmoSemanal([gasto("2026-10-01", 780_000, ARRIENDO)], "2026-10", "2026-10-20");
+    expect(nivelDeSemana(soloEsencial.semanas[0] as (typeof soloEsencial.semanas)[number], soloEsencial)).toBeNull();
+
+    const recien = ritmoSemanal([gasto("2026-10-03", 14_000)], "2026-10", "2026-10-29");
+    expect(nivelDeSemana(recien.semanas[4] as (typeof recien.semanas)[number], recien)).toBeNull();
   });
 });

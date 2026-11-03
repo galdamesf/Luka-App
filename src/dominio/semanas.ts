@@ -1,10 +1,11 @@
-import { diasEnMesISO } from "@/lib/fecha";
+import { aPeriodo, diaDelPeriodo, enPeriodo, fechaDelPeriodo, type Periodo } from "@/lib/periodo";
 import { esPagoDeCuota, type CategoriaPlana, type GastoPlano } from "./resumen";
 
 /**
- * El mes repartido en bloques de 7 dias desde el dia 1, igual que el informe
- * y el desglose de cada presupuesto: dias 1-7, 8-14, 15-21, 22-28 y, si el
- * mes los tiene, 29 en adelante.
+ * El mes repartido en bloques de 7 dias desde su primer dia, igual que el
+ * informe y el desglose de cada presupuesto: dias 1-7, 8-14, 15-21, 22-28 y,
+ * si el mes los tiene, 29 en adelante. Con un dia de inicio distinto del 1,
+ * los dias se cuentan desde ahi: con 27, la semana 1 va del 27 al 2.
  *
  * Los pagos de cuota no entran, igual que en resumirMes: tienen su propia
  * seccion y el balance ya los descuenta aparte.
@@ -14,8 +15,12 @@ export type CategoriaDeSemana = { categoria: CategoriaPlana; total: number };
 
 export type SemanaDelMes = {
   semana: number;
+  /** Dia del periodo en que empieza y termina (el primero es el 1). */
   desde: number;
   hasta: number;
+  /** Las mismas, como fechas "YYYY-MM-DD", para rotular. */
+  fechaDesde: string;
+  fechaHasta: string;
   /** Dias del bloque que ya pasaron. En el mes en curso, hasta hoy inclusive. */
   diasTranscurridos: number;
   /** Hoy cae dentro de este bloque. */
@@ -55,15 +60,15 @@ export type RitmoSemanal = {
 
 export function ritmoSemanal(
   gastos: readonly GastoPlano[],
-  mes: string,
+  mes: string | Periodo,
   hoy: string,
 ): RitmoSemanal {
-  const dias = diasEnMesISO(mes);
+  const periodo = aPeriodo(mes);
+  const dias = periodo.dias;
   const cantidad = Math.ceil(dias / 7);
-  const mesDeHoy = hoy.slice(0, 7);
-  const diaDeHoy = Number(hoy.slice(8, 10));
-  const enCursoElMes = mes === mesDeHoy;
-  const cerrado = mes < mesDeHoy;
+  const enCursoElMes = enPeriodo(hoy, periodo);
+  const cerrado = hoy > periodo.hasta;
+  const diaDeHoy = enCursoElMes ? diaDelPeriodo(hoy, periodo) : 0;
 
   const porCategoria = Array.from({ length: cantidad }, () => new Map<string, CategoriaDeSemana>());
   const semanas: SemanaDelMes[] = Array.from({ length: cantidad }, (_, i) => {
@@ -78,6 +83,8 @@ export function ritmoSemanal(
       semana: i + 1,
       desde,
       hasta,
+      fechaDesde: fechaDelPeriodo(periodo, desde),
+      fechaHasta: fechaDelPeriodo(periodo, hasta),
       diasTranscurridos,
       enCurso: enCursoElMes && diaDeHoy >= desde && diaDeHoy <= hasta,
       total: 0,
@@ -91,8 +98,8 @@ export function ritmoSemanal(
   });
 
   for (const gasto of gastos) {
-    if (!gasto.fecha.startsWith(mes) || esPagoDeCuota(gasto)) continue;
-    const indice = Math.min(Math.floor((Number(gasto.fecha.slice(8, 10)) - 1) / 7), cantidad - 1);
+    if (!enPeriodo(gasto.fecha, periodo) || esPagoDeCuota(gasto)) continue;
+    const indice = Math.min(Math.floor((diaDelPeriodo(gasto.fecha, periodo) - 1) / 7), cantidad - 1);
     const semana = semanas[indice] as SemanaDelMes;
     semana.total += gasto.monto;
     semana.cantidad += 1;
@@ -134,7 +141,7 @@ export function ritmoSemanal(
   );
 
   return {
-    mes,
+    mes: periodo.mes,
     semanas,
     // La en curso si ya tiene gastos; si no, la ultima que tuvo. Abrir una
     // semana vacia (el dia 29, la quinta recien empieza) no muestra nada.
@@ -151,6 +158,49 @@ export function ritmoSemanal(
     discrecionalDiario: diasQueVan === 0 ? null : discrecional / diasQueVan,
     semanaMasAlta: masAlta?.semana ?? null,
   };
+}
+
+export type NivelSemana = "bajo" | "normal" | "alto" | "muy-alto";
+
+/**
+ * Donde corta cada nivel, como veces el ritmo discrecional del mes: hasta
+ * 0.85 es bajo, hasta 1.15 es normal (±15% es ruido de una semana a otra),
+ * hasta 1.5 es alto y de ahi para arriba, muy alto.
+ */
+export const CORTES_NIVEL = { bajo: 0.85, normal: 1.15, alto: 1.5 } as const;
+
+/**
+ * Que tan cargada fue una semana: su gasto discrecional por dia contra el
+ * del mes. Discrecional y no total porque el arriendo hace que la primera
+ * semana siempre parezca la peor, y eso no es algo que se pueda corregir.
+ *
+ * `veces` es la razon: 1 es exactamente el ritmo del mes.
+ *
+ * null si todavia no se puede decir: la semana no empieza, no tiene ningun
+ * gasto registrado (casi siempre es que no se anoto, no que no se gasto: no
+ * se puede llamar "baja"), el mes no tiene gasto discrecional, o la semana en
+ * curso aun no gasta nada discrecional (el primer dia del bloque se leeria
+ * como "bajo" sin serlo).
+ */
+export function nivelDeSemana(
+  semana: SemanaDelMes,
+  ritmo: Pick<RitmoSemanal, "discrecionalDiario">,
+): { nivel: NivelSemana; veces: number } | null {
+  if (semana.diasTranscurridos === 0 || semana.cantidad === 0) return null;
+  if (semana.enCurso && semana.discrecionales === 0) return null;
+  const delMes = ritmo.discrecionalDiario;
+  if (delMes === null || delMes === 0) return null;
+
+  const veces = semana.discrecionales / semana.diasTranscurridos / delMes;
+  const nivel: NivelSemana =
+    veces <= CORTES_NIVEL.bajo
+      ? "bajo"
+      : veces <= CORTES_NIVEL.normal
+        ? "normal"
+        : veces <= CORTES_NIVEL.alto
+          ? "alto"
+          : "muy-alto";
+  return { nivel, veces };
 }
 
 /**

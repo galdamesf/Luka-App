@@ -14,6 +14,7 @@ import {
 } from "@/dominio/esquemas";
 import type { EstadoFormulario } from "@/dominio/formulario";
 import { definirSueldo } from "@/datos/sueldos";
+import { boletaDelFormulario } from "@/lib/boleta-formulario";
 import {
   actualizarDeuda,
   crearDeuda,
@@ -120,12 +121,18 @@ export async function accionPagarCuota(
     };
   }
 
+  // La foto de la boleta, si se adjunto. Se guarda antes de pagar: si el
+  // archivo no sirve, la cuota no se marca pagada a medias.
+  const boleta = await boletaDelFormulario(datos);
+  if ("error" in boleta) return { ok: false, mensaje: boleta.error, errores: {} };
+
   try {
     await pagarCuota(
       resultado.data.deudaId,
       resultado.data.mes,
       resultado.data.fechaPago,
       resultado.data.monto,
+      boleta.archivo,
     );
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };

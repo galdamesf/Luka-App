@@ -137,7 +137,11 @@ export function KpisDelMes({ panel, mes }: Props) {
               </Chip>
               <span>
                 vs. {mesAnterior}
-                {barra.diaDeHoy !== null ? ` al día ${diaComparado}` : " completo"}
+                {barra.diaDeHoy !== null
+                  ? panel.periodo.diaInicio === 1
+                    ? ` al día ${diaComparado}`
+                    : ` en sus primeros ${diaComparado} ${diaComparado === 1 ? "día" : "días"}`
+                  : " completo"}
               </span>
             </>
           )}

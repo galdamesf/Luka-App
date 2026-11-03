@@ -43,8 +43,8 @@ function entrada({
   const resumen = resumirMes(gastos, mes, new Date(`${hoy}T15:00:00.000Z`));
   const balance = calcularBalance({ mes, sueldo, resumen, deudas });
   const panel = armarResumenPanel({
-    mes, hoy, diasDelMes: 31, balance, resumen,
-    cuentas: resumirCuentas(cuentas, mes, 31, hoy), gastosMesAnterior: [],
+    mes, hoy, balance, resumen,
+    cuentas: resumirCuentas(cuentas, mes, hoy), gastosMesAnterior: [],
   });
   return { panel, presupuestos: armarPresupuestos(techos, gastos, mes), cuotasDelMes: balance.cuotasComprometidas };
 }
