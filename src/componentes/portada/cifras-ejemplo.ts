@@ -11,7 +11,13 @@
  *
  * Los subtotales se CALCULAN aqui mismo en vez de escribirse: si alguien
  * cambia un monto y el mes deja de cuadrar, que se note en la fuente.
+ *
+ * El cafe tiene un techo de $40.000 y lo gasto entero. Antes eran $100.000:
+ * el cafe solo superaba a todos los gastos no esenciales del mes y la resta
+ * dejaba de cuadrar.
  */
+
+import { CATEGORIAS_BASE } from "@/dominio/categorias-base";
 
 export const MES_EJEMPLO = {
   nombre: "octubre",
@@ -24,7 +30,7 @@ export const MES_EJEMPLO = {
   comprometido: 65,
 
   techos: [
-    { categoria: "Café", gastado: 100_000, techo: 100_000, estado: "tope" },
+    { categoria: "Café", gastado: 40_000, techo: 40_000, estado: "tope" },
     { categoria: "Feria", gastado: 85_000, techo: 100_000, estado: "aviso" },
     { categoria: "Supermercado", gastado: 87_350, techo: 400_000, estado: "sobra" },
   ],
@@ -43,7 +49,8 @@ export const MES_EJEMPLO = {
     { que: "Notebook en cuotas", cuota: 5, de: 12, monto: 54_990 },
   ],
 
-  categorias: 17,
+  /** Las categorias que trae la app al partir. */
+  categorias: CATEGORIAS_BASE.length,
 } as const;
 
 /** Lo que queda del mes: la resta completa, nunca un numero suelto. */

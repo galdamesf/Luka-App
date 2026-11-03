@@ -110,7 +110,7 @@ export function KpisDelMes({ panel, mes }: Props) {
           <>
             <Cifra valor="Sin definir" tono="tenue" />
             <p className="text-xs text-texto-tenue">
-              <a href="#balance" className="font-semibold text-accion-tinta underline-offset-2 hover:underline">
+              <a href="#balance" className="font-semibold enlace-luka">
                 Defínelo en el balance
               </a>{" "}
               para ver cuánto te queda.
@@ -201,7 +201,7 @@ export function KpisDelMes({ panel, mes }: Props) {
             )}
             <a
               href="#pagos"
-              className="ml-auto font-semibold text-accion-tinta underline-offset-2 hover:underline"
+              className="ml-auto font-semibold enlace-luka"
             >
               Ver pagos
             </a>

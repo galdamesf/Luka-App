@@ -75,7 +75,7 @@ export function BarraDelMes({ panel, mes }: Props) {
     return (
       <article className="rounded-xl border border-dashed border-borde bg-superficie p-5 text-sm text-texto-tenue">
         Define tu sueldo en el{" "}
-        <a href="#balance" className="font-semibold text-accion-tinta underline-offset-2 hover:underline">
+        <a href="#balance" className="font-semibold enlace-luka">
           balance de más abajo
         </a>{" "}
         para ver qué parte de tu mes ya está gastada, comprometida y libre.
@@ -147,7 +147,7 @@ export function BarraDelMes({ panel, mes }: Props) {
           }% y rojo desde ahí${
             barra.diaDeHoy !== null ? `. Hoy es el día ${barra.diaDeHoy} de ${panel.periodo.dias}` : ""
           }`}
-          className="relative h-3.5 overflow-hidden rounded-full border border-borde bg-superficie-tenue"
+          className="relative h-3.5 overflow-hidden rounded-full border border-borde bg-riel"
         >
           {FONDO_TRAMO.map((t) => (
             <span

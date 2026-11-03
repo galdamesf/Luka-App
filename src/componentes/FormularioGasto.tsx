@@ -111,11 +111,11 @@ export function FormularioGasto({
       className={
         enDialogo
           ? "p-6"
-          : "tarjeta-viva viva-accion rounded-xl border border-borde bg-superficie p-5 shadow-sm"
+          : "tarjeta-viva viva-acento rounded-xl border border-borde bg-superficie p-5 shadow-sm"
       }
     >
       <div className="flex items-start gap-3">
-        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-accion/15 text-accion-tinta">
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-acento text-acento-tinta">
           <Icono nombre="plus" tamano={20} />
         </span>
         <div>
@@ -246,7 +246,7 @@ export function FormularioGasto({
         <button
           type="submit"
           disabled={pendiente}
-          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-accion px-4 py-2.5 text-sm font-bold text-accion-texto transition-[filter] duration-150 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          className="boton-luka w-full cursor-pointer"
         >
           <Icono nombre="plus" />
           {pendiente ? "Guardando…" : "Agregar gasto"}

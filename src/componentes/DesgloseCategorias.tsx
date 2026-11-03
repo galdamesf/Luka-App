@@ -55,7 +55,7 @@ function FilaCategoria({ linea, mayor, detalle }: { linea: Linea; mayor: number;
             texto, asi que no depende solo del color. */}
         <span
           aria-hidden="true"
-          className="col-span-3 row-start-2 h-1 overflow-hidden rounded-full bg-superficie-tenue sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:h-1.5"
+          className="col-span-3 row-start-2 h-1 overflow-hidden rounded-full riel sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:h-1.5"
         >
           <span
             className="block h-full rounded-full"
@@ -229,7 +229,7 @@ export function DesgloseCategorias({ resumen, detalles }: Props) {
                     +
                   </span>
                   <span className="truncate text-texto-tenue">Otras {otras.length} categorías</span>
-                  <span className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-accion-tinta">
+                  <span className="ml-auto inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold enlace-luka">
                     <span className="hidden sm:inline sm:group-open/otras:hidden">ver</span>
                     <span className="hidden sm:group-open/otras:inline">ocultar</span>
                     <span className="transition-transform duration-150 group-open/otras:rotate-180">

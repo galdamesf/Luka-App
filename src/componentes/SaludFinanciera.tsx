@@ -42,7 +42,7 @@ export function SaludFinanciera({ salud, mes, anterior }: Props) {
       <article className="rounded-xl border border-dashed border-borde bg-superficie p-5 text-sm text-texto-tenue">
         <h3 className="mb-1 text-base font-bold text-texto">Health Score</h3>
         Se calcula con tu sueldo: con él se mide cuánto ahorras y cuánto se lleva la deuda.{" "}
-        <a href="#balance" className="font-semibold text-accion-tinta underline-offset-2 hover:underline">
+        <a href="#balance" className="font-semibold enlace-luka">
           Defínelo en el balance
         </a>
         .
@@ -81,7 +81,7 @@ export function SaludFinanciera({ salud, mes, anterior }: Props) {
             )}
           </span>
           <span className="block text-[13px] leading-snug text-texto-tenue">{f.detalle}</span>
-          <span aria-hidden="true" className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-superficie-tenue">
+          <span aria-hidden="true" className="mt-1.5 block h-1.5 overflow-hidden rounded-full riel">
             <span
               className={`block h-full rounded-full ${suma ? tono.barra : senal.barra}`}
               style={{ width: `${Math.max(2, (f.puntos / f.maximo) * 100)}%` }}
@@ -186,7 +186,7 @@ export function SaludFinanciera({ salud, mes, anterior }: Props) {
           </div>
           <a
             href={recomendacion.destino}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accion px-4 text-sm font-bold whitespace-nowrap text-accion-texto transition-[filter] duration-150 hover:brightness-110"
+            className="boton-luka"
           >
             {recomendacion.accion}
             <Icono nombre="arrow-right" tamano={16} />

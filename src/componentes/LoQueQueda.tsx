@@ -36,7 +36,7 @@ function DetallePagado({ detalle }: { detalle: DesglosePagado }) {
   ];
   return (
     <details className="mt-1.5 ml-[1.375rem]">
-      <summary className="cursor-pointer text-xs font-semibold text-accion-tinta">Ver detalle</summary>
+      <summary className="cursor-pointer text-xs font-semibold enlace-luka">Ver detalle</summary>
       <ul className="mt-2 space-y-2">
         {filas.map((f) => (
           <li key={f.nombre} className="flex items-baseline justify-between gap-3 text-xs">
@@ -183,7 +183,7 @@ export function LoQueQueda({ queda, mes, estado }: Props) {
               aria-label={`Del sueldo de ${formatearCLP(queda.sueldo)} se van ${formatearCLP(queda.descuentos)}; ${
                 queda.quedaria >= 0 ? `quedan ${formatearCLP(queda.quedaria)}` : `faltan ${formatearCLP(-queda.quedaria)}`
               }.`}
-              className="flex h-4 overflow-hidden rounded-full bg-superficie-tenue"
+              className="flex h-4 overflow-hidden rounded-full riel"
             >
               {lineas.map((l) =>
                 l.monto > 0 ? (
@@ -238,7 +238,7 @@ export function LoQueQueda({ queda, mes, estado }: Props) {
             )}
             {l.clave === "presupuesto" && queda.presupuestoPorGastar.lineas.length > 0 && (
               <details className="mt-1.5 ml-[1.375rem]">
-                <summary className="cursor-pointer text-xs font-semibold text-accion-tinta">
+                <summary className="cursor-pointer text-xs font-semibold enlace-luka">
                   Ver por categoría
                 </summary>
                 <ul className="mt-2 space-y-1.5">

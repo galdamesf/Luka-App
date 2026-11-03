@@ -14,6 +14,8 @@
   --font-acento: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
   /* Monoespaciado para montos: deja las cifras alineadas en columna. */
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  /* Las notas a mano de la portada («cámbialo»). Solo ahí, y con moderación. */
+  --font-mano: "Caveat", "Comic Neue", cursive;
 
   --radius-base: 0.5rem;
 }
@@ -21,16 +23,26 @@
 :root {
   color-scheme: light;
 
-  --fondo: #e6eaf0;
-  --superficie: #f2f4f7;
-  /* El riel va mas CLARO que la card, al reves de lo habitual. No es
-     capricho: las barras de categoria se dibujan encima de el, y a #f1f5f9
-     el ocre de Alimentacion quedaba en 2.89:1, bajo el 3:1 que pide WCAG
-     1.4.11. En blanco da 3.17:1. */
-  --superficie-tenue: #ffffff;
+  /* Los neutros del modo claro son los de la portada: papel tibio de fondo,
+     cartas blancas y bordes calidos. Asi la portada, el ingreso y la app se
+     ven de la misma familia. */
+  --fondo: #faf8f4;
+  --superficie: #ffffff;
+  /* Lo hundido dentro de una carta: campos, hover, fichas internas. Un
+     paso tibio bajo el blanco para que se vea sobre la carta. */
+  --superficie-tenue: #f7f4ef;
   --texto: #0f172a;
   --texto-tenue: #475569;
-  --borde: #d8dfe8;
+  --borde: #e8e1d6;
+
+  /* El riel de las barras: lo que queda detras del relleno. Va en blanco y
+     no en un tono: las barras de categoria se dibujan encima, y el ocre de
+     Alimentacion solo alcanza el 3:1 de WCAG 1.4.11 sobre blanco (3.17:1;
+     sobre #f1f5f9 quedaba en 2.89:1). Como la carta tambien es blanca, el
+     riel lleva un borde fino para que su largo se vea. En oscuro es mas
+     hondo que la carta y no necesita borde. */
+  --riel: #ffffff;
+  --riel-borde: #e8e1d6;
 
   --primario: #1e293b;
   --primario-texto: #ffffff;
@@ -53,7 +65,13 @@
      anillo de foco tiene que poder distinguirse de un relleno cualquiera. */
   --avance: #1557c0;
 
-  /* La accion: botones principales, seleccion y CTAs. El indigo-violeta del
+  /* Los botones ya NO van en este violeta: van en durazno, con el boton de
+     la portada (.boton-luka), y los enlaces en tinta con subrayado durazno
+     (.enlace-luka). El violeta queda como color de identidad de secciones
+     (01 Resumen, 07 Movimientos) y de alguna cifra; un test vigila que nada
+     que se aprieta lo use. Lo que sigue explica por que se eligio este tono.
+
+     La accion: botones principales, seleccion y CTAs. El indigo-violeta del
      mockup del dashboard. Es color de ACCION, no de senal, y un test vigila
      que no se parezca a ninguno de los cuatro. --accion rellena,
      --accion-texto va encima, y --accion-tinta es el tono para texto e
@@ -83,7 +101,7 @@
 
   /* El pie es una banda oscura en los dos temas: por eso tiene tokens
      propios y no reusa --primario, que en modo oscuro es casi blanco. */
-  --pie: #1b2336;
+  --pie: #232e45;
   --pie-texto: #f8fafc;
 
   /* El acento de marca. Hasta ahora la app no tenia uno propio y la portada
@@ -131,6 +149,8 @@
     --texto: #f8fafc;
     --texto-tenue: #94a3b8;
     --borde: #334155;
+    --riel: #181f30;
+    --riel-borde: transparent;
 
     --primario: #f8fafc;
     --primario-texto: #0f172a;
@@ -161,6 +181,8 @@
   --texto: #f8fafc;
   --texto-tenue: #94a3b8;
   --borde: #334155;
+  --riel: #181f30;
+  --riel-borde: transparent;
 
   --primario: #f8fafc;
   --primario-texto: #0f172a;
@@ -219,6 +241,7 @@
   --color-durazno-tenue: var(--durazno-tenue);
   --color-durazno-realce: var(--durazno-realce);
   --color-acento-tinta: var(--acento-tinta);
+  --color-acento-canto: var(--acento-canto);
   --color-durazno: var(--durazno);
   --color-noche: var(--noche);
   --color-noche-superficie: var(--noche-superficie);
@@ -228,6 +251,7 @@
   --color-fondo: var(--fondo);
   --color-superficie: var(--superficie);
   --color-superficie-tenue: var(--superficie-tenue);
+  --color-riel: var(--riel);
   --color-texto: var(--texto);
   --color-texto-tenue: var(--texto-tenue);
   --color-borde: var(--borde);
@@ -249,6 +273,9 @@
   --color-pie: var(--pie);
   --color-pie-texto: var(--pie-texto);
   --color-foco: var(--foco);
+  /* Solo existen dentro de la portada (ver «La portada Mediodía», al final). */
+  --color-texto-suave: var(--texto-suave);
+  --color-titulo: var(--titulo);
 }
 
 * {
@@ -270,6 +297,13 @@ body {
 /* Lo comprometido (cuentas y cuotas por pagar) se dibuja rayado, del color
    del total proyectado: se distingue de lo gastado por el patron y no solo
    por el color. */
+/* El riel de una barra: su fondo y, en claro, un borde fino por dentro. El
+   relleno lo tapa donde llega, asi que el borde solo se ve en lo que falta. */
+.riel {
+  background-color: var(--riel);
+  box-shadow: inset 0 0 0 1px var(--riel-borde);
+}
+
 .rayas-exito,
 .rayas-alerta,
 .rayas-peligro {
@@ -367,6 +401,8 @@ body {
     --fondo: #ffffff;
     --superficie: #ffffff;
     --superficie-tenue: #f3f4f6;
+    --riel: #f3f4f6;
+    --riel-borde: transparent;
     --texto: #000000;
     --texto-tenue: #374151;
     --borde: #d1d5db;
@@ -799,3 +835,204 @@ body {
 }
 :root[data-theme="dark"] .guia-claro { display: none; }
 :root[data-theme="dark"] .guia-oscuro { display: block; }
+
+/* ---------------------------------------------------------------------------
+   La portada Mediodía (/bienvenida).
+
+   La portada no usa el gris frío de la app: claro va sobre papel tibio con
+   cartas blancas y títulos en naranja quemado; oscuro, sobre la noche de
+   siempre con títulos en durazno. En vez de inventar otro juego de nombres,
+   redefine los tokens de la app (fondo, superficie, borde, texto...) dentro de
+   la portada, así bg-fondo o text-texto-tenue sirven igual ahí adentro. Suma
+   dos que la app no tiene: --texto-suave (el tercer nivel de texto) y
+   --titulo.
+
+   Se cuelgan del <body> que contiene la portada y no de la portada misma
+   para que el rebote del scroll, arriba y abajo, muestre el mismo papel. Los
+   mismos selectores de tema que :root: data-theme manda, y sin él, el
+   sistema. El semáforo (--exito, --alerta, --peligro) es el de la app.
+   --------------------------------------------------------------------------- */
+body:has(.portada) {
+  --fondo: #faf8f4;
+  --superficie: #ffffff;
+  --superficie-tenue: #ffffff;
+  --borde: #e8e1d6;
+  --texto: #0f172a;
+  --texto-tenue: #475569;
+  --texto-suave: #5a687e;
+  --titulo: #c2410c;
+  --foco: #c2410c;
+  --marcador: rgb(255 159 110 / 0.5);
+  /* El pie va en el mismo azul en los dos temas. */
+  --pie: #232e45;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body:has(.portada) {
+    --fondo: #0f172a;
+    --superficie: #1b2336;
+    --superficie-tenue: #131c31;
+    --borde: #2c3854;
+    --texto: #f8fafc;
+    --texto-tenue: #cbd5e1;
+    --texto-suave: #94a3b8;
+    --titulo: #ff9f6e;
+    --foco: #ff9f6e;
+    --marcador: rgb(255 159 110 / 0.34);
+  }
+}
+
+:root[data-theme="dark"] body:has(.portada) {
+  --fondo: #0f172a;
+  --superficie: #1b2336;
+  --superficie-tenue: #131c31;
+  --borde: #2c3854;
+  --texto: #f8fafc;
+  --texto-tenue: #cbd5e1;
+  --texto-suave: #94a3b8;
+  --titulo: #ff9f6e;
+  --foco: #ff9f6e;
+  --marcador: rgb(255 159 110 / 0.34);
+}
+
+.portada {
+  background-color: var(--fondo);
+  color: var(--texto);
+}
+
+/* El resaltador: una franja bajo las palabras clave, no un fondo. Se corta
+   bien cuando la frase salta de línea. */
+.marcado {
+  background-image: linear-gradient(transparent 62%, var(--marcador) 62%, var(--marcador) 92%, transparent 92%);
+  padding-inline: 0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* El boton de Luka, en la portada y en la app: durazno, mayusculas con letra
+   espaciada, esquinas de 13 px y un canto de 3 px que se hunde al apretar
+   (el boton de Vitalia). Es el «Entrar» del navbar de la portada y tambien
+   «Registrar gasto», «Guardar» y cada boton principal de la app.
+
+   Va como clase propia y no con utilidades porque estas reglas no van en una
+   capa: le ganan a cualquier clase de Tailwind, asi que el boton se ve igual
+   aunque al lado quede un px-4 o un rounded-lg olvidado. El ancho si se
+   puede dar con una utilidad (w-full), porque aqui no se fija. */
+.boton-luka {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding-inline: 18px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--acento);
+  color: var(--acento-tinta);
+  box-shadow: 0 3px 0 var(--acento-canto);
+  font-weight: 800;
+  font-size: 0.78rem;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: transform 75ms, box-shadow 75ms, filter 120ms, opacity 120ms;
+}
+.boton-luka:not(:disabled):hover { filter: brightness(1.05); }
+.boton-luka:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--acento-canto); }
+.boton-luka:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* «Entrar con Google» del heroe y del cierre: el mismo boton, a la altura del
+   heroe (56 px, como «¿Que hacemos?» al lado). La «G» va sobre blanco, como
+   piden las reglas de Google, y por eso parte con menos aire a la izquierda. */
+.boton-luka-grande {
+  height: 56px;
+  gap: 12px;
+  padding-inline: 10px 24px;
+  font-size: 0.95rem;
+}
+
+/* Los enlaces y botones de texto de la app («Ver pagos», «Ver mas»): en
+   tinta, con un subrayado durazno. No van en naranja: en claro, un naranja
+   que se lea como texto queda pegado al ambar de --alerta y el enlace se
+   leeria como un aviso. El subrayado es lo que dice «esto se aprieta». */
+.enlace-luka {
+  color: var(--texto);
+  text-decoration-line: underline;
+  text-decoration-color: var(--acento);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.enlace-luka:hover { text-decoration-color: var(--acento-canto); }
+
+/* El aviso de la vitrina entra deslizandose, una vez por cada cambio de
+   estado. Solo se mueve: nunca parte invisible. */
+@keyframes portada-aviso-entra {
+  /* Con translate y scale, no con transform: transform es del parallax. */
+  from { translate: 0 14px; scale: 0.98; }
+  to { translate: none; scale: none; }
+}
+.portada-aviso-entra { animation: portada-aviso-entra 700ms cubic-bezier(0.16, 1, 0.3, 1) 600ms both; }
+
+/* La palabra clave del heroe («tu plata»): una etiqueta durazno con el mismo
+   canto de los botones, levemente girada. Al cargar se asienta una vez. El
+   giro va en `rotate` y la entrada en `rotate`/`scale`: transform es del
+   parallax del titular. */
+.etiqueta-luka {
+  display: inline-block;
+  padding: 0 0.2em 0.04em;
+  border-radius: 0.2em;
+  background: var(--acento);
+  color: var(--acento-tinta);
+  box-shadow: 0 0.07em 0 var(--acento-canto);
+  line-height: 1.02;
+  rotate: -2.5deg;
+  animation: etiqueta-asienta 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 250ms both;
+}
+@keyframes etiqueta-asienta {
+  from { rotate: -9deg; scale: 0.92; }
+  to { rotate: -2.5deg; scale: 1; }
+}
+
+/* «claro», en el titular del cierre, encerrado en un circulo a mano
+   (TrazoCirculo.tsx). El circulo se sale un poco de la palabra, como cuando se
+   marca algo con plumon. */
+.palabra-circulada { position: relative; white-space: nowrap; }
+.trazo-circulo {
+  position: absolute;
+  left: -7%;
+  top: -9%;
+  width: 114%;
+  height: 120%;
+  overflow: visible;
+  pointer-events: none;
+}
+.trazo-circulo path {
+  fill: none;
+  stroke: #c2410c;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.trazo-circulo[data-fase="espera"] path { stroke-dashoffset: 1; }
+.trazo-circulo[data-fase="dibuja"] path { animation: trazo-dibuja 900ms cubic-bezier(0.65, 0, 0.35, 1) 150ms both; }
+@keyframes trazo-dibuja {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .etiqueta-luka { animation: none; }
+  .trazo-circulo path { animation: none !important; stroke-dashoffset: 0 !important; }
+}
+
+/* El parallax de la portada (Paralaje.tsx escribe --paralaje en cada capa).
+   Solo transform: no mueve el layout, y lo que ya usa translate o rotate
+   (el hover de las tarjetas, el giro de los stickers) se suma encima. Sin JS
+   o con movimiento reducido, la variable no existe y todo queda en su lugar. */
+[data-paralaje] {
+  transform: translate3d(0, var(--paralaje, 0px), 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .portada-aviso-entra { animation: none; }
+}

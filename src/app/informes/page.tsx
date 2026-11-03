@@ -86,7 +86,7 @@ export default async function Informes({ searchParams }: Props) {
           </div>
           <Link
             href={urlReporte(mes)}
-            className="no-imprimir inline-flex cursor-pointer items-center gap-2 rounded-md bg-accion px-3 py-2 text-sm font-bold text-accion-texto transition-[filter] duration-150 hover:brightness-110"
+            className="boton-luka no-imprimir cursor-pointer"
           >
             <Icono nombre="file-text" tamano={15} />
             Reporte semanal

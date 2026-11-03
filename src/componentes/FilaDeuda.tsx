@@ -142,7 +142,7 @@ export function FilaDeuda({
 
       {avance !== null && (
         <div
-          className="mt-2 h-1.5 overflow-hidden rounded-full bg-superficie-tenue"
+          className="mt-2 h-1.5 overflow-hidden rounded-full riel"
           aria-hidden="true"
         >
           <div

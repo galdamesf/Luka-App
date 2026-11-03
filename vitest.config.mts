@@ -13,6 +13,10 @@ import { fileURLToPath } from "node:url";
   omision en Vitest 5.
 */
 export default defineConfig({
+  // tsconfig deja el JSX tal cual ("preserve") porque lo compila Next. Los
+  // tests que dibujan un componente con react-dom/server necesitan que Vitest
+  // lo compile, con el runtime automatico de React.
+  oxc: { jsx: { runtime: "automatic" } },
   test: {
     environment: "node",
     testTimeout: 20_000,

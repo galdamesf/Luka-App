@@ -192,7 +192,7 @@ export function GraficoSemanas({ semanas }: { semanas: readonly LineaSemana[] })
                 )}
               </span>
             </div>
-            <div className="mt-1 h-2 overflow-hidden rounded-full bg-superficie-tenue" aria-hidden="true">
+            <div className="mt-1 h-2 overflow-hidden rounded-full riel" aria-hidden="true">
               <div
                 className="h-full rounded-full bg-exito-fuerte"
                 style={{ width: `${(semana.total / mayor) * 100}%` }}
@@ -227,7 +227,7 @@ export function TablaMedios({ medios }: { medios: readonly LineaMedioPago[] }) {
                   </span>
                 </span>
               </div>
-              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-superficie-tenue" aria-hidden="true">
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full riel" aria-hidden="true">
                 <div
                   className="h-full rounded-full bg-primario"
                   style={{ width: `${Math.max(linea.porcentaje, 1.5)}%` }}

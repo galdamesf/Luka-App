@@ -66,7 +66,7 @@ export function VolverArriba() {
       onClick={subir}
       aria-label="Volver arriba"
       title={`Volver arriba · llevas el ${avance}% de la página`}
-      className={`no-imprimir fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 inline-flex size-14 cursor-pointer items-center justify-center rounded-full bg-superficie text-accion-tinta shadow-lg shadow-black/25 transition-[opacity,transform,visibility,filter] duration-200 hover:brightness-110 sm:right-6 sm:bottom-6 ${
+      className={`group no-imprimir fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 inline-flex size-14 cursor-pointer items-center justify-center rounded-full bg-superficie text-acento-tinta shadow-lg shadow-black/25 transition-[opacity,transform,visibility,filter] duration-200 hover:brightness-110 sm:right-6 sm:bottom-6 ${
         visible ? "visible translate-y-0 opacity-100" : "invisible translate-y-3 opacity-0"
       }`}
     >
@@ -83,10 +83,10 @@ export function VolverArriba() {
           strokeLinecap="round"
           strokeDasharray={CONTORNO}
           strokeDashoffset={CONTORNO * (1 - avance / 100)}
-          className="stroke-accion transition-[stroke-dashoffset] duration-150"
+          className="stroke-acento-canto transition-[stroke-dashoffset] duration-150"
         />
       </svg>
-      <span className="relative inline-flex size-10 items-center justify-center rounded-full bg-accion text-accion-texto">
+      <span className="relative inline-flex size-10 items-center justify-center rounded-full bg-acento text-acento-tinta shadow-[0_3px_0_var(--acento-canto)] transition-[transform,box-shadow] duration-75 group-active:translate-y-0.5 group-active:shadow-[0_1px_0_var(--acento-canto)]">
         <Icono nombre="arrow-up" tamano={20} />
       </span>
     </button>

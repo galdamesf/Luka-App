@@ -128,7 +128,7 @@ export function FilaPresupuesto({ linea, detalle, accionEditar, alEliminar, comp
       </div>
 
       <div
-        className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-superficie-tenue"
+        className="mt-1.5 flex h-1.5 overflow-hidden rounded-full riel"
         aria-hidden="true"
       >
         <div
