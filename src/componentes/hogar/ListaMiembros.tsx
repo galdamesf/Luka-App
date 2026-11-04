@@ -9,6 +9,10 @@ type Props = {
   yo: { miembroId: string; rol: Rol };
   accionQuitar: AccionFormulario;
   accionHacerDueno: AccionFormulario;
+  /** Quienes ya configuraron la app de autenticacion. */
+  conApp: ReadonlySet<string>;
+  /** El dueno le reinicia la app a quien perdio el celular. */
+  accionReiniciarApp: AccionFormulario;
 };
 
 const PILDORA = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold tracking-wide uppercase";
@@ -33,7 +37,7 @@ function Inicial({ miembro }: { miembro: MiembroDelHogar }) {
  * final las invitaciones pendientes. El dueno ve, en cada fila, como pasarle
  * el hogar o sacar a esa persona (o cancelar su invitacion).
  */
-export function ListaMiembros({ miembros, yo, accionQuitar, accionHacerDueno }: Props) {
+export function ListaMiembros({ miembros, yo, accionQuitar, accionHacerDueno, conApp, accionReiniciarApp }: Props) {
   const soyDueno = yo.rol === "DUENO";
 
   return (
@@ -52,6 +56,9 @@ export function ListaMiembros({ miembros, yo, accionQuitar, accionHacerDueno }: 
                 {m.rol === "DUENO" && <span className={`${PILDORA} bg-acento text-acento-tinta`}>Dueño</span>}
                 {pendiente && (
                   <span className={`${PILDORA} border border-borde text-texto-tenue`}>Invitación pendiente</span>
+                )}
+                {!pendiente && !conApp.has(m.id) && (
+                  <span className={`${PILDORA} border border-borde text-texto-tenue`}>Sin app todavía</span>
                 )}
               </p>
               <p className="truncate text-xs text-texto-tenue">
@@ -75,6 +82,21 @@ export function ListaMiembros({ miembros, yo, accionQuitar, accionHacerDueno }: 
                       día en que empieza el mes.
                     </p>
                     <p>Tú sigues en el hogar como miembro, con todo a la vista igual que hoy.</p>
+                  </ConfirmarAccion>
+                )}
+                {!pendiente && conApp.has(m.id) && (
+                  <ConfirmarAccion
+                    etiqueta="Reiniciar su app"
+                    pregunta={`¿Reiniciar la app de ${primerNombre(m)}?`}
+                    confirmar="Sí, reiniciarla"
+                    accion={accionReiniciarApp}
+                    id={m.id}
+                  >
+                    <p>
+                      Hazlo solo si {primerNombre(m)} perdió el celular y sus códigos de respaldo: su app deja de servir
+                      para Luka y su sesión se cierra.
+                    </p>
+                    <p>La próxima vez que entre con Google, configura una app nueva.</p>
                   </ConfirmarAccion>
                 )}
                 <ConfirmarAccion

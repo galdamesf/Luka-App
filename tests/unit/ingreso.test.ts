@@ -45,11 +45,25 @@ describe("puedeEntrar (al volver de Google)", () => {
 });
 
 describe("tokenDeEntrada (el token recien entrado)", () => {
-  test("se sella con la hora y el arranque, y lleva el hogar", async () => {
+  test("se sella con la hora y el arranque, y lleva el hogar y un id de sesion", async () => {
     miembroDeSesion.mockResolvedValue(HOGAR);
     const token = await tokenDeEntrada({ email: "f@gmail.com", name: "F" }, "arranque-1", 1_000);
-    expect(token).toEqual({ email: "f@gmail.com", name: "F", iniciada: 1_000, arranque: "arranque-1", ...HOGAR });
+    expect(token).toEqual({
+      email: "f@gmail.com",
+      name: "F",
+      iniciada: 1_000,
+      arranque: "arranque-1",
+      ...HOGAR,
+      sesionId: expect.stringMatching(/^[0-9a-f]{32}$/),
+    });
     expect(miembroDeSesion).toHaveBeenCalledWith("f@gmail.com");
+  });
+
+  test("cada entrada tiene su propio id de sesion: el codigo vale para esa sola", async () => {
+    miembroDeSesion.mockResolvedValue(HOGAR);
+    const ids = new Set<string>();
+    for (let i = 0; i < 20; i++) ids.add((await tokenDeEntrada({ email: "f@gmail.com" }, "a"))!.sesionId);
+    expect(ids.size).toBe(20);
   });
 
   test("sin hogar en la base no hay token: la sesion no nace", async () => {

@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { miembroDeSesion, registrarEntrada } from "@/datos/hogares";
 import { reglasDeEntrada } from "@/lib/autorizados";
 import { ahoraEnSegundos, sellarSesion, type HogarDeSesion, type SelloSesion } from "@/lib/sesion";
@@ -29,15 +30,16 @@ export async function puedeEntrar(
 
 /**
  * El token recien entrado (callback jwt, al entrar): se sella con la hora y
- * el arranque, y lleva el hogar que dejo registrado puedeEntrar. null si en la
- * base no aparece: sin hogar no hay sesion.
+ * el arranque, lleva el hogar que dejo registrado puedeEntrar y un id de
+ * sesion al azar, nuevo cada vez, para el segundo paso. null si en la base no
+ * aparece: sin hogar no hay sesion.
  */
 export async function tokenDeEntrada<T extends { email?: string | null }>(
   token: T,
   arranque: string,
   ahora: number = ahoraEnSegundos(),
-): Promise<(T & SelloSesion & HogarDeSesion) | null> {
+): Promise<(T & SelloSesion & HogarDeSesion & { sesionId: string }) | null> {
   const hogar = await miembroDeSesion(token.email);
   if (hogar === null) return null;
-  return { ...token, ...sellarSesion(ahora, arranque), ...hogar };
+  return { ...token, ...sellarSesion(ahora, arranque), ...hogar, sesionId: randomBytes(16).toString("hex") };
 }

@@ -80,6 +80,10 @@ model Miembro {
   hogar            Hogar             @relation(fields: [hogarId], references: [id], onDelete: Cascade)
   gastosAnotados   Gasto[]
   codigosDeBorrado CodigoDeBorrado[]
+  /// La app de autenticacion de su celular (verificacion en dos pasos).
+  dosPasos          DosPasos?
+  codigosDeRespaldo CodigoDeRespaldo[]
+  sesionesVerificadas SesionVerificada[]
 
   @@index([hogarId])
   @@map("miembros")
@@ -105,6 +109,63 @@ model CodigoDeBorrado {
 
   @@index([miembroId])
   @@map("codigos_de_borrado")
+}
+
+/// La verificacion en dos pasos de una persona: la app de autenticacion de
+/// su celular (Google Authenticator u otra). Una por miembro. Mientras
+/// `confirmadoEn` esta vacio, la esta configurando: escaneo el QR pero
+/// todavia no escribio el primer codigo. Ver src/dominio/dos-pasos.ts.
+model DosPasos {
+  miembroId      String    @id @map("miembro_id")
+  /// La clave de la app, cifrada con CLAVE_DOS_PASOS y atada al miembro
+  /// (src/lib/dos-pasos.ts). Nunca se guarda a la vista.
+  claveCifrada   String    @map("clave_cifrada") @db.VarChar(200)
+  /// Desde cuando la app funciona. Vacio = configuracion a medias.
+  confirmadoEn   DateTime? @map("confirmado_en")
+  /// El ultimo paso de 30 segundos que se acepto: un codigo no sirve dos veces.
+  ultimoPaso     Int?      @map("ultimo_paso")
+  /// Codigos equivocados seguidos. Al llegar al limite se bloquea un rato.
+  intentos       Int       @default(0)
+  bloqueadoHasta DateTime? @map("bloqueado_hasta")
+  creadoEn       DateTime  @default(now()) @map("creado_en")
+
+  /// Se va con el miembro.
+  miembro Miembro @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+
+  @@map("dos_pasos")
+}
+
+/// Un codigo de respaldo, por si se pierde el celular: sirve una vez en vez
+/// del codigo de la app. Se guarda su huella (HMAC-SHA256), nunca el codigo.
+model CodigoDeRespaldo {
+  id        String    @id @default(cuid())
+  miembroId String    @map("miembro_id")
+  huella    String    @db.Char(64)
+  /// Vacio = todavia sirve.
+  usadoEn   DateTime? @map("usado_en")
+  creadoEn  DateTime  @default(now()) @map("creado_en")
+
+  miembro Miembro @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+
+  @@unique([miembroId, huella])
+  @@map("codigos_de_respaldo")
+}
+
+/// Una sesion que ya hizo el segundo paso. La sesion de Google trae un id al
+/// azar (src/lib/ingreso.ts); al poner el codigo, ese id queda aqui. Cada
+/// pagina revisa que su sesion este en esta tabla (src/lib/hogar-actual.ts).
+model SesionVerificada {
+  /// El id de la sesion: 32 caracteres hexadecimales.
+  id           String   @id @db.Char(32)
+  miembroId    String   @map("miembro_id")
+  verificadaEn DateTime @default(now()) @map("verificada_en")
+  /// Lo que dura una sesion como maximo: despues no vale aunque siga aqui.
+  expiraEn     DateTime @map("expira_en")
+
+  miembro Miembro @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+
+  @@index([miembroId])
+  @@map("sesiones_verificadas")
 }
 
 model Categoria {

@@ -1,4 +1,5 @@
 import { CODIGO_DE_BORRADO } from "./hogar";
+import { DOS_PASOS } from "./dos-pasos";
 import { ACHICAR_DESDE, TAMANO_MAXIMO_BOLETA } from "./tamano-boleta";
 import { HORAS_MAXIMAS, MINUTOS_SIN_USO } from "@/lib/sesion";
 
@@ -64,6 +65,7 @@ export const PRIVACIDAD: DocumentoLegal = {
           `Las boletas que subes: fotos o PDF de hasta ${mb(TAMANO_MAXIMO_BOLETA)}. Una foto de más de ${mb(ACHICAR_DESDE)} se achica en tu navegador antes de subir, y al hacerlo pierde sus datos ocultos, como la ubicación donde se sacó.`,
           "Tu hogar: quiénes están, quién es el dueño, a qué correos se invitó y quién anotó cada gasto.",
           "Para borrar un hogar: un código temporal que se manda al correo del dueño. Luka guarda solo una huella cifrada del código, nunca el código, y la borra al usarlo o con el hogar.",
+          "Para la verificación en dos pasos: la clave de la app de autenticación de tu celular, guardada cifrada; una huella de cada código de respaldo, nunca el código; cuándo la configuraste, los intentos fallidos y qué sesiones ya pusieron el código. Luka no pide ni guarda tu número de teléfono.",
           "Datos técnicos de cada visita (dirección IP, navegador, hora), que registra el servicio donde funciona Luka para operar y protegerlo.",
         ),
       ],
@@ -129,7 +131,7 @@ export const PRIVACIDAD: DocumentoLegal = {
       bloques: [
         lista(
           "Mientras tu hogar exista.",
-          "Si sales de un hogar, o el dueño te saca, se borra tu lugar en él. Lo que anotaste se queda en el hogar, sin tu nombre.",
+          "Si sales de un hogar, o el dueño te saca, se borra tu lugar en él, con tu verificación en dos pasos. Lo que anotaste se queda en el hogar, sin tu nombre.",
           "Si el dueño borra el hogar, se borra todo lo que tiene, incluidas las boletas. Los respaldos automáticos de los servicios de la sección anterior pueden conservar una copia por un tiempo corto, hasta que se borran solos.",
           "Los datos técnicos de las visitas, el tiempo que los conserve el servicio donde corre Luka.",
         ),
@@ -142,6 +144,7 @@ export const PRIVACIDAD: DocumentoLegal = {
         lista(
           "Todo viaja cifrado (HTTPS).",
           "Cada hogar está separado, y en cada visita se revisa que sigas siendo parte del tuyo.",
+          `Entrar son dos pasos para todos: Google y un código de ${DOS_PASOS.digitos} dígitos de la app de autenticación de tu celular. Tras ${DOS_PASOS.intentos} códigos equivocados seguidos, se bloquea por ${DOS_PASOS.minutosDeBloqueo} minutos.`,
           `La sesión se cierra sola tras ${MINUTOS_SIN_USO} minutos sin uso, a las ${HORAS_MAXIMAS} horas como máximo y cada vez que Luka se actualiza.`,
           "Las boletas se guardan en un almacenamiento privado y solo se muestran a quien está en ese hogar.",
           `Borrar un hogar exige un código que llega al correo del dueño y que vence en ${CODIGO_DE_BORRADO.minutosDeVigencia} minutos.`,

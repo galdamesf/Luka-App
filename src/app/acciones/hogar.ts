@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
 import { esquemaId } from "@/dominio/esquemas";
 import { CODIGO_DE_BORRADO } from "@/dominio/hogar";
@@ -15,7 +16,9 @@ import {
   renombrarHogar,
   salirDelHogar,
 } from "@/datos/hogares";
-import { hogarActual } from "@/lib/hogar-actual";
+import { hogarActual, leerAcceso } from "@/lib/hogar-actual";
+import { ErrorDeDosPasos, quitarMiApp, reiniciarAppDe, renovarCodigosDeRespaldo } from "@/datos/dos-pasos";
+import { RUTA_CONFIGURAR, type EstadoConCodigos } from "@/dominio/dos-pasos";
 
 // Cada accion pide primero el hogar de quien la usa, fuera de cualquier try:
 // si ya no es parte del hogar, hogarActual corta la sesion con una
@@ -26,7 +29,8 @@ import { hogarActual } from "@/lib/hogar-actual";
 // errores para mostrarlos.
 
 function fallo(error: unknown): EstadoFormulario {
-  const mensaje = error instanceof ErrorDeHogar ? error.message : "No se pudo hacer. Intenta de nuevo.";
+  const mensaje =
+    error instanceof ErrorDeHogar || error instanceof ErrorDeDosPasos ? error.message : "No se pudo hacer. Intenta de nuevo.";
   return { ok: false, mensaje, errores: {} };
 }
 
@@ -139,4 +143,58 @@ export async function accionBorrarHogar(
   // pantalla de ingreso lo explica. Fuera del try por la misma razon.
   await signOut({ redirectTo: "/ingresar?error=HogarBorrado" });
   return LISTO("Hogar borrado.");
+}
+
+/* ---------------------------------------------------------------------------
+   La verificacion en dos pasos, desde «Tu hogar»
+   --------------------------------------------------------------------------- */
+
+/** Codigos de respaldo nuevos, para mostrarlos una vez: los anteriores dejan de servir. */
+export async function accionRenovarRespaldos(
+  _previo: EstadoConCodigos,
+  _datos: FormData,
+): Promise<EstadoConCodigos> {
+  const { miembroId } = await hogarActual();
+  try {
+    const codigos = await renovarCodigosDeRespaldo(miembroId);
+    revalidatePath("/hogar");
+    return { ok: true, mensaje: "Estos son tus códigos nuevos. Los anteriores ya no sirven.", errores: {}, codigos };
+  } catch (error) {
+    return { ...fallo(error), codigos: null };
+  }
+}
+
+/**
+ * Pasar la app a otro celular: se quita la actual y Luka pide configurar la
+ * nueva de inmediato, en esta misma sesion.
+ */
+export async function accionCambiarDeCelular(
+  _previo: EstadoFormulario,
+  _datos: FormData,
+): Promise<EstadoFormulario> {
+  const { miembroId } = await hogarActual();
+  const { sesionId } = await leerAcceso();
+  try {
+    await quitarMiApp(miembroId, sesionId ?? "");
+  } catch (error) {
+    return fallo(error);
+  }
+  redirect(RUTA_CONFIGURAR);
+}
+
+/** El dueno le reinicia la app a un miembro que perdio el celular y sus codigos de respaldo. */
+export async function accionReiniciarApp(
+  _previo: EstadoFormulario,
+  datos: FormData,
+): Promise<EstadoFormulario> {
+  const { hogarId, miembroId } = await hogarActual();
+  const id = esquemaId.safeParse(datos.get("id"));
+  if (!id.success) return fallo(null);
+  try {
+    await reiniciarAppDe(hogarId, miembroId, id.data);
+  } catch (error) {
+    return fallo(error);
+  }
+  revalidatePath("/hogar");
+  return LISTO("Listo: la próxima vez que entre, configura su app de nuevo.");
 }

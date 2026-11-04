@@ -6,6 +6,7 @@ import {
   SEGUNDOS_MAXIMOS,
   SEGUNDOS_SIN_USO,
   sellarSesion,
+  sesionDelToken,
   sesionVigente,
   tokenVigente,
 } from "@/lib/sesion";
@@ -115,5 +116,20 @@ describe("el hogar en la sesion", () => {
     expect(mismoHogar(hogar, { ...hogar, hogarId: "h2" })).toBe(false);
     expect(mismoHogar(hogar, { ...hogar, miembroId: "m2" })).toBe(false);
     expect(mismoHogar(null, hogar)).toBe(false);
+  });
+});
+
+describe("sesionDelToken (el id para el segundo paso)", () => {
+  test("lee el id de 32 hexadecimales que nace al entrar", () => {
+    const id = "0123456789abcdef0123456789abcdef";
+    expect(sesionDelToken({ sesionId: id })).toBe(id);
+  });
+
+  test("sin id, o con otra forma, no hay sesion que verificar", () => {
+    expect(sesionDelToken({})).toBeNull();
+    expect(sesionDelToken({ sesionId: 123 })).toBeNull();
+    expect(sesionDelToken({ sesionId: "0123456789ABCDEF0123456789ABCDEF" })).toBeNull();
+    expect(sesionDelToken({ sesionId: "x".repeat(32) })).toBeNull();
+    expect(sesionDelToken({ sesionId: "0123" })).toBeNull();
   });
 });

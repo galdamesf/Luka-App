@@ -4,6 +4,7 @@ import {
   ahoraEnSegundos,
   hogarDelToken,
   SEGUNDOS_SIN_USO,
+  sesionDelToken,
   tokenVigente,
   type HogarDeSesion,
 } from "@/lib/sesion";
@@ -12,6 +13,8 @@ declare module "next-auth" {
   interface Session {
     /** Con que hogar entro la persona (ver src/lib/sesion.ts). */
     hogar?: HogarDeSesion | null;
+    /** El id de esta sesion, para el segundo paso (ver src/lib/sesion.ts). */
+    sesionId?: string | null;
   }
 }
 
@@ -50,7 +53,7 @@ export const configuracionBase = {
       return tokenVigente(token, ahoraEnSegundos(), ARRANQUE) ? token : null;
     },
     session({ session, token }) {
-      return { ...session, hogar: hogarDelToken(token) };
+      return { ...session, hogar: hogarDelToken(token), sesionId: sesionDelToken(token) };
     },
     authorized({ auth }) {
       return Boolean(auth?.user);

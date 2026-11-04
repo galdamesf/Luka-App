@@ -1,14 +1,28 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { miembroDeSesion } from "@/datos/hogares";
+import { accesoDeSesion } from "@/datos/dos-pasos";
+import { RUTA_CONFIGURAR, RUTA_VERIFICAR, estadoDeAcceso, type EstadoDeAcceso } from "@/dominio/dos-pasos";
 import { mismoHogar, type HogarDeSesion } from "@/lib/sesion";
 
 /** Adonde se manda a quien ya no es parte del hogar con que entro. */
 export const RUTA_SESION_TERMINADA = "/sesion/terminada";
 
+/** Quien esta mirando y en que paso va. */
+export type Acceso = {
+  estado: EstadoDeAcceso;
+  /** El hogar segun la base. null si no hay sesion o ya no coincide. */
+  hogar: HogarDeSesion | null;
+  sesionId: string | null;
+  correo: string | null;
+};
+
+const SIN_SESION: Acceso = { estado: "sin-sesion", hogar: null, sesionId: null, correo: null };
+
 /**
- * El hogar de quien esta mirando, revisado contra la base en cada visita.
+ * Quien esta mirando, revisado contra la base en cada visita: si sigue siendo
+ * miembro del hogar con que entro, si tiene la app de autenticacion
+ * configurada y si esta sesion ya puso el codigo (src/dominio/dos-pasos.ts).
  *
  * La cookie dice con que hogar se entro; la base dice si eso sigue siendo
  * cierto. Si a la persona la sacaron del hogar, aqui deja de coincidir y la
@@ -17,24 +31,45 @@ export const RUTA_SESION_TERMINADA = "/sesion/terminada";
  * Devuelve el rol de la base, no el de la cookie: si el dueno le cambia el
  * rol a alguien, vale desde ese momento.
  *
- * null si no hay sesion o si ya no coincide. `cache` hace que varias lecturas
- * en la misma pagina pregunten a la base una sola vez.
+ * `cache` hace que varias lecturas en la misma pagina pregunten a la base una
+ * sola vez.
  */
-export const leerHogarActual = cache(async (): Promise<HogarDeSesion | null> => {
+export const leerAcceso = cache(async (): Promise<Acceso> => {
   const sesion = await auth();
   const delToken = sesion?.hogar ?? null;
-  if (delToken === null) return null;
+  const sesionId = sesion?.sesionId ?? null;
+  const correo = sesion?.user?.email ?? null;
+  if (delToken === null || sesionId === null) return SIN_SESION;
 
-  const enLaBase = await miembroDeSesion(sesion?.user?.email);
-  return mismoHogar(delToken, enLaBase) ? enLaBase : null;
+  const enLaBase = await accesoDeSesion(correo, sesionId);
+  const hogar = mismoHogar(delToken, enLaBase.hogar) ? enLaBase.hogar : null;
+  const estado = estadoDeAcceso({
+    conHogar: hogar !== null,
+    appConfigurada: enLaBase.appConfigurada,
+    sesionVerificada: enLaBase.sesionVerificada,
+  });
+  return { estado, hogar, sesionId, correo };
 });
 
 /**
- * Para las paginas: el hogar de quien mira, o fuera. Sin hogar vigente, la
- * sesion se cierra (RUTA_SESION_TERMINADA) y vuelve a la pantalla de ingreso.
+ * El hogar de quien mira, solo si hizo los dos pasos. null si no: las rutas
+ * con datos (boletas, PDF) responden 401 en vez de redirigir.
+ */
+export const leerHogarActual = cache(async (): Promise<HogarDeSesion | null> => {
+  const acceso = await leerAcceso();
+  return acceso.estado === "listo" ? acceso.hogar : null;
+});
+
+/**
+ * Para las paginas y las acciones: el hogar de quien mira, o fuera.
+ * - Sin hogar vigente, la sesion se cierra (RUTA_SESION_TERMINADA).
+ * - Sin la app configurada, a configurarla.
+ * - Sin el codigo de esta sesion, a ponerlo.
  */
 export async function hogarActual(): Promise<HogarDeSesion> {
-  const hogar = await leerHogarActual();
-  if (hogar === null) redirect(RUTA_SESION_TERMINADA);
-  return hogar;
+  const acceso = await leerAcceso();
+  if (acceso.estado === "configurar") redirect(RUTA_CONFIGURAR);
+  if (acceso.estado === "verificar") redirect(RUTA_VERIFICAR);
+  if (acceso.estado !== "listo" || acceso.hogar === null) redirect(RUTA_SESION_TERMINADA);
+  return acceso.hogar;
 }

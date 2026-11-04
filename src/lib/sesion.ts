@@ -86,6 +86,16 @@ export function hogarDelToken(token: Record<string, unknown>): HogarDeSesion | n
   return { hogarId, miembroId, rol };
 }
 
+/**
+ * El id de la sesion, que nace al entrar con Google (src/lib/ingreso.ts): 32
+ * caracteres hexadecimales al azar. Con el se anota que la sesion ya hizo el
+ * segundo paso (src/datos/dos-pasos.ts). null si falta o tiene otra forma.
+ */
+export function sesionDelToken(token: Record<string, unknown>): string | null {
+  const { sesionId } = token;
+  return typeof sesionId === "string" && /^[0-9a-f]{32}$/.test(sesionId) ? sesionId : null;
+}
+
 /** sesionVigente, y ademas con un hogar: sin hogar no hay nada que mostrar. */
 export function tokenVigente(
   token: Record<string, unknown>,
