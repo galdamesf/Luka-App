@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RUTAS_LEGALES } from "@/dominio/legal";
 import { Luka } from "./Luka";
 import { Onda } from "./portada/Onda";
 
@@ -80,6 +81,14 @@ export function PieDePagina() {
             <p className="mt-4 text-sm text-pie-texto/75">
               Se guardan en una base de datos privada, con cada hogar por separado, y las
               boletas en un almacenamiento privado. Solo las personas de tu hogar los ven.
+            </p>
+            <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              <Link href={RUTAS_LEGALES.privacidad} className="font-semibold text-pie-texto/85 hover:text-pie-texto hover:underline">
+                Política de privacidad
+              </Link>
+              <Link href={RUTAS_LEGALES.terminos} className="font-semibold text-pie-texto/85 hover:text-pie-texto hover:underline">
+                Términos de uso
+              </Link>
             </p>
           </div>
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Luka } from "@/componentes/Luka";
 import { hoyISO } from "@/lib/fecha";
+import { RUTAS_LEGALES } from "@/dominio/legal";
 import { ANCLA_PREGUNTAS, ANCLA_QUE_HACEMOS } from "./enlaces";
 
 /**
@@ -24,7 +25,8 @@ const COLUMNAS: readonly { titulo: string; enlaces: readonly Enlace[] }[] = [
     titulo: "Tus datos",
     enlaces: [
       { texto: "Dónde quedan", href: `#${ANCLA_PREGUNTAS}` },
-      { texto: "Sesión y seguridad", href: `#${ANCLA_PREGUNTAS}` },
+      { texto: "Política de privacidad", href: RUTAS_LEGALES.privacidad },
+      { texto: "Términos de uso", href: RUTAS_LEGALES.terminos },
     ],
   },
 ];
