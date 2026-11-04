@@ -6,6 +6,16 @@
 //
 // Nota sobre fechas: `fecha` es @db.Date (solo dia, sin hora). Siempre se guarda
 // y se lee como medianoche UTC. Ver src/lib/fecha.ts.
+//
+// Nota sobre hogares: los datos de la plata son de un HOGAR, no de una persona.
+// Cada persona entra con su Google y es miembro de un hogar; un hogar puede
+// tener uno o varios miembros.
+//
+// Transicion: `hogarId` tiene por omision "hogar-inicial", el hogar donde
+// quedaron los datos que existian antes de los hogares. Asi, mientras el
+// codigo todavia no pasa el hogar al guardar, todo cae ahi y la app sigue
+// funcionando. Cuando todo el codigo pase el hogar, el valor por omision se
+// quita y el hogar pasa a ser obligatorio.
 
 generator client {
   provider = "prisma-client-js"
@@ -24,8 +34,59 @@ enum MedioPago {
   OTRO
 }
 
+enum RolMiembro {
+  /// Creo el hogar: invita y saca miembros, cambia el nombre y el dia de inicio.
+  DUENO
+  /// Anota, paga y ve todo lo del hogar.
+  MIEMBRO
+}
+
+/// Un hogar: el dueno de todos los datos de la plata.
+model Hogar {
+  id       String   @id @default(cuid())
+  nombre   String   @db.VarChar(60)
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  miembros     Miembro[]
+  categorias   Categoria[]
+  gastos       Gasto[]
+  sueldos      Sueldo[]
+  deudas       Deuda[]
+  cuentas      Cuenta[]
+  presupuestos Presupuesto[]
+  ahorros      Ahorro[]
+  ajustes      Ajustes?
+
+  @@map("hogares")
+}
+
+/// Una persona en un hogar, por su correo de Google.
+///
+/// El correo es unico: cada persona esta en un solo hogar. Mientras no entra
+/// por primera vez (`entroEn` vacio) es una invitacion pendiente.
+model Miembro {
+  id         String     @id @default(cuid())
+  hogarId    String     @map("hogar_id")
+  /// En minusculas, como lo compara la entrada.
+  correo     String     @unique @db.VarChar(254)
+  /// El nombre que entrega Google. Vacio mientras es una invitacion.
+  nombre     String?    @db.VarChar(120)
+  rol        RolMiembro @default(MIEMBRO)
+  invitadoEn DateTime   @default(now()) @map("invitado_en")
+  /// La primera vez que entro. Vacio = invitacion pendiente.
+  entroEn    DateTime?  @map("entro_en")
+
+  /// Si el hogar se borra, sus miembros se van con el.
+  hogar          Hogar   @relation(fields: [hogarId], references: [id], onDelete: Cascade)
+  gastosAnotados Gasto[]
+
+  @@index([hogarId])
+  @@map("miembros")
+}
+
 model Categoria {
   id       String   @id @default(cuid())
+  hogarId  String   @default("hogar-inicial") @map("hogar_id")
   nombre   String   @unique @db.VarChar(60)
   /// Color hex para graficos y acentos, formato #RRGGBB.
   color    String   @db.VarChar(7)
@@ -38,16 +99,21 @@ model Categoria {
   activa   Boolean  @default(true)
   creadoEn DateTime @default(now()) @map("creado_en")
 
+  /// Un hogar con datos no se puede borrar de un tiron (Restrict): borrar un
+  /// hogar sera una accion propia, que primero vacia lo suyo.
+  hogar        Hogar         @relation(fields: [hogarId], references: [id], onDelete: Restrict)
   gastos       Gasto[]
   presupuestos Presupuesto[]
-  cuentas Cuenta[]
+  cuentas      Cuenta[]
 
   @@index([activa, orden])
+  @@index([hogarId])
   @@map("categorias")
 }
 
 model Gasto {
   id            String    @id @default(cuid())
+  hogarId       String    @default("hogar-inicial") @map("hogar_id")
   fecha         DateTime  @db.Date
   descripcion   String    @db.VarChar(120)
   /// Pesos chilenos enteros. Siempre mayor que cero (constraint en la migracion).
@@ -57,18 +123,24 @@ model Gasto {
   categoriaId   String    @map("categoria_id")
   /// Nombre del archivo de la boleta dentro de la carpeta de boletas.
   /// Solo el nombre, nunca una ruta: lo genera el servidor.
-  boletaArchivo String?   @db.VarChar(255) @map("boleta_archivo")
+  boletaArchivo String?   @map("boleta_archivo") @db.VarChar(255)
+  /// Quien lo anoto. Vacio en lo anotado antes de los hogares, o si esa
+  /// persona ya no es miembro: el gasto es del hogar y se queda.
+  anotadoPorId  String?   @map("anotado_por_id")
   creadoEn      DateTime  @default(now()) @map("creado_en")
   actualizadoEn DateTime  @updatedAt @map("actualizado_en")
 
-  categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  hogar      Hogar        @relation(fields: [hogarId], references: [id], onDelete: Restrict)
+  anotadoPor Miembro?     @relation(fields: [anotadoPorId], references: [id], onDelete: SetNull)
+  categoria  Categoria    @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
   /// La cuenta que se pago y genero este gasto, si vino de ahi.
-  cuenta    Cuenta?
+  cuenta     Cuenta?
   /// La cuota de deuda que se pago y genero este gasto, si vino de ahi.
-  cuota     CuotaPagada?
+  cuota      CuotaPagada?
 
   @@index([fecha])
   @@index([categoriaId, fecha])
+  @@index([hogarId, fecha])
   @@map("gastos")
 }
 
@@ -79,14 +151,18 @@ model Gasto {
 /// ganabas en febrero, y el historial de meses viejos sigue siendo cierto.
 model Sueldo {
   id            String   @id @default(cuid())
+  hogarId       String   @default("hogar-inicial") @map("hogar_id")
   /// Pesos chilenos enteros. Cero es valido: un mes sin ingresos.
   monto         Int
   /// Primer dia del mes desde el que rige este monto.
-  vigenteDesde  DateTime @unique @db.Date @map("vigente_desde")
+  vigenteDesde  DateTime @unique @map("vigente_desde") @db.Date
   nota          String?  @db.VarChar(200)
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
+  hogar Hogar @relation(fields: [hogarId], references: [id], onDelete: Restrict)
+
+  @@index([hogarId])
   @@map("sueldos")
 }
 
@@ -97,21 +173,24 @@ model Sueldo {
 /// sola sabe que vas una cuota mas adelante, sin tener que marcar nada.
 model Deuda {
   id            String   @id @default(cuid())
+  hogarId       String   @default("hogar-inicial") @map("hogar_id")
   nombre        String   @db.VarChar(80)
   /// Monto de cada cuota, en pesos.
   montoCuota    Int      @map("monto_cuota")
   cuotasTotales Int      @map("cuotas_totales")
   /// Primer dia del mes en que se paga la primera cuota.
-  primeraCuota  DateTime @db.Date @map("primera_cuota")
+  primeraCuota  DateTime @map("primera_cuota") @db.Date
   /// false si se pago antes de tiempo o se anulo.
   activa        Boolean  @default(true)
   nota          String?  @db.VarChar(200)
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
+  hogar         Hogar         @relation(fields: [hogarId], references: [id], onDelete: Restrict)
   cuotasPagadas CuotaPagada[]
 
   @@index([activa, primeraCuota])
+  @@index([hogarId])
   @@map("deudas")
 }
 
@@ -128,7 +207,7 @@ model CuotaPagada {
   /// Mes de la cuota, guardado como el primer dia de ese mes.
   mes      DateTime @db.Date
   /// Dia exacto en que se pago.
-  pagadaEn DateTime @db.Date @map("pagada_en")
+  pagadaEn DateTime @map("pagada_en") @db.Date
   /// Lo que se pago de verdad, que puede diferir de la cuota pactada.
   monto    Int
   gastoId  String?  @unique @map("gasto_id")
@@ -151,6 +230,7 @@ model CuotaPagada {
 /// Las marcadas `mensual` se regeneran solas al abrir el mes siguiente.
 model Cuenta {
   id             String    @id @default(cuid())
+  hogarId        String    @default("hogar-inicial") @map("hogar_id")
   nombre         String    @db.VarChar(120)
   /// Monto esperado. Al pagarla se puede corregir al monto real.
   monto          Int
@@ -160,17 +240,18 @@ model Cuenta {
   diaVencimiento Int?      @map("dia_vencimiento")
   categoriaId    String    @map("categoria_id")
   /// null = pendiente. Con fecha = pagada ese dia exacto.
-  pagadaEn       DateTime? @db.Date @map("pagada_en")
+  pagadaEn       DateTime? @map("pagada_en") @db.Date
   /// El gasto que se creo al pagarla.
   gastoId        String?   @unique @map("gasto_id")
   /// true si debe reaparecer sola el mes siguiente.
   mensual        Boolean   @default(false)
   /// Nombre del archivo de la boleta. Solo el nombre, nunca una ruta.
-  boletaArchivo  String?   @db.VarChar(255) @map("boleta_archivo")
+  boletaArchivo  String?   @map("boleta_archivo") @db.VarChar(255)
   nota           String?   @db.VarChar(500)
   creadoEn       DateTime  @default(now()) @map("creado_en")
   actualizadoEn  DateTime  @updatedAt @map("actualizado_en")
 
+  hogar     Hogar     @relation(fields: [hogarId], references: [id], onDelete: Restrict)
   categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
   /// Si se borra el gasto, la cuenta vuelve a quedar pendiente en vez de
   /// desaparecer con el.
@@ -180,6 +261,7 @@ model Cuenta {
   /// que hace que regenerar las mensuales sea idempotente.
   @@unique([nombre, mes])
   @@index([mes, pagadaEn])
+  @@index([hogarId, mes])
   @@map("cuentas")
 }
 
@@ -190,6 +272,7 @@ model Cuenta {
 /// una condicion que sigue vigente hasta que la cambies.
 model Presupuesto {
   id            String   @id @default(cuid())
+  hogarId       String   @default("hogar-inicial") @map("hogar_id")
   categoriaId   String   @map("categoria_id")
   /// Mes del presupuesto, guardado como el primer dia de ese mes.
   mes           DateTime @db.Date
@@ -197,10 +280,12 @@ model Presupuesto {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
+  hogar     Hogar     @relation(fields: [hogarId], references: [id], onDelete: Restrict)
   categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
 
   @@unique([categoriaId, mes])
   @@index([mes])
+  @@index([hogarId, mes])
   @@map("presupuestos")
 }
 
@@ -212,6 +297,7 @@ model Presupuesto {
 /// gasto: la plata sigue siendo tuya.
 model Ahorro {
   id            String   @id @default(cuid())
+  hogarId       String   @default("hogar-inicial") @map("hogar_id")
   /// Mes al que corresponde, guardado como el dia 1.
   mes           DateTime @db.Date
   /// Pesos chilenos enteros, mayor que cero (constraint en la migracion).
@@ -221,20 +307,26 @@ model Ahorro {
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
+  hogar Hogar @relation(fields: [hogarId], references: [id], onDelete: Restrict)
+
   @@index([mes])
+  @@index([hogarId, mes])
   @@map("ahorros")
 }
 
-/// Ajustes de la app. Una sola fila, la de id "app".
+/// Ajustes de cada hogar: una fila por hogar.
 ///
-/// Cuando cada usuario tenga sus propios datos (plan multiusuario), esto pasa
-/// a ser de cada usuario.
+/// La fila de id "app" es la de antes de los hogares y quedo en el hogar
+/// inicial. Cuando todo el codigo pase el hogar, la fila se busca por hogar.
 model Ajustes {
   id            String   @id @default("app") @db.VarChar(20)
+  hogarId       String   @unique @default("hogar-inicial") @map("hogar_id")
   /// Dia en que empieza tu mes de gastos: el dia en que te pagan. Con 27,
   /// noviembre va del 27 de octubre al 26 de noviembre. 1 es el mes calendario.
   diaInicioMes  Int      @default(1) @map("dia_inicio_mes")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  hogar Hogar @relation(fields: [hogarId], references: [id], onDelete: Restrict)
 
   @@map("ajustes")
 }

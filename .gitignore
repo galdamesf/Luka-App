@@ -20,6 +20,9 @@ yarn-error.log*
 # Fotos de boletas: son tuyas, no van al repositorio
 /boletas/
 
+# Respaldos de la base (npm run db:respaldo): tienen tus datos
+/respaldos/
+
 # Prisma
 prisma/*.db
 prisma/*.db-journal
