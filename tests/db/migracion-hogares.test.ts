@@ -156,7 +156,7 @@ describe("despues, lo unico pasa a ser unico por hogar", () => {
   test("dentro de un mismo hogar, el nombre sigue sin repetirse", async () => {
     await expect(
       base.query(
-        "INSERT INTO categorias (id, nombre, color, icono) VALUES ('c3', 'Supermercado', '#15803D', 'shopping-cart')",
+        "INSERT INTO categorias (id, hogar_id, nombre, color, icono) VALUES ('c3', 'hogar-inicial', 'Supermercado', '#15803D', 'shopping-cart')",
       ),
     ).rejects.toThrow(/categorias_hogar_id_nombre_key/);
   });

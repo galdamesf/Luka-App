@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { desdeFormData, erroresDe, esquemaAhorroFormulario, esquemaId } from "@/dominio/esquemas";
 import type { EstadoFormulario } from "@/dominio/formulario";
 import { crearAhorro, eliminarAhorro } from "@/datos/ahorros";
+import { hogarActual } from "@/lib/hogar-actual";
+
+// Cada accion pide primero el hogar de quien la usa, fuera de cualquier try:
+// si ya no es parte del hogar, hogarActual corta la sesion con una
+// redireccion, y un catch la convertiria en un mensaje de error.
 
 function traducirError(error: unknown): string {
   const texto = error instanceof Error ? error.message : String(error);
@@ -17,6 +22,7 @@ export async function accionCrearAhorro(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const resultado = esquemaAhorroFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -24,7 +30,7 @@ export async function accionCrearAhorro(
   }
 
   try {
-    await crearAhorro(resultado.data);
+    await crearAhorro(hogarId, resultado.data);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
@@ -34,9 +40,10 @@ export async function accionCrearAhorro(
 }
 
 export async function accionEliminarAhorro(datos: FormData): Promise<void> {
+  const { hogarId } = await hogarActual();
   const id = esquemaId.safeParse(datos.get("id"));
   if (!id.success) return;
 
-  await eliminarAhorro(id.data);
+  await eliminarAhorro(hogarId, id.data);
   revalidatePath("/");
 }

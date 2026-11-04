@@ -41,7 +41,7 @@ export default async function Informes({ searchParams }: Props) {
   // ningun otro, se lee todo lo que sigue.
   const { hogarId } = await hogarActual();
   const parametros = await searchParams;
-  const { diaInicioMes } = await leerAjustes();
+  const { diaInicioMes } = await leerAjustes(hogarId);
   const hoy = hoyISO();
   const elegido = esquemaMes.safeParse(parametros.mes);
   const mes = elegido.success ? elegido.data : periodoDeFecha(hoy, diaInicioMes).mes;
@@ -51,14 +51,14 @@ export default async function Informes({ searchParams }: Props) {
   const [gastos, gastosAnterior, sueldo, deudas, pagos, cuentas, serie] = await Promise.all([
     listarGastosDelMes(hogarId, periodo),
     listarGastosDelMes(hogarId, periodoAnterior),
-    sueldoDelMes(mes),
-    listarDeudas(),
+    sueldoDelMes(hogarId, mes),
+    listarDeudas(hogarId),
     // Sin los pagos, el balance no descuenta las cuotas ya pagadas.
-    listarPagosDelMes(mes),
-    listarCuentasDelMes(mes),
+    listarPagosDelMes(hogarId, mes),
+    listarCuentasDelMes(hogarId, mes),
     // Doce meses hasta el elegido: suficiente para ver estacionalidad sin
     // que el eje se llene de etiquetas.
-    serieHistorica(mes, 12, undefined, diaInicioMes),
+    serieHistorica(hogarId, mes, 12, undefined, diaInicioMes),
   ]);
 
   const informe = armarInforme(gastos, gastosAnterior, periodo);

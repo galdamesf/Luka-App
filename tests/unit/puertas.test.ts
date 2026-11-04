@@ -71,9 +71,26 @@ describe("cada ruta con datos revisa el hogar contra la base", () => {
 });
 
 describe("cada accion guarda en el hogar de la sesion", () => {
-  // Las acciones que ya reciben el hogar. Las demas se suman a medida que
-  // sus funciones de datos lo reciban.
-  const ACCIONES = ["app/acciones/gastos.ts", "app/acciones/presupuestos.ts"];
+  // Todas las acciones, menos la de entrar con Google: esa es la puerta misma
+  // y todavia no hay hogar que pedir.
+  const SIN_HOGAR = ["app/acciones/entrar.ts"];
+  const ACCIONES = readdirSync(join(RAIZ, "app", "acciones"))
+    .filter((n) => n.endsWith(".ts"))
+    .map((n) => `app/acciones/${n}`)
+    .filter((ruta) => !SIN_HOGAR.includes(ruta));
+
+  test("revisa todos los archivos de acciones", () => {
+    expect(ACCIONES).toEqual(
+      expect.arrayContaining([
+        "app/acciones/ahorros.ts",
+        "app/acciones/ajustes.ts",
+        "app/acciones/cuentas.ts",
+        "app/acciones/finanzas.ts",
+        "app/acciones/gastos.ts",
+        "app/acciones/presupuestos.ts",
+      ]),
+    );
+  });
 
   const funciones = ACCIONES.flatMap((ruta) =>
     leer(ruta)
@@ -83,7 +100,7 @@ describe("cada accion guarda en el hogar de la sesion", () => {
   );
 
   test("hay acciones que revisar", () => {
-    expect(funciones.length).toBeGreaterThanOrEqual(5);
+    expect(funciones.length).toBeGreaterThanOrEqual(20);
   });
 
   test.each(funciones)("%s pide el hogar con hogarActual(), antes de cualquier try", (_nombre, codigo) => {

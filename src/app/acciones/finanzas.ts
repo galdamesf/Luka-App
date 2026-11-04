@@ -23,6 +23,11 @@ import {
   reactivarDeuda,
   revertirCuota,
 } from "@/datos/deudas";
+import { hogarActual } from "@/lib/hogar-actual";
+
+// Cada accion pide primero el hogar de quien la usa, fuera de cualquier try:
+// si ya no es parte del hogar, hogarActual corta la sesion con una
+// redireccion, y un catch la convertiria en un mensaje de error.
 
 function traducirError(error: unknown): string {
   const texto = error instanceof Error ? error.message : String(error);
@@ -42,6 +47,7 @@ export async function accionDefinirSueldo(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const resultado = esquemaSueldoFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -53,7 +59,7 @@ export async function accionDefinirSueldo(
   }
 
   try {
-    await definirSueldo(resultado.data.mes, resultado.data.monto, resultado.data.nota);
+    await definirSueldo(hogarId, resultado.data.mes, resultado.data.monto, resultado.data.nota);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
@@ -66,6 +72,7 @@ export async function accionCrearDeuda(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const resultado = esquemaDeudaFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -77,7 +84,7 @@ export async function accionCrearDeuda(
   }
 
   try {
-    await crearDeuda(resultado.data);
+    await crearDeuda(hogarId, resultado.data);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
@@ -91,18 +98,20 @@ export async function accionCrearDeuda(
  * meses pasados, donde esa cuota si se pago.
  */
 export async function accionDesactivarDeuda(datos: FormData): Promise<void> {
+  const { hogarId } = await hogarActual();
   const id = esquemaId.safeParse(datos.get("id"));
   if (!id.success) return;
 
-  await desactivarDeuda(id.data);
+  await desactivarDeuda(hogarId, id.data);
   revalidatePath("/");
 }
 
 export async function accionReactivarDeuda(datos: FormData): Promise<void> {
+  const { hogarId } = await hogarActual();
   const id = esquemaId.safeParse(datos.get("id"));
   if (!id.success) return;
 
-  await reactivarDeuda(id.data);
+  await reactivarDeuda(hogarId, id.data);
   revalidatePath("/");
 }
 
@@ -111,6 +120,7 @@ export async function accionPagarCuota(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const resultado = esquemaPagoCuotaFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -128,6 +138,7 @@ export async function accionPagarCuota(
 
   try {
     await pagarCuota(
+      hogarId,
       resultado.data.deudaId,
       resultado.data.mes,
       resultado.data.fechaPago,
@@ -151,6 +162,7 @@ export async function accionMarcarCuotaPagada(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const deudaId = esquemaId.safeParse(datos.get("deudaId"));
   const mes = esquemaMes.safeParse(datos.get("mes"));
   const fecha = fechaISO.safeParse(datos.get("hoy"));
@@ -164,7 +176,7 @@ export async function accionMarcarCuotaPagada(
   }
 
   try {
-    await pagarCuota(deudaId.data, mes.data, fecha.data, Math.round(monto), null);
+    await pagarCuota(hogarId, deudaId.data, mes.data, fecha.data, Math.round(monto), null);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
@@ -178,6 +190,7 @@ export async function accionRevertirCuota(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const deudaId = esquemaId.safeParse(datos.get("deudaId"));
   const mes = esquemaMes.safeParse(datos.get("mes"));
   if (!deudaId.success || !mes.success) {
@@ -185,7 +198,7 @@ export async function accionRevertirCuota(
   }
 
   try {
-    await revertirCuota(deudaId.data, mes.data);
+    await revertirCuota(hogarId, deudaId.data, mes.data);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
@@ -199,6 +212,7 @@ export async function accionActualizarDeuda(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const resultado = esquemaEdicionDeudaFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -210,7 +224,7 @@ export async function accionActualizarDeuda(
   }
 
   try {
-    await actualizarDeuda(resultado.data);
+    await actualizarDeuda(hogarId, resultado.data);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }

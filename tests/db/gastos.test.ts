@@ -35,13 +35,13 @@ beforeEach(async () => {
   await limpiar(prisma);
   const creadas = await Promise.all([
     prisma.categoria.create({
-      data: { nombre: "Supermercado", color: "#15803D", icono: "cart", esencial: true, orden: 0 },
+      data: { hogarId: HOGAR_INICIAL, nombre: "Supermercado", color: "#15803D", icono: "cart", esencial: true, orden: 0 },
     }),
     prisma.categoria.create({
-      data: { nombre: "Arriendo", color: "#0F766E", icono: "house", esencial: true, orden: 1 },
+      data: { hogarId: HOGAR_INICIAL, nombre: "Arriendo", color: "#0F766E", icono: "house", esencial: true, orden: 1 },
     }),
     prisma.categoria.create({
-      data: { nombre: "Restaurantes", color: "#C2410C", icono: "utensils", esencial: false, orden: 2 },
+      data: { hogarId: HOGAR_INICIAL, nombre: "Restaurantes", color: "#C2410C", icono: "utensils", esencial: false, orden: 2 },
     }),
   ]);
   supermercado = creadas[0].id;

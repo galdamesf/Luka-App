@@ -4,11 +4,17 @@ import { revalidatePath } from "next/cache";
 import { desdeFormData, erroresDe, esquemaDiaInicioFormulario } from "@/dominio/esquemas";
 import type { EstadoFormulario } from "@/dominio/formulario";
 import { definirDiaInicioMes } from "@/datos/ajustes";
+import { hogarActual } from "@/lib/hogar-actual";
+
+// Cada accion pide primero el hogar de quien la usa, fuera de cualquier try:
+// si ya no es parte del hogar, hogarActual corta la sesion con una
+// redireccion, y un catch la convertiria en un mensaje de error.
 
 export async function accionDefinirDiaInicio(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const resultado = esquemaDiaInicioFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -16,7 +22,7 @@ export async function accionDefinirDiaInicio(
   }
 
   try {
-    await definirDiaInicioMes(resultado.data.diaInicioMes);
+    await definirDiaInicioMes(hogarId, resultado.data.diaInicioMes);
   } catch {
     return { ok: false, mensaje: "No se pudo guardar. Intenta de nuevo.", errores: {} };
   }

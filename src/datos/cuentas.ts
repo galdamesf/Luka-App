@@ -4,6 +4,12 @@ import { mensualesQueFaltan, type CuentaPlana } from "@/dominio/cuentas";
 import type { CuentaValidada, EdicionCuentaValidada } from "@/dominio/esquemas";
 import type { ClienteDb } from "./gastos";
 
+/*
+  Acceso a las cuentas del mes. Como en gastos (ver src/datos/gastos.ts), todo
+  recibe primero el hogar de quien mira y solo ve o toca lo de ese hogar: una
+  cuenta de otro hogar se comporta como si no existiera.
+*/
+
 /**
  * Lo que necesitamos del cliente dentro de una transaccion. Se declara a mano
  * porque el tipo real (Prisma.TransactionClient) lo genera prisma generate, y
@@ -48,23 +54,27 @@ function aPlano(fila: FilaCuenta): CuentaPlana {
 }
 
 export async function listarCuentasDelMes(
+  hogarId: string,
   mes: string,
   db: ClienteDb = prisma,
 ): Promise<CuentaPlana[]> {
   const filas = (await db.cuenta.findMany({
-    where: { mes: rangoDelMesISO(mes).desde },
+    where: { hogarId, mes: rangoDelMesISO(mes).desde },
     include: CATEGORIA_INCLUIDA,
     orderBy: [{ diaVencimiento: "asc" }, { nombre: "asc" }],
   })) as FilaCuenta[];
   return filas.map(aPlano);
 }
 
+/** La categoria tiene que ser del hogar: si no, la base la rechaza. */
 export async function crearCuenta(
+  hogarId: string,
   datos: CuentaValidada,
   db: ClienteDb = prisma,
 ): Promise<CuentaPlana> {
   const fila = (await db.cuenta.create({
     data: {
+      hogarId,
       nombre: datos.nombre,
       monto: datos.monto,
       mes: rangoDelMesISO(datos.mes).desde,
@@ -88,11 +98,12 @@ export async function crearCuenta(
  * cambiarla hay que deshacer el pago primero.
  */
 export async function actualizarCuenta(
+  hogarId: string,
   datos: EdicionCuentaValidada,
   db: ClienteDb = prisma,
 ): Promise<CuentaPlana> {
-  const actual = await db.cuenta.findUnique({
-    where: { id: datos.id },
+  const actual = await db.cuenta.findFirst({
+    where: { id: datos.id, hogarId },
     select: { pagadaEn: true },
   });
 
@@ -102,7 +113,7 @@ export async function actualizarCuenta(
   }
 
   const fila = (await db.cuenta.update({
-    where: { id: datos.id },
+    where: { id: datos.id, hogarId },
     data: {
       nombre: datos.nombre,
       monto: datos.monto,
@@ -123,8 +134,10 @@ export async function actualizarCuenta(
  * tendrias una cuenta pagada sin gasto, o un gasto fantasma.
  *
  * El monto puede diferir del esperado: la cuenta de la luz nunca llega igual.
+ * El gasto queda en el hogar de la cuenta.
  */
 export async function pagarCuenta(
+  hogarId: string,
   id: string,
   fechaPago: string,
   montoReal: number,
@@ -132,8 +145,8 @@ export async function pagarCuenta(
   db: typeof prisma = prisma,
 ): Promise<CuentaPlana> {
   return db.$transaction(async (tx: ClienteTx) => {
-    const cuenta = await tx.cuenta.findUniqueOrThrow({
-      where: { id },
+    const cuenta = await tx.cuenta.findFirstOrThrow({
+      where: { id, hogarId },
       include: CATEGORIA_INCLUIDA,
     });
 
@@ -143,6 +156,7 @@ export async function pagarCuenta(
 
     const gasto = await tx.gasto.create({
       data: {
+        hogarId,
         fecha: fechaDesdeISO(fechaPago),
         descripcion: cuenta.nombre.slice(0, 120),
         monto: montoReal,
@@ -153,7 +167,7 @@ export async function pagarCuenta(
     });
 
     const actualizada = await tx.cuenta.update({
-      where: { id },
+      where: { id, hogarId },
       data: {
         pagadaEn: fechaDesdeISO(fechaPago),
         gastoId: gasto.id,
@@ -171,33 +185,38 @@ export async function pagarCuenta(
  * Deshace el pago: borra el gasto que se habia creado y deja la cuenta
  * pendiente otra vez. En transaccion, por lo mismo que pagarCuenta.
  */
-export async function revertirPago(id: string, db: typeof prisma = prisma): Promise<void> {
+export async function revertirPago(
+  hogarId: string,
+  id: string,
+  db: typeof prisma = prisma,
+): Promise<void> {
   await db.$transaction(async (tx: ClienteTx) => {
-    const cuenta = await tx.cuenta.findUniqueOrThrow({ where: { id } });
+    const cuenta = await tx.cuenta.findFirstOrThrow({ where: { id, hogarId } });
 
     // Primero soltar el enlace: con el CHECK puesto, borrar el gasto mientras
     // la cuenta lo apunta dejaria un estado intermedio invalido.
     await tx.cuenta.update({
-      where: { id },
+      where: { id, hogarId },
       data: { pagadaEn: null, gastoId: null },
     });
 
     if (cuenta.gastoId !== null) {
-      await tx.gasto.delete({ where: { id: cuenta.gastoId } });
+      await tx.gasto.delete({ where: { id: cuenta.gastoId, hogarId } });
     }
   });
 }
 
-export async function eliminarCuenta(id: string, db: ClienteDb = prisma): Promise<void> {
-  await db.cuenta.delete({ where: { id } });
+export async function eliminarCuenta(hogarId: string, id: string, db: ClienteDb = prisma): Promise<void> {
+  await db.cuenta.delete({ where: { id, hogarId } });
 }
 
 export async function adjuntarBoletaACuenta(
+  hogarId: string,
   id: string,
   archivo: string,
   db: ClienteDb = prisma,
 ): Promise<void> {
-  await db.cuenta.update({ where: { id }, data: { boletaArchivo: archivo } });
+  await db.cuenta.update({ where: { id, hogarId }, data: { boletaArchivo: archivo } });
 }
 
 /**
@@ -206,32 +225,34 @@ export async function adjuntarBoletaACuenta(
  * no se copiara la boleta solo apareceria en Movimientos.
  */
 export async function adjuntarBoletaAGasto(
+  hogarId: string,
   id: string,
   archivo: string,
   db: typeof prisma = prisma,
 ): Promise<void> {
   await db.$transaction([
-    db.gasto.update({ where: { id }, data: { boletaArchivo: archivo } }),
-    db.cuenta.updateMany({ where: { gastoId: id }, data: { boletaArchivo: archivo } }),
+    db.gasto.update({ where: { id, hogarId }, data: { boletaArchivo: archivo } }),
+    db.cuenta.updateMany({ where: { gastoId: id, hogarId }, data: { boletaArchivo: archivo } }),
   ]);
 }
 
 /**
  * Crea las cuentas mensuales que faltan en `mes`, copiandolas del mes
- * anterior. Es idempotente: el indice unico (nombre, mes) impide duplicar
- * aunque se llame dos veces a la vez.
+ * anterior del mismo hogar. Es idempotente: el indice unico (hogar, nombre,
+ * mes) impide duplicar aunque se llame dos veces a la vez.
  *
  * @returns cuantas se crearon.
  */
 export async function regenerarMensuales(
+  hogarId: string,
   mes: string,
   db: ClienteDb = prisma,
 ): Promise<number> {
   const anterior = sumarMeses(mes, -1);
 
   const [delAnterior, deEsteMes] = await Promise.all([
-    listarCuentasDelMes(anterior, db),
-    listarCuentasDelMes(mes, db),
+    listarCuentasDelMes(hogarId, anterior, db),
+    listarCuentasDelMes(hogarId, mes, db),
   ]);
 
   const faltantes = mensualesQueFaltan(delAnterior, deEsteMes);
@@ -239,6 +260,7 @@ export async function regenerarMensuales(
 
   const resultado = await db.cuenta.createMany({
     data: faltantes.map((f) => ({
+      hogarId,
       nombre: f.nombre,
       monto: f.monto,
       mes: rangoDelMesISO(mes).desde,

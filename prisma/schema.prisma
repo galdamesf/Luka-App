@@ -11,11 +11,9 @@
 // Cada persona entra con su Google y es miembro de un hogar; un hogar puede
 // tener uno o varios miembros.
 //
-// Transicion: `hogarId` tiene por omision "hogar-inicial", el hogar donde
-// quedaron los datos que existian antes de los hogares. Asi, mientras el
-// codigo todavia no pasa el hogar al guardar, todo cae ahi y la app sigue
-// funcionando. Cuando todo el codigo pase el hogar, el valor por omision se
-// quita y el hogar pasa a ser obligatorio.
+// `hogarId` es obligatorio y no tiene valor por omision: cada fila dice de
+// que hogar es. Lo que existia antes de los hogares quedo en el hogar de id
+// "hogar-inicial" («Mi hogar»).
 
 generator client {
   provider = "prisma-client-js"
@@ -86,7 +84,7 @@ model Miembro {
 
 model Categoria {
   id       String   @id @default(cuid())
-  hogarId  String   @default("hogar-inicial") @map("hogar_id")
+  hogarId  String   @map("hogar_id")
   /// Unico dentro del hogar: dos hogares pueden tener cada uno su «Supermercado».
   nombre   String   @db.VarChar(60)
   /// Color hex para graficos y acentos, formato #RRGGBB.
@@ -108,7 +106,7 @@ model Categoria {
   cuentas      Cuenta[]
 
   @@unique([hogarId, nombre])
-  /// Para que gastos y presupuestos apunten a la categoria Y a su hogar.
+  /// Para que gastos, cuentas y presupuestos apunten a la categoria Y a su hogar.
   @@unique([id, hogarId])
   @@index([activa, orden])
   @@map("categorias")
@@ -116,7 +114,7 @@ model Categoria {
 
 model Gasto {
   id            String    @id @default(cuid())
-  hogarId       String    @default("hogar-inicial") @map("hogar_id")
+  hogarId       String    @map("hogar_id")
   fecha         DateTime  @db.Date
   descripcion   String    @db.VarChar(120)
   /// Pesos chilenos enteros. Siempre mayor que cero (constraint en la migracion).
@@ -156,7 +154,7 @@ model Gasto {
 /// ganabas en febrero, y el historial de meses viejos sigue siendo cierto.
 model Sueldo {
   id            String   @id @default(cuid())
-  hogarId       String   @default("hogar-inicial") @map("hogar_id")
+  hogarId       String   @map("hogar_id")
   /// Pesos chilenos enteros. Cero es valido: un mes sin ingresos.
   monto         Int
   /// Primer dia del mes desde el que rige este monto. Uno por mes en cada hogar.
@@ -178,7 +176,7 @@ model Sueldo {
 /// sola sabe que vas una cuota mas adelante, sin tener que marcar nada.
 model Deuda {
   id            String   @id @default(cuid())
-  hogarId       String   @default("hogar-inicial") @map("hogar_id")
+  hogarId       String   @map("hogar_id")
   nombre        String   @db.VarChar(80)
   /// Monto de cada cuota, en pesos.
   montoCuota    Int      @map("monto_cuota")
@@ -235,7 +233,7 @@ model CuotaPagada {
 /// Las marcadas `mensual` se regeneran solas al abrir el mes siguiente.
 model Cuenta {
   id             String    @id @default(cuid())
-  hogarId        String    @default("hogar-inicial") @map("hogar_id")
+  hogarId        String    @map("hogar_id")
   nombre         String    @db.VarChar(120)
   /// Monto esperado. Al pagarla se puede corregir al monto real.
   monto          Int
@@ -257,7 +255,8 @@ model Cuenta {
   actualizadoEn  DateTime  @updatedAt @map("actualizado_en")
 
   hogar     Hogar     @relation(fields: [hogarId], references: [id], onDelete: Restrict)
-  categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  /// La categoria tiene que ser del mismo hogar que la cuenta.
+  categoria Categoria @relation(fields: [categoriaId, hogarId], references: [id, hogarId], onDelete: Restrict)
   /// Si se borra el gasto, la cuenta vuelve a quedar pendiente en vez de
   /// desaparecer con el.
   gasto     Gasto?    @relation(fields: [gastoId], references: [id], onDelete: SetNull)
@@ -277,7 +276,7 @@ model Cuenta {
 /// una condicion que sigue vigente hasta que la cambies.
 model Presupuesto {
   id            String   @id @default(cuid())
-  hogarId       String   @default("hogar-inicial") @map("hogar_id")
+  hogarId       String   @map("hogar_id")
   categoriaId   String   @map("categoria_id")
   /// Mes del presupuesto, guardado como el primer dia de ese mes.
   mes           DateTime @db.Date
@@ -303,7 +302,7 @@ model Presupuesto {
 /// gasto: la plata sigue siendo tuya.
 model Ahorro {
   id            String   @id @default(cuid())
-  hogarId       String   @default("hogar-inicial") @map("hogar_id")
+  hogarId       String   @map("hogar_id")
   /// Mes al que corresponde, guardado como el dia 1.
   mes           DateTime @db.Date
   /// Pesos chilenos enteros, mayor que cero (constraint en la migracion).
@@ -324,7 +323,7 @@ model Ahorro {
 ///
 /// Sin fila, el hogar usa los valores por omision (el mes calendario).
 model Ajustes {
-  hogarId       String   @id @default("hogar-inicial") @map("hogar_id")
+  hogarId       String   @id @map("hogar_id")
   /// Dia en que empieza tu mes de gastos: el dia en que te pagan. Con 27,
   /// noviembre va del 27 de octubre al 26 de noviembre. 1 es el mes calendario.
   diaInicioMes  Int      @default(1) @map("dia_inicio_mes")

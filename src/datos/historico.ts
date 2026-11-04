@@ -12,8 +12,11 @@ import type { ClienteDb } from "./gastos";
  *
  * Los ingresos no se suman de una tabla de movimientos: salen del sueldo
  * vigente en cada mes, que es como esta modelado el sueldo (fijo, ajustable).
+ *
+ * Gastos y sueldos, solo los del hogar de quien mira.
  */
 export async function serieHistorica(
+  hogarId: string,
   mesFinal: string,
   cantidadMeses = 12,
   db: ClienteDb = prisma,
@@ -32,11 +35,11 @@ export async function serieHistorica(
   const [porDia, sueldos] = await Promise.all([
     db.gasto.groupBy({
       by: ["fecha"],
-      where: { fecha: { gte: desde, lt: hasta } },
+      where: { hogarId, fecha: { gte: desde, lt: hasta } },
       _sum: { monto: true },
     }),
     db.sueldo.findMany({
-      where: { vigenteDesde: { lt: hasta } },
+      where: { hogarId, vigenteDesde: { lt: hasta } },
       select: { monto: true, vigenteDesde: true },
     }),
   ]);

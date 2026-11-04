@@ -13,16 +13,6 @@ import type { HogarDeSesion } from "@/lib/sesion";
 /** El hogar donde quedaron los datos de antes de los hogares (migracion 20261103150000_hogares). */
 export const HOGAR_INICIAL = "hogar-inicial";
 
-/**
- * El hogar que usan las funciones de datos que TODAVIA no reciben el hogar de
- * la sesion. Es el mismo valor por omision que tiene hoy cada tabla, asi que
- * no cambia nada: todo sigue cayendo en el hogar inicial.
- *
- * Cuando todas las funciones reciban el hogar de quien mira, esta constante
- * se borra, y TypeScript marca cualquier lugar que se haya quedado atras.
- */
-export const HOGAR_DE_TRANSICION = HOGAR_INICIAL;
-
 type ClienteHogares = Pick<PrismaClient, "miembro">;
 
 /** Las categorias con que parte un hogar: las mismas que carga el seed. */

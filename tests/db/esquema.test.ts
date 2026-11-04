@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
-import { clienteDePrueba, limpiar } from "./base";
+import { HOGAR_INICIAL, clienteDePrueba, limpiar } from "./base";
 import { fechaDesdeISO, isoDesdeFecha, rangoDelMesISO } from "@/lib/fecha";
 
 let prisma: PrismaClient;
@@ -20,7 +20,7 @@ beforeEach(async () => {
 
 async function crearCategoria(nombre = "Supermercado") {
   return prisma.categoria.create({
-    data: { nombre, color: "#15803D", icono: "shopping-cart", esencial: true },
+    data: { hogarId: HOGAR_INICIAL, nombre, color: "#15803D", icono: "shopping-cart", esencial: true },
   });
 }
 
@@ -43,6 +43,7 @@ describe("gastos", () => {
     const categoria = await crearCategoria();
     const gasto = await prisma.gasto.create({
       data: {
+        hogarId: HOGAR_INICIAL,
         fecha: fechaDesdeISO("2026-10-15"),
         descripcion: "Feria del martes",
         monto: 23450,
@@ -63,6 +64,7 @@ describe("gastos", () => {
     for (const iso of ["2026-10-01", "2026-10-31", "2027-01-01", "2026-12-31"]) {
       const gasto = await prisma.gasto.create({
         data: {
+          hogarId: HOGAR_INICIAL,
           fecha: fechaDesdeISO(iso),
           descripcion: `Prueba ${iso}`,
           monto: 1000,
@@ -80,6 +82,7 @@ describe("gastos", () => {
       await expect(
         prisma.gasto.create({
           data: {
+            hogarId: HOGAR_INICIAL,
             fecha: fechaDesdeISO("2026-10-15"),
             descripcion: "Monto malo",
             monto,
@@ -95,6 +98,7 @@ describe("gastos", () => {
     await expect(
       prisma.gasto.create({
         data: {
+          hogarId: HOGAR_INICIAL,
           fecha: fechaDesdeISO("2026-10-15"),
           descripcion: "x".repeat(121),
           monto: 1000,
@@ -108,6 +112,7 @@ describe("gastos", () => {
     await expect(
       prisma.gasto.create({
         data: {
+          hogarId: HOGAR_INICIAL,
           fecha: fechaDesdeISO("2026-10-15"),
           descripcion: "Huerfano",
           monto: 1000,
@@ -121,6 +126,7 @@ describe("gastos", () => {
     const categoria = await crearCategoria();
     await prisma.gasto.create({
       data: {
+        hogarId: HOGAR_INICIAL,
         fecha: fechaDesdeISO("2026-10-15"),
         descripcion: "Compra",
         monto: 5000,
@@ -149,13 +155,13 @@ describe("consulta mensual", () => {
     await prisma.gasto.createMany({
       data: [
         // Septiembre: no debe aparecer.
-        { fecha: fechaDesdeISO("2026-09-30"), descripcion: "Mes anterior", monto: 99999, categoriaId: super_.id },
+        { hogarId: HOGAR_INICIAL, fecha: fechaDesdeISO("2026-09-30"), descripcion: "Mes anterior", monto: 99999, categoriaId: super_.id },
         // Octubre: los tres bordes y el medio.
-        { fecha: fechaDesdeISO("2026-10-01"), descripcion: "Primero", monto: 10000, categoriaId: super_.id },
-        { fecha: fechaDesdeISO("2026-10-15"), descripcion: "Medio", monto: 20000, categoriaId: super_.id },
-        { fecha: fechaDesdeISO("2026-10-31"), descripcion: "Ultimo", monto: 5000, categoriaId: transporte.id },
+        { hogarId: HOGAR_INICIAL, fecha: fechaDesdeISO("2026-10-01"), descripcion: "Primero", monto: 10000, categoriaId: super_.id },
+        { hogarId: HOGAR_INICIAL, fecha: fechaDesdeISO("2026-10-15"), descripcion: "Medio", monto: 20000, categoriaId: super_.id },
+        { hogarId: HOGAR_INICIAL, fecha: fechaDesdeISO("2026-10-31"), descripcion: "Ultimo", monto: 5000, categoriaId: transporte.id },
         // Noviembre: no debe aparecer.
-        { fecha: fechaDesdeISO("2026-11-01"), descripcion: "Mes siguiente", monto: 88888, categoriaId: super_.id },
+        { hogarId: HOGAR_INICIAL, fecha: fechaDesdeISO("2026-11-01"), descripcion: "Mes siguiente", monto: 88888, categoriaId: super_.id },
       ],
     });
 

@@ -50,7 +50,7 @@ function datosDeuda(cambios: Partial<DeudaValidada> = {}): DeudaValidada {
 
 describe("sueldos", () => {
   test("se guarda y vuelve como mes, no como fecha suelta", async () => {
-    const s = await definirSueldo("2026-10", 1250000, null, prisma);
+    const s = await definirSueldo(HOGAR_INICIAL, "2026-10", 1250000, null, prisma);
     expect(s.monto).toBe(1250000);
     expect(s.vigenteDesde).toBe("2026-10");
   });
@@ -59,67 +59,67 @@ describe("sueldos", () => {
     // Enero es el caso que revienta: la medianoche UTC del 1 cae el 31 de
     // diciembre en Chile, y ahi el AÑO tambien cambia.
     for (const mes of ["2026-01", "2026-12", "2027-01"]) {
-      await definirSueldo(mes, 1000000, null, prisma);
-      const guardados = await listarSueldos(prisma);
+      await definirSueldo(HOGAR_INICIAL, mes, 1000000, null, prisma);
+      const guardados = await listarSueldos(HOGAR_INICIAL, prisma);
       expect(guardados.map((s) => s.vigenteDesde)).toContain(mes);
     }
   });
 
   test("definirlo dos veces para el mismo mes corrige, no duplica", async () => {
-    await definirSueldo("2026-10", 1200000, null, prisma);
-    await definirSueldo("2026-10", 1250000, "con el aumento", prisma);
+    await definirSueldo(HOGAR_INICIAL, "2026-10", 1200000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, "2026-10", 1250000, "con el aumento", prisma);
 
-    const todos = await listarSueldos(prisma);
+    const todos = await listarSueldos(HOGAR_INICIAL, prisma);
     expect(todos).toHaveLength(1);
     expect(todos[0]?.monto).toBe(1250000);
     expect(todos[0]?.nota).toBe("con el aumento");
   });
 
   test("rechaza un sueldo negativo", async () => {
-    await expect(definirSueldo("2026-10", -1, null, prisma)).rejects.toThrow();
+    await expect(definirSueldo(HOGAR_INICIAL, "2026-10", -1, null, prisma)).rejects.toThrow();
   });
 
   test("acepta cero: un mes sin ingresos es un dato real", async () => {
-    const s = await definirSueldo("2026-10", 0, null, prisma);
+    const s = await definirSueldo(HOGAR_INICIAL, "2026-10", 0, null, prisma);
     expect(s.monto).toBe(0);
   });
 
   test("sueldoDelMes toma el vigente, no el ultimo cargado", async () => {
-    await definirSueldo("2026-01", 900000, null, prisma);
-    await definirSueldo("2026-06", 1200000, null, prisma);
-    await definirSueldo("2027-01", 1350000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, "2026-01", 900000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, "2026-06", 1200000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, "2027-01", 1350000, null, prisma);
 
-    expect(await sueldoDelMes("2026-03", prisma)).toBe(900000);
-    expect(await sueldoDelMes("2026-06", prisma)).toBe(1200000);
-    expect(await sueldoDelMes("2026-12", prisma)).toBe(1200000);
-    expect(await sueldoDelMes("2027-05", prisma)).toBe(1350000);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-03", prisma)).toBe(900000);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-06", prisma)).toBe(1200000);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-12", prisma)).toBe(1200000);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2027-05", prisma)).toBe(1350000);
   });
 
   test("un aumento no reescribe los meses anteriores", async () => {
-    await definirSueldo("2026-01", 900000, null, prisma);
-    await definirSueldo("2026-06", 1200000, null, prisma);
-    expect(await sueldoDelMes("2026-02", prisma)).toBe(900000);
+    await definirSueldo(HOGAR_INICIAL, "2026-01", 900000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, "2026-06", 1200000, null, prisma);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-02", prisma)).toBe(900000);
   });
 
   test("antes del primer sueldo cargado devuelve null", async () => {
-    await definirSueldo("2026-06", 1200000, null, prisma);
-    expect(await sueldoDelMes("2026-01", prisma)).toBeNull();
+    await definirSueldo(HOGAR_INICIAL, "2026-06", 1200000, null, prisma);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-01", prisma)).toBeNull();
   });
 
   test("sin ningun sueldo devuelve null", async () => {
-    expect(await sueldoDelMes("2026-10", prisma)).toBeNull();
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-10", prisma)).toBeNull();
   });
 
   test("se puede borrar el de un mes", async () => {
-    await definirSueldo("2026-10", 1200000, null, prisma);
-    await eliminarSueldo("2026-10", prisma);
-    expect(await listarSueldos(prisma)).toEqual([]);
+    await definirSueldo(HOGAR_INICIAL, "2026-10", 1200000, null, prisma);
+    await eliminarSueldo(HOGAR_INICIAL, "2026-10", prisma);
+    expect(await listarSueldos(HOGAR_INICIAL, prisma)).toEqual([]);
   });
 });
 
 describe("deudas", () => {
   test("se crea y vuelve con la primera cuota como mes", async () => {
-    const d = await crearDeuda(datosDeuda(), prisma);
+    const d = await crearDeuda(HOGAR_INICIAL, datosDeuda(), prisma);
     expect(d.nombre).toBe("Crédito de consumo");
     expect(d.montoCuota).toBe(85000);
     expect(d.cuotasTotales).toBe(12);
@@ -129,26 +129,26 @@ describe("deudas", () => {
 
   test("el mes de la primera cuota no se corre", async () => {
     for (const mes of ["2026-01", "2026-12", "2027-01"]) {
-      const d = await crearDeuda(datosDeuda({ primeraCuota: mes }), prisma);
+      const d = await crearDeuda(HOGAR_INICIAL, datosDeuda({ primeraCuota: mes }), prisma);
       expect(d.primeraCuota).toBe(mes);
     }
   });
 
   test("la base rechaza cuota cero o negativa", async () => {
-    await expect(crearDeuda(datosDeuda({ montoCuota: 0 }), prisma)).rejects.toThrow();
-    await expect(crearDeuda(datosDeuda({ montoCuota: -5000 }), prisma)).rejects.toThrow();
+    await expect(crearDeuda(HOGAR_INICIAL, datosDeuda({ montoCuota: 0 }), prisma)).rejects.toThrow();
+    await expect(crearDeuda(HOGAR_INICIAL, datosDeuda({ montoCuota: -5000 }), prisma)).rejects.toThrow();
   });
 
   test("la base rechaza un numero de cuotas absurdo", async () => {
-    await expect(crearDeuda(datosDeuda({ cuotasTotales: 0 }), prisma)).rejects.toThrow();
-    await expect(crearDeuda(datosDeuda({ cuotasTotales: 601 }), prisma)).rejects.toThrow();
+    await expect(crearDeuda(HOGAR_INICIAL, datosDeuda({ cuotasTotales: 0 }), prisma)).rejects.toThrow();
+    await expect(crearDeuda(HOGAR_INICIAL, datosDeuda({ cuotasTotales: 601 }), prisma)).rejects.toThrow();
   });
 
   test("desactivar la saca del calculo sin borrarla", async () => {
-    const d = await crearDeuda(datosDeuda(), prisma);
-    await desactivarDeuda(d.id, prisma);
+    const d = await crearDeuda(HOGAR_INICIAL, datosDeuda(), prisma);
+    await desactivarDeuda(HOGAR_INICIAL, d.id, prisma);
 
-    const todas = await listarDeudas(prisma);
+    const todas = await listarDeudas(HOGAR_INICIAL, prisma);
     expect(todas).toHaveLength(1);
     expect(todas[0]?.activa).toBe(false);
     expect(cuotaEnMes(todas[0]!, "2026-10")).toBeNull();
@@ -156,26 +156,26 @@ describe("deudas", () => {
   });
 
   test("se puede reactivar", async () => {
-    const d = await crearDeuda(datosDeuda(), prisma);
-    await desactivarDeuda(d.id, prisma);
-    await reactivarDeuda(d.id, prisma);
-    const todas = await listarDeudas(prisma);
+    const d = await crearDeuda(HOGAR_INICIAL, datosDeuda(), prisma);
+    await desactivarDeuda(HOGAR_INICIAL, d.id, prisma);
+    await reactivarDeuda(HOGAR_INICIAL, d.id, prisma);
+    const todas = await listarDeudas(HOGAR_INICIAL, prisma);
     expect(todas[0]?.activa).toBe(true);
   });
 
   test("se puede borrar una creada por error", async () => {
-    const d = await crearDeuda(datosDeuda(), prisma);
-    await eliminarDeuda(d.id, prisma);
-    expect(await listarDeudas(prisma)).toEqual([]);
+    const d = await crearDeuda(HOGAR_INICIAL, datosDeuda(), prisma);
+    await eliminarDeuda(HOGAR_INICIAL, d.id, prisma);
+    expect(await listarDeudas(HOGAR_INICIAL, prisma)).toEqual([]);
   });
 
   test("lista activas primero y por cuota mas alta", async () => {
-    await crearDeuda(datosDeuda({ nombre: "Chica", montoCuota: 20000 }), prisma);
-    const grande = await crearDeuda(datosDeuda({ nombre: "Grande", montoCuota: 200000 }), prisma);
-    const apagada = await crearDeuda(datosDeuda({ nombre: "Apagada", montoCuota: 999999 }), prisma);
-    await desactivarDeuda(apagada.id, prisma);
+    await crearDeuda(HOGAR_INICIAL, datosDeuda({ nombre: "Chica", montoCuota: 20000 }), prisma);
+    const grande = await crearDeuda(HOGAR_INICIAL, datosDeuda({ nombre: "Grande", montoCuota: 200000 }), prisma);
+    const apagada = await crearDeuda(HOGAR_INICIAL, datosDeuda({ nombre: "Apagada", montoCuota: 999999 }), prisma);
+    await desactivarDeuda(HOGAR_INICIAL, apagada.id, prisma);
 
-    const todas = await listarDeudas(prisma);
+    const todas = await listarDeudas(HOGAR_INICIAL, prisma);
     expect(todas.map((d) => d.nombre)).toEqual(["Grande", "Chica", "Apagada"]);
     expect(todas[0]?.id).toBe(grande.id);
   });
@@ -184,13 +184,13 @@ describe("deudas", () => {
 describe("de la base al balance, de punta a punta", () => {
   test("los numeros del mes salen correctos sobre datos reales", async () => {
     const esencial = await prisma.categoria.create({
-      data: { nombre: "Arriendo", color: "#0d9488", icono: "house", esencial: true },
+      data: { hogarId: HOGAR_INICIAL, nombre: "Arriendo", color: "#0d9488", icono: "house", esencial: true },
     });
     const discrecional = await prisma.categoria.create({
-      data: { nombre: "Restaurantes", color: "#ea580c", icono: "utensils", esencial: false },
+      data: { hogarId: HOGAR_INICIAL, nombre: "Restaurantes", color: "#ea580c", icono: "utensils", esencial: false },
     });
 
-    await definirSueldo("2026-10", 1250000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, "2026-10", 1250000, null, prisma);
 
     await crearGasto(
       HOGAR_INICIAL,
@@ -204,22 +204,23 @@ describe("de la base al balance, de punta a punta", () => {
     );
 
     const credito = await crearDeuda(
+      HOGAR_INICIAL,
       datosDeuda({ nombre: "Crédito", montoCuota: 118000, cuotasTotales: 24, primeraCuota: "2025-11" }),
       prisma,
     );
-    await crearDeuda(datosDeuda({ nombre: "Notebook", montoCuota: 54990, cuotasTotales: 12, primeraCuota: "2026-06" }), prisma);
+    await crearDeuda(HOGAR_INICIAL, datosDeuda({ nombre: "Notebook", montoCuota: 54990, cuotasTotales: 12, primeraCuota: "2026-06" }), prisma);
     // Terminada antes de octubre: no debe cobrar.
-    await crearDeuda(datosDeuda({ nombre: "Vieja", montoCuota: 999999, cuotasTotales: 3, primeraCuota: "2025-01" }), prisma);
+    await crearDeuda(HOGAR_INICIAL, datosDeuda({ nombre: "Vieja", montoCuota: 999999, cuotasTotales: 3, primeraCuota: "2025-01" }), prisma);
 
     // Se paga la cuota del credito como en la app: crea su gasto y su pago.
     // La del notebook queda pendiente.
-    await pagarCuota(credito.id, "2026-10", "2026-10-05", 118000, null, prisma);
+    await pagarCuota(HOGAR_INICIAL, credito.id, "2026-10", "2026-10-05", 118000, null, prisma);
 
     const [gastos, sueldo, deudas, pagos] = await Promise.all([
       listarGastosDelMes(HOGAR_INICIAL, "2026-10", prisma),
-      sueldoDelMes("2026-10", prisma),
-      listarDeudas(prisma),
-      listarPagosDelMes("2026-10", prisma),
+      sueldoDelMes(HOGAR_INICIAL, "2026-10", prisma),
+      listarDeudas(HOGAR_INICIAL, prisma),
+      listarPagosDelMes(HOGAR_INICIAL, "2026-10", prisma),
     ]);
 
     const resumen = resumirMes(gastos, "2026-10", new Date("2026-11-15T12:00:00.000Z"));
@@ -251,9 +252,9 @@ describe("de la base al balance, de punta a punta", () => {
     const resumen = resumirMes([], "2026-10", new Date("2026-11-15T12:00:00.000Z"));
     const balance = calcularBalance({
       mes: "2026-10",
-      sueldo: await sueldoDelMes("2026-10", prisma),
+      sueldo: await sueldoDelMes(HOGAR_INICIAL, "2026-10", prisma),
       resumen,
-      deudas: await listarDeudas(prisma),
+      deudas: await listarDeudas(HOGAR_INICIAL, prisma),
       pagos: [],
     });
 

@@ -35,7 +35,7 @@ export default async function ReporteSemana({ searchParams }: Props) {
   // ningun otro, se lee todo lo que sigue.
   const { hogarId } = await hogarActual();
   const parametros = await searchParams;
-  const { diaInicioMes } = await leerAjustes();
+  const { diaInicioMes } = await leerAjustes(hogarId);
   const hoy = hoyISO();
   const elegido = esquemaMes.safeParse(parametros.mes);
   const mes = elegido.success ? elegido.data : periodoDeFecha(hoy, diaInicioMes).mes;

@@ -31,7 +31,7 @@ export async function GET(peticion: Request) {
 
   // El mismo corte de mes que el dashboard: con dia 27, noviembre va del 27
   // de octubre al 26 de noviembre.
-  const { diaInicioMes } = await leerAjustes();
+  const { diaInicioMes } = await leerAjustes(hogar.hogarId);
   const periodo = periodoDe(mes.data, diaInicioMes);
   const gastos = await listarGastosDelMes(hogar.hogarId, periodo);
   const reporte = armarReporteSemanal(gastos, periodo, semana, hoyISO());
