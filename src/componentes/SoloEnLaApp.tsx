@@ -2,8 +2,11 @@
 
 import { usePathname } from "next/navigation";
 
-/** Rutas publicas: las ve quien todavia no entro, y traen su propio marco. */
-const PUBLICAS = ["/bienvenida", "/ingresar", "/privacidad", "/terminos"];
+/**
+ * Rutas con su propio marco: las publicas (las ve quien todavia no entro) y
+ * el segundo paso (/verificacion), que todavia no es estar adentro.
+ */
+const PUBLICAS = ["/bienvenida", "/ingresar", "/privacidad", "/terminos", "/verificacion"];
 
 /**
  * Esconde el navbar y el pie de la app en las paginas publicas.

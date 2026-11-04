@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 import { ACTUALIZADO, PRIVACIDAD, RESPONSABLE, RUTAS_LEGALES, TERMINOS, type DocumentoLegal } from "@/dominio/legal";
 import { CODIGO_DE_BORRADO } from "@/dominio/hogar";
+import { DOS_PASOS } from "@/dominio/dos-pasos";
 import { TAMANO_MAXIMO_BOLETA } from "@/dominio/tamano-boleta";
 import { HORAS_MAXIMAS, MINUTOS_SIN_USO } from "@/lib/sesion";
 
@@ -44,6 +45,13 @@ describe("lo que dice la politica es lo que hace Luka", () => {
     expect(texto).toContain(`tras ${MINUTOS_SIN_USO} minutos sin uso, a las ${HORAS_MAXIMAS} horas como máximo`);
     expect(texto).toContain(`vence en ${CODIGO_DE_BORRADO.minutosDeVigencia} minutos`);
     expect(texto).toContain(`hasta ${TAMANO_MAXIMO_BOLETA / 1024 / 1024}\u00a0MB`);
+  });
+
+  test("la verificacion en dos pasos: que guarda, que no, y sus limites salen del codigo", () => {
+    expect(texto).toContain(`un código de ${DOS_PASOS.digitos} dígitos de la app de autenticación`);
+    expect(texto).toContain(`Tras ${DOS_PASOS.intentos} códigos equivocados seguidos, se bloquea por ${DOS_PASOS.minutosDeBloqueo} minutos`);
+    expect(texto).toMatch(/guardada cifrada/);
+    expect(texto).toMatch(/no pide ni guarda tu número de teléfono/);
   });
 
   test("nombra los servicios donde viven los datos y los permisos de Google que pide", () => {

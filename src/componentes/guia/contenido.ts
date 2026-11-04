@@ -607,6 +607,20 @@ export const GUIA: readonly SeccionGuia[] = [
           "Cada correo puede estar en un solo hogar. Invita a la persona antes de que entre por primera vez: si entra antes, Luka le arma su propio hogar.",
       },
       {
+        titulo: "Entrar con el código de tu celular",
+        texto: [
+          "Entrar a Luka son dos pasos, para todos los del hogar: Google y un código de 6 dígitos de una app de tu celular, como Google Authenticator. Así, aunque alguien entre a tu cuenta de Google, no ve tu hogar sin tu celular.",
+          "La primera vez, Luka te muestra un código QR para escanearlo con la app y te da 10 códigos de respaldo. Cada uno te deja entrar una vez si no tienes el celular a mano.",
+        ],
+        terminos: [
+          { termino: "«Generar códigos nuevos»", definicion: "Te da 10 códigos de respaldo nuevos; los que tenías dejan de servir." },
+          { termino: "«Pasar la app a otro celular»", definicion: "La app de ahora deja de servir para Luka y te muestra un código QR nuevo para el otro celular." },
+          { termino: "«Reiniciar su app»", definicion: "Solo el dueño, para alguien que perdió el celular y sus códigos: la próxima vez que entre, configura una app nueva." },
+        ],
+        consejo:
+          "Guarda los códigos de respaldo lejos del celular: en tu gestor de contraseñas, impresos o en otro computador. Si te equivocas 5 veces seguidas con el código, Luka espera 15 minutos antes de dejarte probar de nuevo.",
+      },
+      {
         titulo: "Pasar el hogar, sacar a alguien o salir",
         texto: [
           "Con «Pasarle el hogar», el dueño deja a otro miembro como dueño y él queda como miembro. Con «Sacar del hogar» saca a alguien; lo que esa persona anotó se queda en el hogar.",
@@ -652,6 +666,11 @@ export const PREGUNTAS: readonly { pregunta: string; respuesta: string }[] = [
     pregunta: "¿Qué es esencial y qué es discrecional?",
     respuesta:
       "Lo decide la categoría. Esencial es lo que no puedes dejar de pagar (arriendo, supermercado, luz); discrecional, lo que podrías recortar (café, salidas, regalos).",
+  },
+  {
+    pregunta: "Perdí mi celular, ¿cómo entro?",
+    respuesta:
+      "Entra con Google y, donde te pide el código, toca «No tengo mi celular: usar un código de respaldo». Ya adentro, en «Hogar», usa «Pasar la app a otro celular». Si también perdiste los códigos, pídele al dueño del hogar que use «Reiniciar su app».",
   },
   {
     pregunta: "¿Tengo que anotar las cuentas cada mes?",
