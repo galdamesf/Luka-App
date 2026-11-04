@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { mesDesdeFecha, rangoDelMesISO } from "@/lib/fecha";
 import { sueldoVigente } from "@/dominio/balance";
 import type { ClienteDb } from "./gastos";
+import { HOGAR_DE_TRANSICION } from "./hogares";
 
 export type SueldoPlano = {
   id: string;
@@ -49,10 +50,11 @@ export async function definirSueldo(
 ): Promise<SueldoPlano> {
   const vigenteDesde = rangoDelMesISO(mes).desde;
 
+  const hogarId = HOGAR_DE_TRANSICION;
   const fila = (await db.sueldo.upsert({
-    where: { vigenteDesde },
+    where: { hogarId_vigenteDesde: { hogarId, vigenteDesde } },
     update: { monto, nota },
-    create: { monto, nota, vigenteDesde },
+    create: { hogarId, monto, nota, vigenteDesde },
   })) as FilaSueldo;
 
   return aPlano(fila);
@@ -80,5 +82,9 @@ export async function sueldoDelMes(
 }
 
 export async function eliminarSueldo(mes: string, db: ClienteDb = prisma): Promise<void> {
-  await db.sueldo.delete({ where: { vigenteDesde: rangoDelMesISO(mes).desde } });
+  await db.sueldo.delete({
+    where: {
+      hogarId_vigenteDesde: { hogarId: HOGAR_DE_TRANSICION, vigenteDesde: rangoDelMesISO(mes).desde },
+    },
+  });
 }

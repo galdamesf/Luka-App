@@ -30,8 +30,9 @@ describe("ajustes", () => {
     expect(await prisma.ajustes.count()).toBe(1);
   });
 
-  test("la base rechaza un dia fuera de 1 a 31 y una segunda fila", async () => {
-    await expect(prisma.ajustes.create({ data: { id: "app", diaInicioMes: 32 } })).rejects.toThrow();
-    await expect(prisma.ajustes.create({ data: { id: "otra", diaInicioMes: 5 } })).rejects.toThrow();
+  test("la base rechaza un dia fuera de 1 a 31 y una segunda fila del mismo hogar", async () => {
+    await expect(prisma.ajustes.create({ data: { diaInicioMes: 32 } })).rejects.toThrow();
+    await prisma.ajustes.create({ data: { diaInicioMes: 27 } });
+    await expect(prisma.ajustes.create({ data: { diaInicioMes: 5 } })).rejects.toThrow();
   });
 });

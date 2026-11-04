@@ -87,8 +87,9 @@ export async function eliminarDeuda(id: string, db: ClienteDb = prisma): Promise
  * El par (deuda, mes) es unico en la base, asi que dos clics seguidos en
  * "pagar" no dejan dos registros: el segundo choca contra el indice.
  *
- * El gasto se registra en la categoria de deudas. Si alguien la borro o la
- * renombro, se vuelve a crear aqui mismo: pagar no deberia fallar por eso.
+ * El gasto se registra en la categoria de deudas del hogar de la deuda, y el
+ * gasto queda en ese mismo hogar. Si alguien borro o renombro la categoria,
+ * se vuelve a crear aqui mismo: pagar no deberia fallar por eso.
  */
 export async function pagarCuota(
   deudaId: string,
@@ -109,11 +110,12 @@ export async function pagarCuota(
 
     const categoria =
       (await tx.categoria.findUnique({
-        where: { nombre: CATEGORIA_CUOTAS },
+        where: { hogarId_nombre: { hogarId: deuda.hogarId, nombre: CATEGORIA_CUOTAS } },
         select: { id: true },
       })) ??
       (await tx.categoria.create({
         data: {
+          hogarId: deuda.hogarId,
           nombre: CATEGORIA_CUOTAS,
           color: colorDeGrupo("otros"),
           icono: "credit-card",
@@ -124,6 +126,7 @@ export async function pagarCuota(
 
     const gasto = await tx.gasto.create({
       data: {
+        hogarId: deuda.hogarId,
         fecha: fechaDesdeISO(fechaPago),
         descripcion: deuda.nombre.slice(0, 120),
         monto: montoReal,

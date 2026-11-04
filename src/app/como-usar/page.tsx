@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Icono } from "@/componentes/Icono";
+import { hogarActual } from "@/lib/hogar-actual";
 import { COLOR_SECCION, SECCIONES_PANEL } from "@/componentes/secciones-panel";
 import { TextoGuia } from "@/componentes/guia/TextoGuia";
 import { ImagenDeGuia } from "@/componentes/guia/ImagenDeGuia";
@@ -134,7 +135,10 @@ function Seccion({ seccion }: { seccion: SeccionGuia }) {
  * capturas del panel (con datos de ejemplo). El contenido vive en
  * componentes/guia/contenido.ts; aca solo se le da forma.
  */
-export default function ComoUsar() {
+export default async function ComoUsar() {
+  // Cada visita revisa contra la base que la persona siga en el hogar con
+  // que entro. Si no, la sesion se cierra aqui mismo.
+  await hogarActual();
   const indice = [
     ...GUIA.map((s) => ({ id: s.id, titulo: s.titulo })),
     { id: "preguntas", titulo: "Preguntas frecuentes" },

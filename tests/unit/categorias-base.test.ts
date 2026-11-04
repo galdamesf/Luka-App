@@ -270,15 +270,25 @@ describe("el seed no deja campos afuera", () => {
   // existian: el `update` del seed solo refrescaba color, icono y orden, asi
   // que la categoria vieja se quedaba con el valor con el que nacio. Solo se
   // notaba al mirar por que un gasto caia en la linea equivocada del balance.
-  const seed = readFileSync(
-    new URL("../../prisma/seed.ts", import.meta.url),
+  //
+  // El seed llama a refrescarCategoriasBase (src/datos/categorias.ts): ahi
+  // esta el update que se revisa. Vale `campo: valor` o la forma corta `campo`.
+  const codigo = readFileSync(
+    new URL("../../src/datos/categorias.ts", import.meta.url),
     "utf-8",
   );
-  const update = seed.slice(seed.indexOf("update: {"), seed.indexOf("create: {"));
+  const funcion = codigo.slice(codigo.indexOf("export async function refrescarCategoriasBase"));
+  const update = funcion.slice(funcion.indexOf("update: {"), funcion.indexOf("create: {"));
+
+  test("el seed usa refrescarCategoriasBase", () => {
+    const seed = readFileSync(new URL("../../prisma/seed.ts", import.meta.url), "utf-8");
+    expect(seed).toContain("refrescarCategoriasBase(");
+    expect(update.length).toBeGreaterThan(0);
+  });
 
   test.each(
     Object.keys(CATEGORIAS_CON_COLOR[0]!).filter((campo) => campo !== "nombre"),
   )("el update del seed refresca %s", (campo) => {
-    expect(update, `falta "${campo}" en el update del seed`).toContain(`${campo}:`);
+    expect(update, `falta "${campo}" en el update del seed`).toMatch(new RegExp(`\\b${campo}\\b`));
   });
 });

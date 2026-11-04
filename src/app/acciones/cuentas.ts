@@ -25,7 +25,7 @@ import { boletaDelFormulario } from "@/lib/boleta-formulario";
 function traducirError(error: unknown): string {
   const texto = error instanceof Error ? error.message : String(error);
 
-  if (texto.includes("cuentas_nombre_mes_key")) {
+  if (texto.includes("cuentas_hogar_id_nombre_mes_key")) {
     return "Ya tienes una cuenta con ese nombre en ese mes.";
   }
   if (texto.includes("cuentas_monto_positivo")) return "El monto debe ser mayor que cero.";

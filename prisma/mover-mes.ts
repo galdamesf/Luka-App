@@ -19,6 +19,7 @@ import { cargarEnv } from "../src/lib/env";
 import { formatearCLP } from "../src/lib/dinero";
 import { cambiosDelPlan, planearMovimiento } from "../src/dominio/mover-mes";
 import { aplicarMovimiento, leerDeudasParaMover, leerParaMover } from "../src/datos/mover-mes";
+import { HOGAR_DE_TRANSICION } from "../src/datos/hogares";
 
 cargarEnv();
 
@@ -93,7 +94,11 @@ async function main() {
 
     await aplicarMovimiento(plan, hasta, prisma);
     if (dia !== null) {
-      await prisma.ajustes.upsert({ where: { id: "app" }, update: { diaInicioMes: dia }, create: { id: "app", diaInicioMes: dia } });
+      await prisma.ajustes.upsert({
+        where: { hogarId: HOGAR_DE_TRANSICION },
+        update: { diaInicioMes: dia },
+        create: { hogarId: HOGAR_DE_TRANSICION, diaInicioMes: dia },
+      });
     }
     console.log("\nListo.\n");
   } finally {

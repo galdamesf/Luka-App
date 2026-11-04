@@ -1,0 +1,93 @@
+import { describe, expect, test } from "vitest";
+import {
+  decidirEntrada,
+  limpiarNombre,
+  nombreDeHogarNuevo,
+  normalizarCorreo,
+  type ReglasDeEntrada,
+} from "@/dominio/entrada";
+
+describe("normalizarCorreo", () => {
+  test("deja el correo sin espacios y en minusculas, como lo exige la base", () => {
+    expect(normalizarCorreo("  Fernando@Gmail.COM ")).toBe("fernando@gmail.com");
+  });
+
+  test.each([null, undefined, "", "   ", "sin-arroba", "@gmail.com", "ana@", "a b@gmail.com"])(
+    "%j no es un correo",
+    (correo) => {
+      expect(normalizarCorreo(correo)).toBeNull();
+    },
+  );
+
+  test("un correo mas largo que la columna no pasa", () => {
+    expect(normalizarCorreo(`${"a".repeat(250)}@g.cl`)).toBeNull();
+  });
+});
+
+describe("limpiarNombre", () => {
+  test("junta espacios y recorta a lo que cabe", () => {
+    expect(limpiarNombre("  Ana   María  ")).toBe("Ana María");
+    expect(limpiarNombre("x".repeat(200))).toHaveLength(120);
+  });
+
+  test("sin nombre queda vacio", () => {
+    expect(limpiarNombre(undefined)).toBeNull();
+    expect(limpiarNombre("   ")).toBeNull();
+  });
+});
+
+describe("decidirEntrada", () => {
+  const cerrada: ReglasDeEntrada = { listaDeAntes: ["fernando@gmail.com", "ana@gmail.com"], puertaAbierta: false };
+  const abierta: ReglasDeEntrada = { ...cerrada, puertaAbierta: true };
+  const decidir = (correo: string | null, yaEsMiembro: boolean, reglas = cerrada) =>
+    decidirEntrada({ correo, yaEsMiembro, ...reglas });
+
+  test("quien ya es miembro (o tiene invitacion) entra a su hogar", () => {
+    expect(decidir("pedro@gmail.com", true)).toEqual({ tipo: "miembro" });
+  });
+
+  test("ser miembro manda sobre la lista de antes: no se cambia de hogar", () => {
+    expect(decidir("ana@gmail.com", true)).toEqual({ tipo: "miembro" });
+  });
+
+  test("el primero de la lista de antes es el dueno del hogar inicial", () => {
+    expect(decidir("fernando@gmail.com", false)).toEqual({ tipo: "hogar-inicial", rol: "DUENO" });
+  });
+
+  test("los demas de la lista entran al hogar inicial como miembros", () => {
+    expect(decidir("ana@gmail.com", false)).toEqual({ tipo: "hogar-inicial", rol: "MIEMBRO" });
+  });
+
+  test("con la puerta cerrada, alguien nuevo no entra", () => {
+    expect(decidir("desconocido@gmail.com", false)).toEqual({ tipo: "rechazada" });
+  });
+
+  test("con la puerta abierta, alguien nuevo tiene su propio hogar", () => {
+    expect(decidir("desconocido@gmail.com", false, abierta)).toEqual({ tipo: "hogar-nuevo" });
+  });
+
+  test("con la lista vacia y la puerta cerrada solo entran los miembros", () => {
+    const vacia = { listaDeAntes: [], puertaAbierta: false };
+    expect(decidir("fernando@gmail.com", false, vacia)).toEqual({ tipo: "rechazada" });
+    expect(decidir("fernando@gmail.com", true, vacia)).toEqual({ tipo: "miembro" });
+  });
+
+  test("sin correo no entra nadie, ni con la puerta abierta", () => {
+    expect(decidir(null, false, abierta)).toEqual({ tipo: "rechazada" });
+  });
+});
+
+describe("nombreDeHogarNuevo", () => {
+  test("lleva el primer nombre de la persona", () => {
+    expect(nombreDeHogarNuevo("Ana María Pérez")).toBe("Hogar de Ana");
+  });
+
+  test("sin nombre, «Mi hogar»", () => {
+    expect(nombreDeHogarNuevo(null)).toBe("Mi hogar");
+    expect(nombreDeHogarNuevo("   ")).toBe("Mi hogar");
+  });
+
+  test("nunca pasa de lo que cabe en la columna", () => {
+    expect(nombreDeHogarNuevo("x".repeat(100)).length).toBeLessThanOrEqual(60);
+  });
+});

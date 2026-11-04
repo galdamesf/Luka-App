@@ -10,7 +10,8 @@ import { urlDePrueba } from "./base";
  *
  * Se prueba como pasaria en tu base: en una base aparte se aplican las
  * migraciones de ANTES, se anota un poco de todo, y recien ahi se aplica la de
- * hogares. La base aparte se borra al final.
+ * hogares. Despues, las que vienen detras (lo unico pasa a ser por hogar), y
+ * se revisa que tampoco pierdan nada. La base aparte se borra al final.
  */
 
 const CARPETA = join(process.cwd(), "prisma", "migrations");
@@ -116,5 +117,47 @@ describe("migracion de hogares sobre una base con datos", () => {
     expect(ajustes.rows).toEqual([{ dia_inicio_mes: 27 }]);
     const gastos = await base.query("SELECT sum(monto)::int AS total FROM gastos");
     expect(gastos.rows[0].total).toBe(14500);
+  });
+});
+
+describe("despues, lo unico pasa a ser unico por hogar", () => {
+  beforeAll(async () => {
+    const posteriores = readdirSync(CARPETA)
+      .filter((m) => !m.endsWith(".toml") && m > (MIGRACION_HOGARES as string))
+      .sort();
+    expect(posteriores.length).toBeGreaterThan(0);
+    for (const m of posteriores) await aplicar(base, m);
+  });
+
+  test("no se pierde ninguna fila", async () => {
+    for (const [tabla, n] of Object.entries(antes)) {
+      const { rows } = await base.query(`SELECT count(*)::int AS n FROM "${tabla}"`);
+      expect(rows[0].n, tabla).toBe(n);
+    }
+  });
+
+  test("los ajustes de antes quedan como los del hogar inicial, con su dia", async () => {
+    const { rows } = await base.query("SELECT * FROM ajustes");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ hogar_id: "hogar-inicial", dia_inicio_mes: 27 });
+    expect(rows[0]).not.toHaveProperty("id");
+  });
+
+  test("otro hogar ya puede tener su «Supermercado» y sus ajustes", async () => {
+    await base.query(`
+      INSERT INTO hogares (id, nombre) VALUES ('otro', 'Casa de Ana');
+      INSERT INTO categorias (id, hogar_id, nombre, color, icono) VALUES ('c2', 'otro', 'Supermercado', '#15803D', 'shopping-cart');
+      INSERT INTO ajustes (hogar_id, dia_inicio_mes, actualizado_en) VALUES ('otro', 5, now());
+    `);
+    const { rows } = await base.query("SELECT count(*)::int AS n FROM categorias WHERE nombre = 'Supermercado'");
+    expect(rows[0].n).toBe(2);
+  });
+
+  test("dentro de un mismo hogar, el nombre sigue sin repetirse", async () => {
+    await expect(
+      base.query(
+        "INSERT INTO categorias (id, nombre, color, icono) VALUES ('c3', 'Supermercado', '#15803D', 'shopping-cart')",
+      ),
+    ).rejects.toThrow(/categorias_hogar_id_nombre_key/);
   });
 });

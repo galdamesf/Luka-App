@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { leerHogarActual } from "@/lib/hogar-actual";
 import { listarGastosDelMes } from "@/datos/gastos";
 import { armarReporteSemanal } from "@/dominio/reporte-semanal";
 import { esquemaMes } from "@/dominio/esquemas";
@@ -15,11 +15,12 @@ export const runtime = "nodejs";
  * /informes/semana/pdf?mes=2026-10&semana=5
  *
  * El middleware ya exige sesion, pero esta ruta entrega la plata del mes en
- * un archivo: se vuelve a revisar aqui por si algun dia cambia el matcher.
+ * un archivo: se vuelve a revisar aqui, contra la base, que la persona siga
+ * en su hogar.
  */
 export async function GET(peticion: Request) {
-  const sesion = await auth();
-  if (!sesion?.user) return new Response("Necesitas iniciar sesión.", { status: 401 });
+  const hogar = await leerHogarActual();
+  if (hogar === null) return new Response("Necesitas iniciar sesión.", { status: 401 });
 
   const parametros = new URL(peticion.url).searchParams;
   const mes = esquemaMes.safeParse(parametros.get("mes"));

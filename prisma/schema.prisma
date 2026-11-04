@@ -87,7 +87,8 @@ model Miembro {
 model Categoria {
   id       String   @id @default(cuid())
   hogarId  String   @default("hogar-inicial") @map("hogar_id")
-  nombre   String   @unique @db.VarChar(60)
+  /// Unico dentro del hogar: dos hogares pueden tener cada uno su «Supermercado».
+  nombre   String   @db.VarChar(60)
   /// Color hex para graficos y acentos, formato #RRGGBB.
   color    String   @db.VarChar(7)
   /// Nombre del icono de lucide-react.
@@ -106,8 +107,8 @@ model Categoria {
   presupuestos Presupuesto[]
   cuentas      Cuenta[]
 
+  @@unique([hogarId, nombre])
   @@index([activa, orden])
-  @@index([hogarId])
   @@map("categorias")
 }
 
@@ -154,15 +155,15 @@ model Sueldo {
   hogarId       String   @default("hogar-inicial") @map("hogar_id")
   /// Pesos chilenos enteros. Cero es valido: un mes sin ingresos.
   monto         Int
-  /// Primer dia del mes desde el que rige este monto.
-  vigenteDesde  DateTime @unique @map("vigente_desde") @db.Date
+  /// Primer dia del mes desde el que rige este monto. Uno por mes en cada hogar.
+  vigenteDesde  DateTime @map("vigente_desde") @db.Date
   nota          String?  @db.VarChar(200)
   creadoEn      DateTime @default(now()) @map("creado_en")
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
   hogar Hogar @relation(fields: [hogarId], references: [id], onDelete: Restrict)
 
-  @@index([hogarId])
+  @@unique([hogarId, vigenteDesde])
   @@map("sueldos")
 }
 
@@ -257,9 +258,9 @@ model Cuenta {
   /// desaparecer con el.
   gasto     Gasto?    @relation(fields: [gastoId], references: [id], onDelete: SetNull)
 
-  /// Una cuenta con el mismo nombre no se repite dentro del mismo mes. Es lo
-  /// que hace que regenerar las mensuales sea idempotente.
-  @@unique([nombre, mes])
+  /// Una cuenta con el mismo nombre no se repite dentro del mismo mes del
+  /// mismo hogar. Es lo que hace que regenerar las mensuales sea idempotente.
+  @@unique([hogarId, nombre, mes])
   @@index([mes, pagadaEn])
   @@index([hogarId, mes])
   @@map("cuentas")
@@ -314,13 +315,11 @@ model Ahorro {
   @@map("ahorros")
 }
 
-/// Ajustes de cada hogar: una fila por hogar.
+/// Ajustes de cada hogar: una fila por hogar, y el hogar es la llave.
 ///
-/// La fila de id "app" es la de antes de los hogares y quedo en el hogar
-/// inicial. Cuando todo el codigo pase el hogar, la fila se busca por hogar.
+/// Sin fila, el hogar usa los valores por omision (el mes calendario).
 model Ajustes {
-  id            String   @id @default("app") @db.VarChar(20)
-  hogarId       String   @unique @default("hogar-inicial") @map("hogar_id")
+  hogarId       String   @id @default("hogar-inicial") @map("hogar_id")
   /// Dia en que empieza tu mes de gastos: el dia en que te pagan. Con 27,
   /// noviembre va del 27 de octubre al 26 de noviembre. 1 es el mes calendario.
   diaInicioMes  Int      @default(1) @map("dia_inicio_mes")

@@ -92,10 +92,42 @@ describe("hogares", () => {
     expect(await prisma.miembro.count()).toBe(0);
   });
 
-  test("cada hogar tiene a lo mas un juego de ajustes", async () => {
+  test("cada hogar tiene a lo mas un juego de ajustes, y cada uno el suyo", async () => {
+    const otro = await prisma.hogar.create({ data: { nombre: "Casa de Ana" } });
     await prisma.ajustes.create({ data: { diaInicioMes: 27 } });
-    // Otra fila para el mismo hogar choca (por el hogar o por el id 'app').
-    await expect(prisma.ajustes.create({ data: { id: "otro", diaInicioMes: 1 } })).rejects.toThrow();
+    await prisma.ajustes.create({ data: { hogarId: otro.id, diaInicioMes: 5 } });
+    await expect(prisma.ajustes.create({ data: { diaInicioMes: 1 } })).rejects.toThrow();
+    expect(await prisma.ajustes.count()).toBe(2);
+  });
+});
+
+describe("lo unico pasa a ser unico dentro de cada hogar", () => {
+  test("dos hogares pueden tener cada uno su «Supermercado»; uno solo, no dos", async () => {
+    const otro = await prisma.hogar.create({ data: { nombre: "Casa de Ana" } });
+    await crearCategoria();
+    await crearCategoria(otro.id);
+    expect(await prisma.categoria.count({ where: { nombre: "Supermercado" } })).toBe(2);
+    await expect(crearCategoria(otro.id)).rejects.toThrow();
+  });
+
+  test("cada hogar tiene su sueldo del mes", async () => {
+    const otro = await prisma.hogar.create({ data: { nombre: "Casa de Ana" } });
+    await prisma.sueldo.create({ data: { monto: 1_000_000, vigenteDesde: MES } });
+    await prisma.sueldo.create({ data: { hogarId: otro.id, monto: 800_000, vigenteDesde: MES } });
+    await expect(prisma.sueldo.create({ data: { monto: 5, vigenteDesde: MES } })).rejects.toThrow();
+  });
+
+  test("la misma cuenta del mismo mes puede estar en dos hogares, no dos veces en uno", async () => {
+    const otro = await prisma.hogar.create({ data: { nombre: "Casa de Ana" } });
+    const mia = await crearCategoria();
+    const suya = await crearCategoria(otro.id);
+    await prisma.cuenta.create({ data: { nombre: "Luz", monto: 30_000, mes: MES, categoriaId: mia.id } });
+    await prisma.cuenta.create({
+      data: { hogarId: otro.id, nombre: "Luz", monto: 25_000, mes: MES, categoriaId: suya.id },
+    });
+    await expect(
+      prisma.cuenta.create({ data: { nombre: "Luz", monto: 1, mes: MES, categoriaId: mia.id } }),
+    ).rejects.toThrow();
   });
 });
 

@@ -1,5 +1,10 @@
+import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { configuracionBase } from "@/auth.config";
+
+// La version del ingreso sin base de datos: el middleware decide solo con la
+// cookie firmada. Que la persona siga en su hogar lo revisa cada pagina.
+const { auth } = NextAuth(configuracionBase);
 
 /**
  * La app detras de la sesion.
@@ -12,7 +17,7 @@ import { auth } from "@/auth";
  *   archivos estaticos de Next.
  *
  * La decision usa solo la cookie firmada (sesion JWT): el middleware no toca
- * la base de datos.
+ * la base de datos. Una cookie vencida o sin hogar cuenta como sin sesion.
  */
 export default auth((peticion) => {
   const { pathname } = peticion.nextUrl;

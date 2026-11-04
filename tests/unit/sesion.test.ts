@@ -1,10 +1,13 @@
 import { describe, expect, test } from "vitest";
 import {
   ahoraEnSegundos,
+  hogarDelToken,
+  mismoHogar,
   SEGUNDOS_MAXIMOS,
   SEGUNDOS_SIN_USO,
   sellarSesion,
   sesionVigente,
+  tokenVigente,
 } from "@/lib/sesion";
 
 const ARRANQUE = "arranque-de-hoy";
@@ -74,5 +77,43 @@ describe("ahoraEnSegundos", () => {
     expect(Number.isInteger(ahora)).toBe(true);
     expect(ahora).toBeGreaterThanOrEqual(antes);
     expect(ahora).toBeLessThanOrEqual(antes + 1);
+  });
+});
+
+describe("el hogar en la sesion", () => {
+  const hogar = { hogarId: "h1", miembroId: "m1", rol: "DUENO" as const };
+  const sello = sellarSesion(1_000, "a1");
+
+  test("hogarDelToken lee el hogar que se guardo al entrar", () => {
+    expect(hogarDelToken({ ...sello, ...hogar, email: "f@gmail.com" })).toEqual(hogar);
+  });
+
+  test("un token sin hogar (de antes de los hogares) no trae hogar", () => {
+    expect(hogarDelToken({ ...sello })).toBeNull();
+  });
+
+  test("un hogar a medias o con un rol que no existe no vale", () => {
+    expect(hogarDelToken({ ...hogar, miembroId: "" })).toBeNull();
+    expect(hogarDelToken({ ...hogar, rol: "ADMIN" })).toBeNull();
+    expect(hogarDelToken({ ...hogar, hogarId: 7 })).toBeNull();
+  });
+
+  test("tokenVigente pide el sello vigente Y el hogar", () => {
+    expect(tokenVigente({ ...sello, ...hogar }, 1_010, "a1")).toBe(true);
+    expect(tokenVigente({ ...sello }, 1_010, "a1")).toBe(false);
+    expect(tokenVigente({ ...sello, ...hogar }, 1_010, "otro-arranque")).toBe(false);
+  });
+
+  test("mismoHogar: la sesion coincide con lo que dice la base", () => {
+    expect(mismoHogar(hogar, { ...hogar })).toBe(true);
+    // El rol puede cambiar sin cortar la sesion: manda el de la base.
+    expect(mismoHogar(hogar, { ...hogar, rol: "MIEMBRO" })).toBe(true);
+  });
+
+  test("mismoHogar: si ya no es miembro, o lo es de otro hogar, no coincide", () => {
+    expect(mismoHogar(hogar, null)).toBe(false);
+    expect(mismoHogar(hogar, { ...hogar, hogarId: "h2" })).toBe(false);
+    expect(mismoHogar(hogar, { ...hogar, miembroId: "m2" })).toBe(false);
+    expect(mismoHogar(null, hogar)).toBe(false);
   });
 });

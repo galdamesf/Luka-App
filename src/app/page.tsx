@@ -20,6 +20,7 @@ import { esquemaMes } from "@/dominio/esquemas";
 import { hoyISO } from "@/lib/fecha";
 import { enPeriodo, periodoDe, periodoDeFecha, periodoVecino } from "@/lib/periodo";
 import { leerAjustes } from "@/datos/ajustes";
+import { hogarActual } from "@/lib/hogar-actual";
 import { accionCrearGasto, accionEliminarGasto } from "./acciones/gastos";
 import { accionCrearAhorro, accionEliminarAhorro } from "./acciones/ahorros";
 import { accionDefinirDiaInicio } from "./acciones/ajustes";
@@ -81,6 +82,9 @@ type Props = {
 };
 
 export default async function Home({ searchParams }: Props) {
+  // Cada visita revisa contra la base que la persona siga en el hogar con
+  // que entro. Si no, la sesion se cierra aqui mismo.
+  await hogarActual();
   const parametros = await searchParams;
 
   // El mes de gastos empieza el dia que eligio la persona (el de su pago).

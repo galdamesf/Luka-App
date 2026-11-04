@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { correosAutorizados, estaAutorizado } from "@/lib/autorizados";
+import { PUERTA_ABIERTA, correosAutorizados, reglasDeEntrada } from "@/lib/autorizados";
 
 describe("correosAutorizados", () => {
   test("separa por coma y limpia espacios y mayusculas", () => {
@@ -16,23 +16,18 @@ describe("correosAutorizados", () => {
   });
 });
 
-describe("estaAutorizado", () => {
-  const lista = ["fernando@gmail.com"];
-
-  test("acepta el correo aunque venga con otra capitalizacion", () => {
-    expect(estaAutorizado("Fernando@Gmail.com", lista)).toBe(true);
+describe("reglasDeEntrada", () => {
+  test("toma la lista de CORREOS_AUTORIZADOS, limpia y en su orden", () => {
+    const reglas = reglasDeEntrada({ CORREOS_AUTORIZADOS: " Fernando@Gmail.com, ana@gmail.com" });
+    expect(reglas.listaDeAntes).toEqual(["fernando@gmail.com", "ana@gmail.com"]);
   });
 
-  test("rechaza a quien no esta en la lista", () => {
-    expect(estaAutorizado("otro@gmail.com", lista)).toBe(false);
+  test("sin la variable, la lista queda vacia", () => {
+    expect(reglasDeEntrada({}).listaDeAntes).toEqual([]);
   });
 
-  test("sin correo no entra nadie", () => {
-    expect(estaAutorizado(null, lista)).toBe(false);
-    expect(estaAutorizado(undefined, lista)).toBe(false);
-  });
-
-  test("con la lista vacia no entra nadie: la puerta cerrada por defecto", () => {
-    expect(estaAutorizado("fernando@gmail.com", [])).toBe(false);
+  test("la puerta sigue cerrada mientras las paginas lean los datos de todos", () => {
+    expect(PUERTA_ABIERTA).toBe(false);
+    expect(reglasDeEntrada({}).puertaAbierta).toBe(false);
   });
 });
