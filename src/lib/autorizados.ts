@@ -1,18 +1,19 @@
 import type { ReglasDeEntrada } from "@/dominio/entrada";
 
 /**
- * La lista de correos de antes de los hogares.
+ * La lista de correos de CORREOS_AUTORIZADOS en el .env, separados por coma.
  *
- * Viene de CORREOS_AUTORIZADOS en el .env: correos separados por coma. Quien
- * esta en la lista entra al hogar inicial, el de los datos que ya existian; el
- * primero de la lista es su dueno (ver src/dominio/entrada.ts). La
+ * Solo cuenta el primero: entra como dueno de «Mi hogar» (el de los datos que
+ * ya existian) la primera vez, mientras ese hogar no tenga dueno. Despues, a
+ * los demas se los invita desde la pagina Hogar (ver src/dominio/entrada.ts).
+ * La
  * comparacion ignora mayusculas y espacios, porque Google a veces entrega el
  * correo con otra capitalizacion y un espacio de mas en el .env no puede
  * dejar a Fernando afuera de su propia app.
  *
  * Con la lista vacia y la puerta cerrada solo entran los que ya son miembros
- * de un hogar: una app de plata con la puerta abierta por un .env a medio
- * escribir seria peor que una que te pide configurarla.
+ * de un hogar o tienen una invitacion: una app de plata con la puerta abierta
+ * por un .env a medio escribir seria peor que una que te pide configurarla.
  */
 export function correosAutorizados(valor: string | undefined): string[] {
   return (valor ?? "")

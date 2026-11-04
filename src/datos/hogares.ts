@@ -8,6 +8,17 @@ import {
   normalizarCorreo,
   type ReglasDeEntrada,
 } from "@/dominio/entrada";
+import {
+  errorDeNombreDeHogar,
+  ordenarMiembros,
+  puedeHacerDueno,
+  puedeInvitar,
+  puedeQuitar,
+  puedeRenombrar,
+  puedeSalir,
+  type MiembroDelHogar,
+  type Quien,
+} from "@/dominio/hogar";
 import type { HogarDeSesion } from "@/lib/sesion";
 
 /** El hogar donde quedaron los datos de antes de los hogares (migracion 20261103150000_hogares). */
@@ -47,7 +58,14 @@ export async function registrarEntrada(
   const intentar = () =>
     db.$transaction(async (tx) => {
       const existente = await tx.miembro.findUnique({ where: { correo } });
-      const decision = decidirEntrada({ correo, yaEsMiembro: existente !== null, ...reglas });
+      const hogarInicialConDueno =
+        (await tx.miembro.count({ where: { hogarId: HOGAR_INICIAL, rol: "DUENO" } })) > 0;
+      const decision = decidirEntrada({
+        correo,
+        yaEsMiembro: existente !== null,
+        hogarInicialConDueno,
+        ...reglas,
+      });
 
       switch (decision.tipo) {
         case "rechazada":
@@ -65,9 +83,9 @@ export async function registrarEntrada(
           return aSesion(fila);
         }
 
-        case "hogar-inicial": {
+        case "dueno-del-hogar-inicial": {
           const fila = await tx.miembro.create({
-            data: { hogarId: HOGAR_INICIAL, correo, nombre, rol: decision.rol, entroEn: new Date() },
+            data: { hogarId: HOGAR_INICIAL, correo, nombre, rol: "DUENO", entroEn: new Date() },
             select: CAMPOS_DE_SESION,
           });
           return aSesion(fila);
@@ -113,4 +131,152 @@ export async function miembroDeSesion(
   });
   if (fila === null || fila.entroEn === null) return null;
   return aSesion(fila);
+}
+
+/* ---------------------------------------------------------------------------
+   La pagina Hogar: el hogar con sus miembros, invitar, sacar, salir y pasar
+   el hogar. Las reglas de quien puede que estan en src/dominio/hogar.ts; aqui
+   se aplican contra la base, con el rol que dice la base y no el que trae la
+   sesion, y todo dentro del hogar de quien mira.
+   --------------------------------------------------------------------------- */
+
+/** Un error que se le puede mostrar tal cual a la persona. */
+export class ErrorDeHogar extends Error {}
+
+export type HogarConMiembros = {
+  id: string;
+  nombre: string;
+  miembros: MiembroDelHogar[];
+};
+
+type FilaMiembro = {
+  id: string;
+  correo: string;
+  nombre: string | null;
+  rol: "DUENO" | "MIEMBRO";
+  entroEn: Date | null;
+};
+
+function aMiembro(fila: FilaMiembro): MiembroDelHogar {
+  return { ...fila, entroEn: fila.entroEn === null ? null : fila.entroEn.toISOString() };
+}
+
+const CAMPOS_DE_MIEMBRO = { id: true, correo: true, nombre: true, rol: true, entroEn: true } as const;
+
+export async function leerHogar(hogarId: string, db: Pick<PrismaClient, "hogar"> = prisma): Promise<HogarConMiembros> {
+  const hogar = await db.hogar.findUniqueOrThrow({
+    where: { id: hogarId },
+    select: { id: true, nombre: true, miembros: { select: CAMPOS_DE_MIEMBRO } },
+  });
+  return { id: hogar.id, nombre: hogar.nombre, miembros: ordenarMiembros(hogar.miembros.map(aMiembro)) };
+}
+
+/** Cuantos miembros ya entraron: con mas de uno, cada gasto dice quien lo anoto. */
+export async function miembrosQueEntraron(hogarId: string, db: ClienteHogares = prisma): Promise<number> {
+  return db.miembro.count({ where: { hogarId, entroEn: { not: null } } });
+}
+
+type ClienteTxHogar = Pick<PrismaClient, "miembro" | "hogar">;
+
+/** Quien hace la accion, segun la base. Si ya no esta en el hogar, no hace nada. */
+async function quienEs(tx: ClienteTxHogar, hogarId: string, quienId: string): Promise<Quien> {
+  const fila = await tx.miembro.findFirst({ where: { id: quienId, hogarId }, select: { id: true, rol: true } });
+  if (fila === null) throw new ErrorDeHogar("Ya no eres parte de este hogar.");
+  return { miembroId: fila.id, rol: fila.rol };
+}
+
+/** Un miembro del hogar, o el error de que ya no esta. */
+async function miembroDelHogar(tx: ClienteTxHogar, hogarId: string, miembroId: string): Promise<MiembroDelHogar> {
+  const fila = await tx.miembro.findFirst({ where: { id: miembroId, hogarId }, select: CAMPOS_DE_MIEMBRO });
+  if (fila === null) throw new ErrorDeHogar("Esa persona ya no está en el hogar.");
+  return aMiembro(fila);
+}
+
+function exigir(motivo: string | null): void {
+  if (motivo !== null) throw new ErrorDeHogar(motivo);
+}
+
+export async function renombrarHogar(
+  hogarId: string,
+  quienId: string,
+  nombre: string,
+  db: PrismaClient = prisma,
+): Promise<void> {
+  exigir(errorDeNombreDeHogar(nombre));
+  await db.$transaction(async (tx) => {
+    exigir(puedeRenombrar(await quienEs(tx, hogarId, quienId)));
+    await tx.hogar.update({ where: { id: hogarId }, data: { nombre: nombre.trim() } });
+  });
+}
+
+/**
+ * Invita un correo al hogar: queda como miembro con la invitacion pendiente
+ * hasta que entre con ese Google. No se manda ningun correo: la persona
+ * entra a Luka y cae en el hogar.
+ */
+export async function invitarMiembro(
+  hogarId: string,
+  quienId: string,
+  correo: string,
+  db: PrismaClient = prisma,
+): Promise<MiembroDelHogar> {
+  const normalizado = normalizarCorreo(correo);
+  if (normalizado === null) throw new ErrorDeHogar("Ese correo no parece un correo.");
+
+  try {
+    return await db.$transaction(async (tx) => {
+      exigir(puedeInvitar(await quienEs(tx, hogarId, quienId)));
+      const fila = await tx.miembro.create({
+        data: { hogarId, correo: normalizado, rol: "MIEMBRO" },
+        select: CAMPOS_DE_MIEMBRO,
+      });
+      return aMiembro(fila);
+    });
+  } catch (error) {
+    // El correo es unico en toda la base: cada persona esta en un solo hogar.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new ErrorDeHogar("Ese correo ya es parte de un hogar en Luka.");
+    }
+    throw error;
+  }
+}
+
+/** Saca a alguien del hogar, o cancela su invitacion: es lo mismo. Sus gastos se quedan. */
+export async function quitarMiembro(
+  hogarId: string,
+  quienId: string,
+  miembroId: string,
+  db: PrismaClient = prisma,
+): Promise<void> {
+  await db.$transaction(async (tx) => {
+    const quien = await quienEs(tx, hogarId, quienId);
+    const objetivo = await miembroDelHogar(tx, hogarId, miembroId);
+    exigir(puedeQuitar(quien, objetivo));
+    await tx.miembro.delete({ where: { id: objetivo.id } });
+  });
+}
+
+/** El dueno le pasa el hogar a otro miembro, que ya haya entrado, y queda como miembro. */
+export async function hacerDueno(
+  hogarId: string,
+  quienId: string,
+  miembroId: string,
+  db: PrismaClient = prisma,
+): Promise<void> {
+  await db.$transaction(async (tx) => {
+    const quien = await quienEs(tx, hogarId, quienId);
+    const objetivo = await miembroDelHogar(tx, hogarId, miembroId);
+    exigir(puedeHacerDueno(quien, objetivo));
+    await tx.miembro.update({ where: { id: objetivo.id }, data: { rol: "DUENO" } });
+    await tx.miembro.update({ where: { id: quien.miembroId }, data: { rol: "MIEMBRO" } });
+  });
+}
+
+/** Un miembro se va del hogar. Sus gastos se quedan, sin autor. */
+export async function salirDelHogar(hogarId: string, quienId: string, db: PrismaClient = prisma): Promise<void> {
+  await db.$transaction(async (tx) => {
+    const quien = await quienEs(tx, hogarId, quienId);
+    exigir(puedeSalir(quien));
+    await tx.miembro.delete({ where: { id: quien.miembroId } });
+  });
 }

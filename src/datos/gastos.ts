@@ -47,6 +47,8 @@ const CATEGORIA_INCLUIDA = {
     select: { deudaId: true, deuda: { select: { nombre: true } } },
   },
   cuenta: { select: { id: true, nombre: true } },
+  // Quien lo anoto: en un hogar de varias personas, cada gasto lo dice.
+  anotadoPor: { select: { nombre: true, correo: true } },
 } as const;
 
 /** Lo que Prisma devuelve con esa inclusion. */
@@ -60,6 +62,7 @@ type FilaGasto = {
   boletaArchivo: string | null;
   cuota: { deudaId: string; deuda: { nombre: string } | null } | null;
   cuenta: { id: string; nombre: string } | null;
+  anotadoPor: { nombre: string | null; correo: string } | null;
   categoria: {
     id: string;
     nombre: string;

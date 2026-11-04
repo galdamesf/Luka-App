@@ -20,6 +20,8 @@ import { esquemaMes } from "@/dominio/esquemas";
 import { hoyISO } from "@/lib/fecha";
 import { enPeriodo, periodoDe, periodoDeFecha, periodoVecino } from "@/lib/periodo";
 import { leerAjustes } from "@/datos/ajustes";
+import { miembrosQueEntraron } from "@/datos/hogares";
+import { sinAutor } from "@/dominio/resumen";
 import { hogarActual } from "@/lib/hogar-actual";
 import { accionCrearGasto, accionEliminarGasto } from "./acciones/gastos";
 import { accionCrearAhorro, accionEliminarAhorro } from "./acciones/ahorros";
@@ -85,7 +87,7 @@ export default async function Home({ searchParams }: Props) {
   // Cada visita revisa contra la base que la persona siga en el hogar con
   // que entro (si no, la sesion se cierra aqui mismo), y de ese hogar, y de
   // ningun otro, se lee todo lo que sigue.
-  const { hogarId } = await hogarActual();
+  const { hogarId, rol } = await hogarActual();
   const parametros = await searchParams;
 
   // El mes de gastos empieza el dia que eligio la persona (el de su pago).
@@ -128,6 +130,10 @@ export default async function Home({ searchParams }: Props) {
     // Hasta este mes: de ahi salen los del mes, el total y el historial.
     listarAhorrosHasta(hogarId, mes),
   ]);
+
+  // Quien anoto cada gasto se muestra solo si en el hogar hay mas de una
+  // persona: con una sola, cada fila diria lo mismo.
+  const gastosConAutor = (await miembrosQueEntraron(hogarId)) > 1 ? gastos : sinAutor(gastos);
 
   const resumen = resumirMes(gastos, periodo);
   const detalles = detallesPorCategoria(gastos, gastosAnterior);
@@ -286,7 +292,12 @@ export default async function Home({ searchParams }: Props) {
             mes={mes}
             rango={diaInicioMes === 1 ? undefined : rangoCorto(periodo.desde, periodo.hasta)}
           />
-          <AjusteDiaInicio diaInicio={diaInicioMes} hoy={hoy} accion={accionDefinirDiaInicio} />
+          <AjusteDiaInicio
+            diaInicio={diaInicioMes}
+            hoy={hoy}
+            accion={accionDefinirDiaInicio}
+            puedeCambiar={rol === "DUENO"}
+          />
           {/* Abre el popup para registrar un gasto sin bajar hasta la seccion 02. */}
           <RegistrarGastoEmergente
             categorias={categorias}
@@ -451,7 +462,7 @@ export default async function Home({ searchParams }: Props) {
             por su lado. Por eso no se restan dos veces. */}
         <SeccionPanel seccion="movimientos">
           <MovimientosDelMes
-            gastos={gastos}
+            gastos={gastosConAutor}
             categorias={categorias}
             alEliminar={accionEliminarGasto}
             accionBoleta={accionAdjuntarBoletaAGasto}

@@ -157,6 +157,7 @@ export function TablaGastos({
                   <p className="truncate text-sm font-medium">{gasto.descripcion}</p>
                   <p className="cifra mt-0.5 text-xs text-texto-tenue">
                     {fechaCorta(gasto.fecha)} · {ETIQUETA_MEDIO_PAGO[gasto.medioPago]}
+                    {gasto.anotadoPor ? ` · anotó ${gasto.anotadoPor}` : null}
                   </p>
                   {gasto.cuota !== null && (
                     <div className="mt-1">
@@ -214,6 +215,7 @@ export function TablaGastos({
                     <span className="block">{gasto.descripcion}</span>
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-texto-tenue">
                       {ETIQUETA_MEDIO_PAGO[gasto.medioPago]}
+                      {gasto.anotadoPor ? <span>· anotó {gasto.anotadoPor}</span> : null}
                       <MarcaCuota gasto={gasto} />
                     </span>
                   </td>

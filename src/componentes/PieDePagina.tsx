@@ -5,6 +5,7 @@ import { Onda } from "./portada/Onda";
 const ENLACES = [
   { href: "/", etiqueta: "Inicio" },
   { href: "/informes", etiqueta: "Informes" },
+  { href: "/hogar", etiqueta: "Hogar" },
   { href: "/como-usar", etiqueta: "¿Cómo usar?" },
 ] as const;
 

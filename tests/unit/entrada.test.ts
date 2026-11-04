@@ -39,41 +39,48 @@ describe("limpiarNombre", () => {
 describe("decidirEntrada", () => {
   const cerrada: ReglasDeEntrada = { listaDeAntes: ["fernando@gmail.com", "ana@gmail.com"], puertaAbierta: false };
   const abierta: ReglasDeEntrada = { ...cerrada, puertaAbierta: true };
-  const decidir = (correo: string | null, yaEsMiembro: boolean, reglas = cerrada) =>
-    decidirEntrada({ correo, yaEsMiembro, ...reglas });
+  const decidir = (
+    correo: string | null,
+    { yaEsMiembro = false, hogarInicialConDueno = false, reglas = cerrada } = {},
+  ) => decidirEntrada({ correo, yaEsMiembro, hogarInicialConDueno, ...reglas });
 
   test("quien ya es miembro (o tiene invitacion) entra a su hogar", () => {
-    expect(decidir("pedro@gmail.com", true)).toEqual({ tipo: "miembro" });
+    expect(decidir("pedro@gmail.com", { yaEsMiembro: true })).toEqual({ tipo: "miembro" });
   });
 
-  test("ser miembro manda sobre la lista de antes: no se cambia de hogar", () => {
-    expect(decidir("ana@gmail.com", true)).toEqual({ tipo: "miembro" });
+  test("ser miembro manda sobre todo: nadie se cambia de hogar al entrar", () => {
+    expect(decidir("fernando@gmail.com", { yaEsMiembro: true })).toEqual({ tipo: "miembro" });
   });
 
-  test("el primero de la lista de antes es el dueno del hogar inicial", () => {
-    expect(decidir("fernando@gmail.com", false)).toEqual({ tipo: "hogar-inicial", rol: "DUENO" });
+  test("el primero de la lista se vuelve dueno de «Mi hogar» mientras no tenga dueno", () => {
+    expect(decidir("fernando@gmail.com")).toEqual({ tipo: "dueno-del-hogar-inicial" });
   });
 
-  test("los demas de la lista entran al hogar inicial como miembros", () => {
-    expect(decidir("ana@gmail.com", false)).toEqual({ tipo: "hogar-inicial", rol: "MIEMBRO" });
+  test("con «Mi hogar» ya con dueno, la lista no abre nada: a quien sacaron no vuelve solo", () => {
+    expect(decidir("fernando@gmail.com", { hogarInicialConDueno: true })).toEqual({ tipo: "rechazada" });
+  });
+
+  test("los demas de la lista necesitan invitacion, como cualquiera", () => {
+    expect(decidir("ana@gmail.com")).toEqual({ tipo: "rechazada" });
   });
 
   test("con la puerta cerrada, alguien nuevo no entra", () => {
-    expect(decidir("desconocido@gmail.com", false)).toEqual({ tipo: "rechazada" });
+    expect(decidir("desconocido@gmail.com")).toEqual({ tipo: "rechazada" });
   });
 
   test("con la puerta abierta, alguien nuevo tiene su propio hogar", () => {
-    expect(decidir("desconocido@gmail.com", false, abierta)).toEqual({ tipo: "hogar-nuevo" });
+    expect(decidir("desconocido@gmail.com", { reglas: abierta })).toEqual({ tipo: "hogar-nuevo" });
+    expect(decidir("ana@gmail.com", { reglas: abierta, hogarInicialConDueno: true })).toEqual({ tipo: "hogar-nuevo" });
   });
 
   test("con la lista vacia y la puerta cerrada solo entran los miembros", () => {
     const vacia = { listaDeAntes: [], puertaAbierta: false };
-    expect(decidir("fernando@gmail.com", false, vacia)).toEqual({ tipo: "rechazada" });
-    expect(decidir("fernando@gmail.com", true, vacia)).toEqual({ tipo: "miembro" });
+    expect(decidir("fernando@gmail.com", { reglas: vacia })).toEqual({ tipo: "rechazada" });
+    expect(decidir("fernando@gmail.com", { reglas: vacia, yaEsMiembro: true })).toEqual({ tipo: "miembro" });
   });
 
   test("sin correo no entra nadie, ni con la puerta abierta", () => {
-    expect(decidir(null, false, abierta)).toEqual({ tipo: "rechazada" });
+    expect(decidir(null, { reglas: abierta })).toEqual({ tipo: "rechazada" });
   });
 });
 

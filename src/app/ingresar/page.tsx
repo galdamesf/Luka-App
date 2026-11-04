@@ -21,6 +21,7 @@ export const metadata: Metadata = {
 function mensajeDeError(error: string): string {
   if (error === "AccessDenied") return "Ese correo no está autorizado para entrar a esta app.";
   if (error === "SinHogar") return "Tu sesión se cerró porque ya no eres parte de ese hogar. Entra de nuevo para seguir.";
+  if (error === "Salida") return "Saliste del hogar. Para volver, alguien del hogar tiene que invitarte de nuevo.";
   return "No se pudo completar el ingreso. Inténtalo de nuevo.";
 }
 

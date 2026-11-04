@@ -5,9 +5,12 @@
  *
  *  1. Si su correo ya es miembro de un hogar (o tiene una invitacion
  *     pendiente), entra a ese hogar.
- *  2. Si su correo esta en la lista de antes de los hogares
- *     (CORREOS_AUTORIZADOS), entra al hogar inicial, el de los datos que ya
- *     existian. El primer correo de la lista es su dueno; los demas, miembros.
+ *  2. Si «Mi hogar» (el hogar inicial, el de los datos de antes de los
+ *     hogares) todavia no tiene dueno y su correo es el primero de
+ *     CORREOS_AUTORIZADOS, entra como su dueno. Pasa una sola vez: despues, a
+ *     «Mi hogar» se entra solo con invitacion, igual que a cualquier hogar.
+ *     Asi, a quien sacaron del hogar no vuelve a entrar solo por estar en el
+ *     .env.
  *  3. Si la puerta esta abierta, se le crea un hogar nuevo, vacio, con las
  *     categorias de partida, y queda como su dueno.
  *  4. Si no, no entra.
@@ -17,7 +20,7 @@
 export type Rol = "DUENO" | "MIEMBRO";
 
 export type ReglasDeEntrada = {
-  /** Los correos de antes de los hogares, ya normalizados, en su orden. */
+  /** Los correos de CORREOS_AUTORIZADOS, normalizados, en su orden. Solo cuenta el primero. */
   listaDeAntes: readonly string[];
   /** Si cualquiera con Google puede entrar y tener su propio hogar. */
   puertaAbierta: boolean;
@@ -25,7 +28,7 @@ export type ReglasDeEntrada = {
 
 export type DecisionDeEntrada =
   | { tipo: "miembro" }
-  | { tipo: "hogar-inicial"; rol: Rol }
+  | { tipo: "dueno-del-hogar-inicial" }
   | { tipo: "hogar-nuevo" }
   | { tipo: "rechazada" };
 
@@ -51,6 +54,7 @@ export function limpiarNombre(nombre: string | null | undefined): string | null 
 export function decidirEntrada({
   correo,
   yaEsMiembro,
+  hogarInicialConDueno,
   listaDeAntes,
   puertaAbierta,
 }: ReglasDeEntrada & {
@@ -58,15 +62,12 @@ export function decidirEntrada({
   correo: string | null;
   /** Si el correo ya esta en la tabla de miembros, haya entrado o no. */
   yaEsMiembro: boolean;
+  /** Si «Mi hogar» ya tiene dueno: entonces la lista ya no abre nada. */
+  hogarInicialConDueno: boolean;
 }): DecisionDeEntrada {
   if (correo === null) return { tipo: "rechazada" };
   if (yaEsMiembro) return { tipo: "miembro" };
-
-  const posicion = listaDeAntes.indexOf(correo);
-  if (posicion !== -1) {
-    return { tipo: "hogar-inicial", rol: posicion === 0 ? "DUENO" : "MIEMBRO" };
-  }
-
+  if (!hogarInicialConDueno && listaDeAntes[0] === correo) return { tipo: "dueno-del-hogar-inicial" };
   return puertaAbierta ? { tipo: "hogar-nuevo" } : { tipo: "rechazada" };
 }
 

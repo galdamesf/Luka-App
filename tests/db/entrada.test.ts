@@ -43,11 +43,17 @@ describe("registrarEntrada con la puerta cerrada", () => {
     expect(miembro.id).toBe(hogar?.miembroId);
   });
 
-  test("los demas de la lista entran al mismo hogar, como miembros", async () => {
+  test("los demas de la lista no entran solos: se les invita", async () => {
     await entrar("fernando@gmail.com");
-    const ana = await entrar("ana@gmail.com", "Ana");
-    expect(ana).toMatchObject({ hogarId: HOGAR_INICIAL, rol: "MIEMBRO" });
-    expect(await prisma.miembro.count({ where: { hogarId: HOGAR_INICIAL } })).toBe(2);
+    expect(await entrar("ana@gmail.com", "Ana")).toBeNull();
+    expect(await prisma.miembro.count({ where: { hogarId: HOGAR_INICIAL } })).toBe(1);
+  });
+
+  test("con «Mi hogar» ya con dueno, el primero de la lista no vuelve si lo sacaron", async () => {
+    await prisma.miembro.create({
+      data: { hogarId: HOGAR_INICIAL, correo: "otro@gmail.com", rol: "DUENO", entroEn: new Date() },
+    });
+    expect(await entrar("fernando@gmail.com")).toBeNull();
   });
 
   test("entrar de nuevo no crea otro miembro y devuelve el mismo hogar", async () => {
@@ -127,7 +133,7 @@ describe("registrarEntrada con la puerta abierta", () => {
     expect(await prisma.categoria.count({ where: { hogarId: sofia!.hogarId } })).toBe(n);
   });
 
-  test("quien esta en la lista de antes sigue yendo al hogar inicial, no a uno nuevo", async () => {
+  test("el primero de la lista sigue reclamando «Mi hogar», no uno nuevo", async () => {
     const hogar = await entrar("fernando@gmail.com", null, ABIERTA);
     expect(hogar?.hogarId).toBe(HOGAR_INICIAL);
     expect(await prisma.hogar.count()).toBe(1);

@@ -11,6 +11,8 @@ import { esquemaMes } from "@/dominio/esquemas";
 import { hoyISO } from "@/lib/fecha";
 import { periodoDe, periodoDeFecha, periodoVecino } from "@/lib/periodo";
 import { leerAjustes } from "@/datos/ajustes";
+import { miembrosQueEntraron } from "@/datos/hogares";
+import { sinAutor } from "@/dominio/resumen";
 import { hogarActual } from "@/lib/hogar-actual";
 import { SelectorMes } from "@/componentes/SelectorMes";
 import { BotonImprimir } from "@/componentes/BotonImprimir";
@@ -62,6 +64,8 @@ export default async function Informes({ searchParams }: Props) {
   ]);
 
   const informe = armarInforme(gastos, gastosAnterior, periodo);
+  // Quien anoto cada gasto, solo si en el hogar hay mas de una persona.
+  const gastosConAutor = (await miembrosQueEntraron(hogarId)) > 1 ? gastos : sinAutor(gastos);
   const balance = calcularBalance({ mes, sueldo, resumen: informe.resumen, deudas, pagos });
   const resumenCuentas = resumirCuentas(cuentas, periodo, hoy);
   const estadisticas = analizarHistorico(serie);
@@ -195,7 +199,7 @@ export default async function Informes({ searchParams }: Props) {
           </section>
         )}
 
-        <TablaGastos gastos={gastos} />
+        <TablaGastos gastos={gastosConAutor} />
       </main>
     </div>
   );
