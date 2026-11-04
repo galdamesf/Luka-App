@@ -47,3 +47,18 @@ export function urlDePrueba(base?: string): string {
   url.pathname = `/${nombre}_test`;
   return url.toString();
 }
+
+/**
+ * La segunda base de PRUEBAS, que hace de «la nube» en los tests de
+ * npm run nube:subir: la de pruebas con `_nube_test` en vez de `_test`.
+ * Tambien termina en `_test`, asi que tampoco puede ser una base de verdad.
+ */
+export function urlDePruebaNube(base?: string): string {
+  const url = new URL(urlDePrueba(base));
+  // Una TEST_DATABASE_URL a mano puede no terminar en _test: igual se le
+  // agrega, para que nunca sea la misma base que la de pruebas.
+  url.pathname = url.pathname.endsWith("_test")
+    ? url.pathname.replace(/_test$/, "_nube_test")
+    : `${url.pathname}_nube_test`;
+  return url.toString();
+}

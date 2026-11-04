@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { urlDePrueba } from "@/lib/url-db";
+import { urlDePrueba, urlDePruebaNube } from "@/lib/url-db";
 
 const BASE = "postgresql://gastos:gastos_local@localhost:5433/control_gastos?schema=public";
 
@@ -76,5 +76,27 @@ describe("urlDePrueba leyendo del entorno", () => {
   test("una TEST_DATABASE_URL vacia no cuenta como definida", () => {
     process.env.TEST_DATABASE_URL = "   ";
     expect(urlDePrueba()).toContain("control_gastos_test");
+  });
+});
+
+describe("urlDePruebaNube, la segunda base de pruebas", () => {
+  test("cambia _test por _nube_test y conserva lo demas", () => {
+    const url = new URL(urlDePruebaNube(BASE));
+    expect(url.pathname).toBe("/control_gastos_nube_test");
+    expect(url.port).toBe("5433");
+    expect(url.searchParams.get("schema")).toBe("public");
+  });
+
+  test("con una TEST_DATABASE_URL a mano, sin _test, igual es otra base", () => {
+    process.env.TEST_DATABASE_URL = "postgresql://gastos@localhost:5433/pruebas";
+    expect(new URL(urlDePrueba()).pathname).toBe("/pruebas");
+    expect(new URL(urlDePruebaNube()).pathname).toBe("/pruebas_nube_test");
+  });
+
+  test("no es ni la base de trabajo ni la primera de pruebas", () => {
+    const nube = new URL(urlDePruebaNube(BASE)).pathname;
+    expect(nube).not.toBe("/control_gastos");
+    expect(nube).not.toBe(new URL(urlDePrueba(BASE)).pathname);
+    expect(nube.endsWith("_test")).toBe(true);
   });
 });

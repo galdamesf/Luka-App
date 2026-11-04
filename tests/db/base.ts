@@ -1,13 +1,18 @@
 import { PrismaClient } from "@prisma/client";
-import { urlDePrueba } from "@/lib/url-db";
+import { urlDePrueba, urlDePruebaNube } from "@/lib/url-db";
 
-export { urlDePrueba };
+export { urlDePrueba, urlDePruebaNube };
 
 /** El hogar donde quedaron los datos de antes de los hogares (ver schema.prisma). */
 export const HOGAR_INICIAL = "hogar-inicial";
 
 export function clienteDePrueba(): PrismaClient {
   return new PrismaClient({ datasourceUrl: urlDePrueba() });
+}
+
+/** La segunda base de pruebas, que hace de «la nube» (ver global-setup.ts). */
+export function clienteDeLaNube(): PrismaClient {
+  return new PrismaClient({ datasourceUrl: urlDePruebaNube() });
 }
 
 /**

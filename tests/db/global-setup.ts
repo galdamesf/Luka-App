@@ -1,19 +1,23 @@
 import { execFileSync } from "node:child_process";
 import { Client } from "pg";
-import { urlDePrueba } from "@/lib/url-db";
+import { urlDePrueba, urlDePruebaNube } from "@/lib/url-db";
 
 /**
- * Antes de los tests de base de datos: crear la base _test si no existe y
- * aplicarle las migraciones. Correrlo de nuevo no rompe nada.
+ * Antes de los tests de base de datos: crear las bases de pruebas si no
+ * existen y aplicarles las migraciones. Correrlo de nuevo no rompe nada.
+ *
+ * Son dos: la _test de siempre y la _nube_test, que hace de «la nube» en los
+ * tests de npm run nube:subir.
  */
 export default async function setup() {
-  const url = urlDePrueba();
-  await crearBaseSiFalta(url);
+  for (const url of [urlDePrueba(), urlDePruebaNube()]) {
+    await crearBaseSiFalta(url);
 
-  execFileSync("npx", ["prisma", "migrate", "deploy"], {
-    stdio: "inherit",
-    env: { ...process.env, DATABASE_URL: url },
-  });
+    execFileSync("npx", ["prisma", "migrate", "deploy"], {
+      stdio: "inherit",
+      env: { ...process.env, DATABASE_URL: url },
+    });
+  }
 }
 
 async function crearBaseSiFalta(url: string): Promise<void> {
