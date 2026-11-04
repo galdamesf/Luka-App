@@ -37,8 +37,9 @@ type Props = { searchParams: Promise<{ mes?: string }> };
 
 export default async function Informes({ searchParams }: Props) {
   // Cada visita revisa contra la base que la persona siga en el hogar con
-  // que entro. Si no, la sesion se cierra aqui mismo.
-  await hogarActual();
+  // que entro (si no, la sesion se cierra aqui mismo), y de ese hogar, y de
+  // ningun otro, se lee todo lo que sigue.
+  const { hogarId } = await hogarActual();
   const parametros = await searchParams;
   const { diaInicioMes } = await leerAjustes();
   const hoy = hoyISO();
@@ -48,8 +49,8 @@ export default async function Informes({ searchParams }: Props) {
   const periodoAnterior = periodoVecino(periodo, -1);
 
   const [gastos, gastosAnterior, sueldo, deudas, pagos, cuentas, serie] = await Promise.all([
-    listarGastosDelMes(periodo),
-    listarGastosDelMes(periodoAnterior),
+    listarGastosDelMes(hogarId, periodo),
+    listarGastosDelMes(hogarId, periodoAnterior),
     sueldoDelMes(mes),
     listarDeudas(),
     // Sin los pagos, el balance no descuenta las cuotas ya pagadas.

@@ -69,3 +69,29 @@ describe("cada ruta con datos revisa el hogar contra la base", () => {
     expect(codigo).toMatch(/status:\s*401/);
   });
 });
+
+describe("cada accion guarda en el hogar de la sesion", () => {
+  // Las acciones que ya reciben el hogar. Las demas se suman a medida que
+  // sus funciones de datos lo reciban.
+  const ACCIONES = ["app/acciones/gastos.ts", "app/acciones/presupuestos.ts"];
+
+  const funciones = ACCIONES.flatMap((ruta) =>
+    leer(ruta)
+      .split(/(?=export async function )/)
+      .filter((trozo) => trozo.startsWith("export async function "))
+      .map((trozo) => [`${ruta} › ${/export async function (\w+)/.exec(trozo)![1]}`, trozo] as const),
+  );
+
+  test("hay acciones que revisar", () => {
+    expect(funciones.length).toBeGreaterThanOrEqual(5);
+  });
+
+  test.each(funciones)("%s pide el hogar con hogarActual(), antes de cualquier try", (_nombre, codigo) => {
+    const pide = codigo.indexOf("await hogarActual()");
+    expect(pide).toBeGreaterThan(-1);
+    // Dentro de un try, la redireccion que corta la sesion se volveria un
+    // mensaje de error y la accion seguiria.
+    const intento = codigo.indexOf("try {");
+    if (intento !== -1) expect(pide).toBeLessThan(intento);
+  });
+});

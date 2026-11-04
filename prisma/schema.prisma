@@ -108,6 +108,8 @@ model Categoria {
   cuentas      Cuenta[]
 
   @@unique([hogarId, nombre])
+  /// Para que gastos y presupuestos apunten a la categoria Y a su hogar.
+  @@unique([id, hogarId])
   @@index([activa, orden])
   @@map("categorias")
 }
@@ -133,7 +135,9 @@ model Gasto {
 
   hogar      Hogar        @relation(fields: [hogarId], references: [id], onDelete: Restrict)
   anotadoPor Miembro?     @relation(fields: [anotadoPorId], references: [id], onDelete: SetNull)
-  categoria  Categoria    @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  /// La categoria tiene que ser del mismo hogar que el gasto: la llave va por
+  /// los dos campos, asi la base rechaza un gasto con la categoria de otro.
+  categoria  Categoria    @relation(fields: [categoriaId, hogarId], references: [id, hogarId], onDelete: Restrict)
   /// La cuenta que se pago y genero este gasto, si vino de ahi.
   cuenta     Cuenta?
   /// La cuota de deuda que se pago y genero este gasto, si vino de ahi.
@@ -282,7 +286,8 @@ model Presupuesto {
   actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
   hogar     Hogar     @relation(fields: [hogarId], references: [id], onDelete: Restrict)
-  categoria Categoria @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  /// La categoria tiene que ser del mismo hogar que el presupuesto.
+  categoria Categoria @relation(fields: [categoriaId, hogarId], references: [id, hogarId], onDelete: Cascade)
 
   @@unique([categoriaId, mes])
   @@index([mes])

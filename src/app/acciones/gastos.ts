@@ -10,10 +10,11 @@ import {
 import type { EstadoFormulario } from "@/dominio/formulario";
 import { crearGasto, eliminarGasto } from "@/datos/gastos";
 import { guardarBoleta } from "@/lib/boletas";
+import { hogarActual } from "@/lib/hogar-actual";
 
 /** Codigos de Prisma que sabemos traducir a algo legible. */
 const MENSAJES_PRISMA: Record<string, string> = {
-  // Llave foranea rota: la categoria no existe.
+  // Llave foranea rota: la categoria no existe (o no es de este hogar).
   P2003: "La categoría elegida ya no existe. Recarga la página.",
 };
 
@@ -35,6 +36,9 @@ export async function accionCrearGasto(
   _estadoPrevio: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  // Fuera del try: si ya no es parte del hogar, hogarActual corta la sesion
+  // con una redireccion, y un catch la convertiria en un mensaje de error.
+  const { hogarId, miembroId } = await hogarActual();
   const resultado = esquemaGastoFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -57,7 +61,7 @@ export async function accionCrearGasto(
   }
 
   try {
-    await crearGasto({ ...resultado.data, boletaArchivo });
+    await crearGasto(hogarId, { ...resultado.data, boletaArchivo, anotadoPorId: miembroId });
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
@@ -84,11 +88,13 @@ function esNoEncontrado(error: unknown): boolean {
  * cumplio, asi que no se trata como error. Cualquier otra falla si se propaga.
  */
 export async function accionEliminarGasto(datos: FormData): Promise<void> {
+  const { hogarId } = await hogarActual();
   const id = esquemaId.safeParse(datos.get("id"));
   if (!id.success) return;
 
   try {
-    await eliminarGasto(id.data);
+    // Un gasto de otro hogar no se encuentra: cuenta como "ya no existe".
+    await eliminarGasto(hogarId, id.data);
   } catch (error) {
     if (!esNoEncontrado(error)) throw error;
   }

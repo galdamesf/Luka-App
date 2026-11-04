@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
-import { clienteDePrueba, limpiar } from "./base";
+import { HOGAR_INICIAL, clienteDePrueba, limpiar } from "./base";
 import {
   definirSueldo,
   eliminarSueldo,
@@ -193,10 +193,12 @@ describe("de la base al balance, de punta a punta", () => {
     await definirSueldo("2026-10", 1250000, null, prisma);
 
     await crearGasto(
+      HOGAR_INICIAL,
       { fecha: "2026-10-01", descripcion: "Arriendo", monto: 450000, categoriaId: esencial.id, medioPago: "TRANSFERENCIA", notas: null },
       prisma,
     );
     await crearGasto(
+      HOGAR_INICIAL,
       { fecha: "2026-10-12", descripcion: "Almuerzo", monto: 28900, categoriaId: discrecional.id, medioPago: "CREDITO", notas: null },
       prisma,
     );
@@ -214,7 +216,7 @@ describe("de la base al balance, de punta a punta", () => {
     await pagarCuota(credito.id, "2026-10", "2026-10-05", 118000, null, prisma);
 
     const [gastos, sueldo, deudas, pagos] = await Promise.all([
-      listarGastosDelMes("2026-10", prisma),
+      listarGastosDelMes(HOGAR_INICIAL, "2026-10", prisma),
       sueldoDelMes("2026-10", prisma),
       listarDeudas(prisma),
       listarPagosDelMes("2026-10", prisma),

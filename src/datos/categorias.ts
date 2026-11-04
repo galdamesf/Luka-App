@@ -4,12 +4,13 @@ import type { CategoriaPlana } from "@/dominio/resumen";
 import type { ClienteDb } from "./gastos";
 import { categoriasDePartida } from "./hogares";
 
-/** Categorias activas, en el orden definido por el seed. */
+/** Categorias activas del hogar, en el orden definido por el seed. */
 export async function listarCategoriasActivas(
+  hogarId: string,
   db: ClienteDb = prisma,
 ): Promise<CategoriaPlana[]> {
   return (await db.categoria.findMany({
-    where: { activa: true },
+    where: { hogarId, activa: true },
     select: { id: true, nombre: true, color: true, icono: true, esencial: true },
     orderBy: [{ orden: "asc" }, { nombre: "asc" }],
   })) as CategoriaPlana[];
@@ -22,17 +23,19 @@ export async function listarCategoriasActivas(
  * tuviera, perder la categoria dejaria el historial sin contexto.
  */
 export async function desactivarCategoria(
+  hogarId: string,
   id: string,
   db: ClienteDb = prisma,
 ): Promise<void> {
-  await db.categoria.update({ where: { id }, data: { activa: false } });
+  await db.categoria.update({ where: { id, hogarId }, data: { activa: false } });
 }
 
 export async function reactivarCategoria(
+  hogarId: string,
   id: string,
   db: ClienteDb = prisma,
 ): Promise<void> {
-  await db.categoria.update({ where: { id }, data: { activa: true } });
+  await db.categoria.update({ where: { id, hogarId }, data: { activa: true } });
 }
 
 /**

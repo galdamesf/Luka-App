@@ -33,7 +33,7 @@ export async function GET(peticion: Request) {
   // de octubre al 26 de noviembre.
   const { diaInicioMes } = await leerAjustes();
   const periodo = periodoDe(mes.data, diaInicioMes);
-  const gastos = await listarGastosDelMes(periodo);
+  const gastos = await listarGastosDelMes(hogar.hogarId, periodo);
   const reporte = armarReporteSemanal(gastos, periodo, semana, hoyISO());
   if (reporte === null) return new Response("Esa semana no existe en el mes.", { status: 404 });
 

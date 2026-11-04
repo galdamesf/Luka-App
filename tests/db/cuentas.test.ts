@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
-import { clienteDePrueba, limpiar } from "./base";
+import { HOGAR_INICIAL, clienteDePrueba, limpiar } from "./base";
 import {
   actualizarCuenta,
   adjuntarBoletaACuenta,
@@ -100,7 +100,7 @@ describe("pagar", () => {
     expect(pagada.pagadaEn).toBe("2026-10-09");
     expect(pagada.gastoId).not.toBeNull();
 
-    const gasto = await obtenerGasto(pagada.gastoId as string, prisma);
+    const gasto = await obtenerGasto(HOGAR_INICIAL, pagada.gastoId as string, prisma);
     expect(gasto?.fecha).toBe("2026-10-09");
     expect(gasto?.descripcion).toBe("Luz");
     expect(gasto?.monto).toBe(38400);
@@ -112,8 +112,8 @@ describe("pagar", () => {
     const cuenta = await crearCuenta(datos({ mes: "2026-09" }), prisma);
     await pagarCuenta(cuenta.id, "2026-10-02", 38400, null, prisma);
 
-    expect((await listarGastosDelMes("2026-10", prisma))).toHaveLength(1);
-    expect((await listarGastosDelMes("2026-09", prisma))).toHaveLength(0);
+    expect((await listarGastosDelMes(HOGAR_INICIAL, "2026-10", prisma))).toHaveLength(1);
+    expect((await listarGastosDelMes(HOGAR_INICIAL, "2026-09", prisma))).toHaveLength(0);
   });
 
   test("acepta un monto distinto al esperado y lo deja en los dos lados", async () => {
@@ -122,7 +122,7 @@ describe("pagar", () => {
     const pagada = await pagarCuenta(cuenta.id, "2026-10-09", 41250, null, prisma);
 
     expect(pagada.monto).toBe(41250);
-    const gasto = await obtenerGasto(pagada.gastoId as string, prisma);
+    const gasto = await obtenerGasto(HOGAR_INICIAL, pagada.gastoId as string, prisma);
     expect(gasto?.monto).toBe(41250);
   });
 
@@ -132,7 +132,7 @@ describe("pagar", () => {
     const pagada = await pagarCuenta(cuenta.id, "2026-10-09", 38400, archivo, prisma);
 
     expect(pagada.boletaArchivo).toBe(archivo);
-    const gasto = await obtenerGasto(pagada.gastoId as string, prisma);
+    const gasto = await obtenerGasto(HOGAR_INICIAL, pagada.gastoId as string, prisma);
     expect(gasto?.boletaArchivo).toBe(archivo);
   });
 
@@ -152,7 +152,7 @@ describe("pagar", () => {
     const [despues] = await listarCuentasDelMes("2026-10", prisma);
     expect(despues?.pagadaEn).toBeNull();
     expect(despues?.gastoId).toBeNull();
-    expect(await listarGastosDelMes("2026-10", prisma)).toHaveLength(0);
+    expect(await listarGastosDelMes(HOGAR_INICIAL, "2026-10", prisma)).toHaveLength(0);
   });
 });
 
@@ -167,7 +167,7 @@ describe("deshacer el pago", () => {
     const [despues] = await listarCuentasDelMes("2026-10", prisma);
     expect(despues?.pagadaEn).toBeNull();
     expect(despues?.gastoId).toBeNull();
-    expect(await obtenerGasto(gastoId, prisma)).toBeNull();
+    expect(await obtenerGasto(HOGAR_INICIAL, gastoId, prisma)).toBeNull();
   });
 
   test("se puede volver a pagar despues de deshacer", async () => {
@@ -274,7 +274,7 @@ describe("eliminar", () => {
 
     await eliminarCuenta(cuenta.id, prisma);
 
-    expect(await obtenerGasto(pagada.gastoId as string, prisma)).not.toBeNull();
+    expect(await obtenerGasto(HOGAR_INICIAL, pagada.gastoId as string, prisma)).not.toBeNull();
   });
 });
 
@@ -398,7 +398,7 @@ describe("la boleta de una cuenta", () => {
     const pagada = await pagarCuenta(cuenta.id, "2026-10-30", 31900, null, prisma);
 
     expect(pagada.boletaArchivo).toBe("gimnasio.jpg");
-    const gasto = await obtenerGasto(pagada.gastoId as string, prisma);
+    const gasto = await obtenerGasto(HOGAR_INICIAL, pagada.gastoId as string, prisma);
     expect(gasto?.boletaArchivo).toBe("gimnasio.jpg");
   });
 
@@ -410,7 +410,7 @@ describe("la boleta de una cuenta", () => {
 
     const [enLaLista] = await listarCuentasDelMes("2026-10", prisma);
     expect(enLaLista?.boletaArchivo).toBe("despues.jpg");
-    const gasto = await obtenerGasto(pagada.gastoId as string, prisma);
+    const gasto = await obtenerGasto(HOGAR_INICIAL, pagada.gastoId as string, prisma);
     expect(gasto?.boletaArchivo).toBe("despues.jpg");
   });
 });
@@ -420,12 +420,12 @@ describe("borrar desde Movimientos el gasto de una cuenta pagada", () => {
     const cuenta = await crearCuenta(datos({ nombre: "Gimnasio" }), prisma);
     const pagada = await pagarCuenta(cuenta.id, "2026-10-30", 31900, null, prisma);
 
-    await eliminarGasto(pagada.gastoId as string, prisma);
+    await eliminarGasto(HOGAR_INICIAL, pagada.gastoId as string, prisma);
 
     const [despues] = await listarCuentasDelMes("2026-10", prisma);
     expect(despues?.pagadaEn).toBeNull();
     expect(despues?.gastoId).toBeNull();
-    expect(await listarGastosDelMes("2026-10", prisma)).toEqual([]);
+    expect(await listarGastosDelMes(HOGAR_INICIAL, "2026-10", prisma)).toEqual([]);
 
     await pagarCuenta(cuenta.id, "2026-10-31", 31900, null, prisma);
     const [otraVez] = await listarCuentasDelMes("2026-10", prisma);
@@ -436,7 +436,7 @@ describe("borrar desde Movimientos el gasto de una cuenta pagada", () => {
     const cuenta = await crearCuenta(datos({ nombre: "Gimnasio" }), prisma);
     await pagarCuenta(cuenta.id, "2026-10-30", 31900, null, prisma);
 
-    const [gasto] = await listarGastosDelMes("2026-10", prisma);
+    const [gasto] = await listarGastosDelMes(HOGAR_INICIAL, "2026-10", prisma);
     expect(gasto?.cuenta).toEqual({ cuentaId: cuenta.id, nombre: "Gimnasio" });
   });
 });

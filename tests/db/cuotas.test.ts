@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
-import { clienteDePrueba, limpiar } from "./base";
+import { HOGAR_INICIAL, clienteDePrueba, limpiar } from "./base";
 import { crearDeuda, listarPagosDelMes, pagarCuota } from "@/datos/deudas";
 import { eliminarGasto, listarGastosDelMes } from "@/datos/gastos";
 
@@ -70,7 +70,7 @@ describe("el pago de una cuota en Movimientos", () => {
     const deuda = await deudaRipley();
     await pagarCuota(deuda.id, "2026-11", "2026-10-30", 45000, null, prisma);
 
-    const gastos = await listarGastosDelMes("2026-10", prisma);
+    const gastos = await listarGastosDelMes(HOGAR_INICIAL, "2026-10", prisma);
     expect(gastos).toHaveLength(1);
     expect(gastos[0]?.cuota).toEqual({ deudaId: deuda.id, deudaNombre: "Ripley" });
   });
@@ -80,7 +80,7 @@ describe("el pago de una cuota en Movimientos", () => {
     await pagarCuota(deuda.id, "2026-11", "2026-10-30", 45000, null, prisma);
     const [pago] = await listarPagosDelMes("2026-11", prisma);
 
-    await eliminarGasto(pago!.gastoId!, prisma);
+    await eliminarGasto(HOGAR_INICIAL, pago!.gastoId!, prisma);
 
     expect(await listarPagosDelMes("2026-11", prisma)).toEqual([]);
     expect(await prisma.gasto.count()).toBe(0);
@@ -99,7 +99,7 @@ describe("el pago de una cuota en Movimientos", () => {
       data: { fecha: new Date("2026-10-30T00:00:00.000Z"), descripcion: "Café", monto: 3000, categoriaId: categoria.id },
     });
 
-    await eliminarGasto(comun.id, prisma);
+    await eliminarGasto(HOGAR_INICIAL, comun.id, prisma);
 
     expect(await listarPagosDelMes("2026-11", prisma)).toHaveLength(1);
   });

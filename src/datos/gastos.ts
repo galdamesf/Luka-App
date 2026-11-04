@@ -8,9 +8,13 @@ import type { GastoParcial, GastoValidado } from "@/dominio/esquemas";
 /**
  * Acceso a la tabla de gastos.
  *
- * Todas las funciones reciben el cliente como ultimo parametro, con el
- * singleton por omision. Eso es lo que deja que los tests de integracion le
- * pasen el cliente que apunta a la base _test en vez de a la de trabajo.
+ * Todas las funciones reciben primero el hogar de quien mira (el de la
+ * sesion, ver src/lib/hogar-actual.ts) y solo leen o tocan lo de ese hogar:
+ * un id de otro hogar se comporta como si no existiera.
+ *
+ * Y reciben el cliente como ultimo parametro, con el singleton por omision.
+ * Eso es lo que deja que los tests de integracion le pasen el cliente que
+ * apunta a la base _test en vez de a la de trabajo.
  */
 export type ClienteDb = Pick<
   PrismaClient,
@@ -70,13 +74,14 @@ type FilaGasto = {
  * suelto, los del mes calendario.
  */
 export async function listarGastosDelMes(
+  hogarId: string,
   mes: string | Periodo,
   db: ClienteDb = prisma,
 ): Promise<GastoPlano[]> {
   const { desde, hasta } = rangoDelPeriodo(aPeriodo(mes));
 
   const filas = (await db.gasto.findMany({
-    where: { fecha: { gte: desde, lt: hasta } },
+    where: { hogarId, fecha: { gte: desde, lt: hasta } },
     include: CATEGORIA_INCLUIDA,
     // Por fecha, y a igual fecha el ultimo ingresado primero.
     orderBy: [{ fecha: "desc" }, { creadoEn: "desc" }],
@@ -86,23 +91,32 @@ export async function listarGastosDelMes(
 }
 
 export async function obtenerGasto(
+  hogarId: string,
   id: string,
   db: ClienteDb = prisma,
 ): Promise<GastoPlano | null> {
-  const fila = (await db.gasto.findUnique({
-    where: { id },
+  const fila = (await db.gasto.findFirst({
+    where: { id, hogarId },
     include: CATEGORIA_INCLUIDA,
   })) as FilaGasto | null;
 
   return fila === null ? null : aPlano(fila);
 }
 
+/**
+ * Anota un gasto en el hogar. `anotadoPorId` es el miembro que lo anota (el
+ * de la sesion, nunca del formulario). La categoria tiene que ser del mismo
+ * hogar: si no, la base lo rechaza (llave por categoria y hogar).
+ */
 export async function crearGasto(
-  datos: GastoValidado,
+  hogarId: string,
+  datos: GastoValidado & { anotadoPorId?: string | null },
   db: ClienteDb = prisma,
 ): Promise<GastoPlano> {
   const fila = (await db.gasto.create({
     data: {
+      hogarId,
+      anotadoPorId: datos.anotadoPorId ?? null,
       // Siempre por el helper: construir la fecha a mano corre el dia en Chile.
       fecha: fechaDesdeISO(datos.fecha),
       descripcion: datos.descripcion,
@@ -119,6 +133,7 @@ export async function crearGasto(
 }
 
 export async function actualizarGasto(
+  hogarId: string,
   id: string,
   cambios: GastoParcial,
   db: ClienteDb = prisma,
@@ -133,8 +148,9 @@ export async function actualizarGasto(
   if (cambios.notas !== undefined) data.notas = cambios.notas;
   if (cambios.categoriaId !== undefined) data.categoriaId = cambios.categoriaId;
 
+  // Un gasto de otro hogar no se encuentra: falla igual que uno que no existe.
   const fila = (await db.gasto.update({
-    where: { id },
+    where: { id, hogarId },
     data,
     include: CATEGORIA_INCLUIDA,
   })) as FilaGasto;
@@ -150,12 +166,19 @@ export async function actualizarGasto(
  * contando como pagadas sin ningun gasto que lo respalde, y lo que te queda
  * subiria sin que nadie haya devuelto esa plata. Primero se suelta el enlace
  * y despues se borra el gasto, igual que al revertir un pago.
+ *
+ * Todo dentro del hogar: si el id es de otro hogar, el ultimo paso falla y la
+ * transaccion entera se deshace, sin tocar sus cuotas ni sus cuentas.
  */
-export async function eliminarGasto(id: string, db: typeof prisma = prisma): Promise<void> {
+export async function eliminarGasto(
+  hogarId: string,
+  id: string,
+  db: typeof prisma = prisma,
+): Promise<void> {
   await db.$transaction([
-    db.cuotaPagada.deleteMany({ where: { gastoId: id } }),
-    db.cuenta.updateMany({ where: { gastoId: id }, data: { pagadaEn: null, gastoId: null } }),
-    db.gasto.delete({ where: { id } }),
+    db.cuotaPagada.deleteMany({ where: { gastoId: id, gasto: { hogarId } } }),
+    db.cuenta.updateMany({ where: { gastoId: id, hogarId }, data: { pagadaEn: null, gastoId: null } }),
+    db.gasto.delete({ where: { id, hogarId } }),
   ]);
 }
 
@@ -165,10 +188,11 @@ export async function eliminarGasto(id: string, db: typeof prisma = prisma): Pro
  *
  * Va en SQL crudo porque Prisma no sabe agrupar por `date_trunc`.
  */
-export async function mesesConGastos(db: ClienteDb = prisma): Promise<string[]> {
+export async function mesesConGastos(hogarId: string, db: ClienteDb = prisma): Promise<string[]> {
   const filas = (await db.$queryRaw`
     SELECT DISTINCT to_char("fecha", 'YYYY-MM') AS mes
     FROM "gastos"
+    WHERE "hogar_id" = ${hogarId}
     ORDER BY mes DESC
   `) as Array<{ mes: string }>;
 
