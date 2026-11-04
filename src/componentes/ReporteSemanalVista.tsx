@@ -112,7 +112,7 @@ export function ReporteSemanalVista({ reporte }: { reporte: ReporteSemanal }) {
           <h2 id="t-tipo" className="text-sm font-bold">
             Esencial y discrecional
           </h2>
-          <div aria-hidden="true" className="mt-3 flex h-3 overflow-hidden rounded-full bg-superficie-tenue">
+          <div aria-hidden="true" className="mt-3 flex h-3 overflow-hidden rounded-full riel">
             {reporte.total > 0 && (
               <>
                 <span className="bg-tono-cielo" style={{ width: `${(reporte.esenciales / reporte.total) * 100}%` }} />
@@ -305,7 +305,7 @@ export function ReporteSemanalVista({ reporte }: { reporte: ReporteSemanal }) {
                     {m.nombre} <span className="text-xs font-normal text-texto-tenue">· {plural(m.cantidad, "gasto", "gastos")}</span>
                   </span>
                   <span className="cifra text-sm font-bold">{formatearCLP(m.total)}</span>
-                  <span aria-hidden="true" className="col-span-2 block h-1.5 overflow-hidden rounded-full bg-superficie-tenue">
+                  <span aria-hidden="true" className="col-span-2 block h-1.5 overflow-hidden rounded-full riel">
                     <span className="block h-full rounded-full bg-tono-violeta" style={{ width: `${m.porcentaje}%` }} />
                   </span>
                 </li>
@@ -325,7 +325,7 @@ export function ReporteSemanalVista({ reporte }: { reporte: ReporteSemanal }) {
                 }`}
               >
                 <span className="font-medium">{capitalizar(fechaLarga(d.fecha))}</span>
-                <span aria-hidden="true" className="block h-2 overflow-hidden rounded-full bg-superficie-tenue">
+                <span aria-hidden="true" className="block h-2 overflow-hidden rounded-full riel">
                   {d.total > 0 && (
                     <span className="block h-full rounded-full bg-accion" style={{ width: `${(d.total / maximoDia) * 100}%` }} />
                   )}

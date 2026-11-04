@@ -226,8 +226,8 @@ describe("los grupos se distinguen entre si", () => {
 /**
  * REGRESION: el test medía contra el fondo equivocado.
  *
- * Las barras de categoria se dibujan sobre `--superficie-tenue` (el riel),
- * no sobre `--superficie` (la card). Validar contra la card daba todo en
+ * Las barras de categoria se dibujan sobre `--riel`, no sobre `--superficie`
+ * (la card). Validar contra la card daba todo en
  * verde mientras cuatro de seis colores fallaban de verdad.
  *
  * Esto ata las constantes al CSS: si alguien cambia el riel y no actualiza
@@ -237,8 +237,8 @@ describe("las constantes apuntan al riel de verdad", () => {
   const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
 
   function rielDe(bloque: string): string {
-    const m = bloque.match(/--superficie-tenue:\s*(#[0-9a-fA-F]{6})/);
-    expect(m, "no encontré --superficie-tenue en ese bloque").not.toBeNull();
+    const m = bloque.match(/--riel:\s*(#[0-9a-fA-F]{6})/);
+    expect(m, "no encontré --riel en ese bloque").not.toBeNull();
     return m![1]!.toLowerCase();
   }
 
@@ -252,10 +252,16 @@ describe("las constantes apuntan al riel de verdad", () => {
     expect(rielDe(oscuro)).toBe(FONDO_OSCURO.toLowerCase());
   });
 
-  test("el riel NO es la superficie de la card: son cosas distintas", () => {
+  // El riel tiene que verse sobre la card: o es de otro color, o lleva un
+  // borde que si se ve. En claro los dos son blancos (el ocre solo alcanza
+  // el 3:1 sobre blanco), asi que manda el borde.
+  test("el riel se ve sobre la card: por su color o por su borde", () => {
     const claro = css.slice(css.indexOf(":root"), css.indexOf("@media"));
     const card = claro.match(/--superficie:\s*(#[0-9a-fA-F]{6})/)![1]!.toLowerCase();
-    expect(card).not.toBe(rielDe(claro));
+    if (card !== rielDe(claro)) return;
+    const borde = claro.match(/--riel-borde:\s*(#[0-9a-fA-F]{6})/)?.[1]?.toLowerCase();
+    expect(borde, "el riel es igual a la card y no tiene --riel-borde").toBeDefined();
+    expect(borde).not.toBe(card);
   });
 });
 

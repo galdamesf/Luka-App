@@ -120,7 +120,7 @@ function Seccion({ seccion }: { seccion: SeccionGuia }) {
 
       <Link
         href={seccion.enlace}
-        className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-borde px-3.5 text-sm font-semibold text-accion-tinta transition-colors duration-150 hover:bg-superficie"
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-borde px-3.5 text-sm font-semibold text-texto transition-colors duration-150 hover:border-acento hover:bg-superficie"
       >
         {seccion.id === "informes" ? "Ir a Informes" : "Ir a esta sección del panel"}
         <Icono nombre="arrow-right" tamano={15} />
@@ -174,7 +174,7 @@ export default function ComoUsar() {
             <li key={paso.titulo} className="flex gap-3 rounded-xl border border-borde bg-superficie-tenue p-4">
               <span
                 aria-hidden="true"
-                className="cifra inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-accion text-sm font-bold text-accion-texto"
+                className="cifra inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-acento text-sm font-bold text-acento-tinta"
               >
                 {i + 1}
               </span>
@@ -183,7 +183,7 @@ export default function ComoUsar() {
                 <p className="text-[13px] leading-relaxed text-texto-tenue">
                   <TextoGuia texto={paso.texto} />
                 </p>
-                <a href={paso.destino} className="inline-block text-[13px] font-semibold text-accion-tinta hover:underline">
+                <a href={paso.destino} className="inline-block text-[13px] font-semibold enlace-luka">
                   Ver cómo
                 </a>
               </div>

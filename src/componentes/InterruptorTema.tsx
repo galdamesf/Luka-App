@@ -24,7 +24,11 @@ function temaDelSistema(): Tema {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
 }
 
-export function InterruptorTema() {
+/** El aspecto de siempre en la app. La portada le pasa el suyo en `className`. */
+const CLASE_APP =
+  "inline-flex size-11 cursor-pointer items-center justify-center rounded-md border border-borde text-texto-tenue transition-colors duration-150 hover:bg-superficie-tenue hover:text-texto sm:size-9";
+
+export function InterruptorTema({ className = CLASE_APP }: { className?: string }) {
   // Arranca en null para no suponer nada antes de montar: en el servidor no
   // sabemos que tema tiene la persona y adivinar provoca parpadeo.
   const [tema, setTema] = useState<Tema | null>(null);
@@ -59,7 +63,7 @@ export function InterruptorTema() {
       // suppressHydrationWarning: el icono depende de localStorage, que el
       // servidor no puede conocer.
       suppressHydrationWarning
-      className="inline-flex size-11 cursor-pointer items-center justify-center rounded-md border border-borde text-texto-tenue transition-colors duration-150 hover:bg-superficie-tenue hover:text-texto sm:size-9"
+      className={className}
     >
       <Icono nombre={esOscuro ? "sun" : "moon"} tamano={18} />
       <span className="sr-only">

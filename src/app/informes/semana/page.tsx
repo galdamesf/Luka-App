@@ -49,7 +49,7 @@ export default async function ReporteSemana({ searchParams }: Props) {
         <div className="space-y-1">
           <Link
             href={`/informes?mes=${mes}`}
-            className="no-imprimir inline-flex items-center gap-1 text-sm font-semibold text-accion-tinta underline-offset-2 hover:underline"
+            className="no-imprimir inline-flex items-center gap-1 text-sm font-semibold enlace-luka"
           >
             <Icono nombre="chevron-left" tamano={15} />
             Informes
@@ -71,7 +71,7 @@ export default async function ReporteSemana({ searchParams }: Props) {
           <a
             href={urlPdfReporte(mes, reporte.semana)}
             download
-            className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-accion px-4 text-sm font-bold text-accion-texto shadow-sm transition-[filter] duration-150 hover:brightness-110"
+            className="boton-luka cursor-pointer"
           >
             <Icono nombre="download" tamano={18} />
             Descargar PDF
@@ -93,16 +93,16 @@ export default async function ReporteSemana({ searchParams }: Props) {
                   aria-current={activa ? "page" : undefined}
                   className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3.5 text-sm font-bold transition-colors duration-150 ${
                     activa
-                      ? "border-accion bg-accion text-accion-texto"
-                      : "border-borde bg-superficie text-texto-tenue hover:border-accion/50 hover:text-texto"
+                      ? "border-acento bg-acento text-acento-tinta"
+                      : "border-borde bg-superficie text-texto-tenue hover:border-acento hover:text-texto"
                   }`}
                 >
                   <span
                     aria-hidden="true"
-                    className={`size-2.5 rounded-full ${estilo.lleno} ${activa ? "ring-2 ring-accion-texto/80" : ""}`}
+                    className={`size-2.5 rounded-full ${estilo.lleno} ${activa ? "ring-2 ring-acento-tinta/80" : ""}`}
                   />
                   Semana {s.semana}
-                  <span className={`cifra text-xs font-normal ${activa ? "text-accion-texto/80" : "text-texto-tenue"}`}>
+                  <span className={`cifra text-xs font-normal ${activa ? "text-acento-tinta/80" : "text-texto-tenue"}`}>
                     {rangoDeDias(s.fechaDesde, s.fechaHasta)}
                   </span>
                   {nivel !== null && <span className="sr-only">, ritmo {estilo.nombre.toLowerCase()}</span>}

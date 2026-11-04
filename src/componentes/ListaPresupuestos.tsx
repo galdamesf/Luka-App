@@ -63,7 +63,7 @@ export function ListaPresupuestos({ items, accionEditar, alEliminar }: Props) {
                 aria-pressed={elegido}
                 onClick={() => setFiltro(f.id)}
                 className={`inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border px-3.5 text-[13px] font-semibold transition-colors duration-150 ${
-                  elegido ? "border-accion bg-accion/15 text-accion-tinta" : "border-borde text-texto-tenue hover:text-texto"
+                  elegido ? "border-acento bg-acento/15 text-texto" : "border-borde text-texto-tenue hover:text-texto"
                 }`}
               >
                 <span aria-hidden="true" className={`size-2 rounded-full ${f.punto}`} />
@@ -104,7 +104,7 @@ export function ListaPresupuestos({ items, accionEditar, alEliminar }: Props) {
             aria-expanded={verTodas}
             aria-controls="lista-presupuestos"
             onClick={() => setVerTodas(!verTodas)}
-            className="inline-flex min-h-10 cursor-pointer items-center gap-1 rounded-md px-2 text-[13px] font-semibold text-accion-tinta transition-colors duration-150 hover:bg-superficie-tenue"
+            className="inline-flex min-h-10 cursor-pointer items-center gap-1 rounded-md px-2 text-[13px] font-semibold enlace-luka transition-colors duration-150 hover:bg-superficie-tenue"
           >
             {verTodas ? "Ver menos" : `Ver todas (${visibles.length})`}
             <span className={`transition-transform duration-150 ${verTodas ? "rotate-180" : ""}`}>

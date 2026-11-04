@@ -94,12 +94,12 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
                   aria-pressed={activa}
                   onClick={() => setElegida(s.semana)}
                   className={`inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold transition-colors duration-150 ${
-                    activa ? "bg-accion text-accion-texto" : "text-texto-tenue hover:bg-superficie hover:text-texto"
+                    activa ? "bg-acento text-acento-tinta" : "text-texto-tenue hover:bg-superficie hover:text-texto"
                   }`}
                 >
                   <span
                     aria-hidden="true"
-                    className={`size-2.5 rounded-full ${estiloDe(s).lleno} ${activa ? "ring-2 ring-accion-texto/80" : ""}`}
+                    className={`size-2.5 rounded-full ${estiloDe(s).lleno} ${activa ? "ring-2 ring-acento-tinta/80" : ""}`}
                   />
                   Semana {s.semana}
                 </button>
@@ -129,13 +129,13 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
                 aria-pressed={soloDiscrecional}
                 onClick={() => setSoloDiscrecional(!soloDiscrecional)}
                 className={`inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-bold transition-colors duration-150 ${
-                  soloDiscrecional ? "border-accion bg-accion/15 text-accion-tinta" : "border-borde text-texto-tenue hover:text-texto"
+                  soloDiscrecional ? "border-acento bg-acento/15 text-texto" : "border-borde text-texto-tenue hover:text-texto"
                 }`}
               >
                 <span
                   aria-hidden="true"
                   className={`relative h-4 w-7 rounded-full transition-colors duration-150 ${
-                    soloDiscrecional ? "bg-accion" : "bg-texto-tenue/40"
+                    soloDiscrecional ? "bg-acento-canto" : "bg-texto-tenue/40"
                   }`}
                 >
                   <span
@@ -166,7 +166,7 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
                     aria-pressed={activa}
                     aria-label={`Semana ${s.semana}, del ${rangoLargo(s.fechaDesde, s.fechaHasta, false)}: ${formatearCLP(valor)}, ritmo ${estiloBarra.nombre.toLowerCase()}`}
                     className={`flex h-full cursor-pointer flex-col items-center justify-end gap-2 rounded-t-lg border border-b-0 pt-2 transition-colors duration-150 ${
-                      activa ? "border-accion/50 bg-accion/10" : "border-transparent hover:bg-superficie-tenue"
+                      activa ? "border-acento bg-acento/10" : "border-transparent hover:bg-superficie-tenue"
                     }`}
                   >
                     <span className={`cifra text-[11px] font-bold ${estiloBarra.texto}`}>
@@ -314,7 +314,7 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
                         <span className="truncate">{c.categoria.nombre}</span>
                       </span>
                       <span className="cifra text-[13px] font-bold">{formatearCLP(c.total)}</span>
-                      <span aria-hidden="true" className="col-span-2 block h-1.5 overflow-hidden rounded-full bg-superficie-tenue">
+                      <span aria-hidden="true" className="col-span-2 block h-1.5 overflow-hidden rounded-full riel">
                         <span
                           className="block h-full rounded-full"
                           style={{ width: `${(c.total / pico.total) * 100}%`, backgroundColor: c.categoria.color }}
@@ -340,7 +340,7 @@ export function RitmoSemanal({ ritmo, proyeccion, proyeccionPctSueldo }: Props) 
               <a
                 href={urlPdfReporte(ritmo.mes, semana.semana)}
                 download
-                className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg bg-accion px-3 text-sm font-bold text-accion-texto transition-[filter] duration-150 hover:brightness-110"
+                className="boton-luka cursor-pointer"
               >
                 <Icono nombre="download" tamano={16} />
                 Descargar PDF

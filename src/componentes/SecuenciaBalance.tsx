@@ -147,7 +147,7 @@ export function SecuenciaBalance({ balance, gastos, periodo, children }: Props) 
           {/* Barra de lo comprometido. La cifra ya esta arriba en texto, asi
               que esto no es la unica forma de saberlo. */}
           <div
-            className="mt-4 h-2 overflow-hidden rounded-full bg-superficie-tenue"
+            className="mt-4 h-2 overflow-hidden rounded-full riel"
             aria-hidden="true"
           >
             <div

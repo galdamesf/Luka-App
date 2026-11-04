@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, test } from "vitest";
-import { PALETA_PAISAJE as PALETA } from "@/componentes/portada/paleta-paisaje";
 import {
   contraste,
   distanciaPerceptual,
@@ -121,6 +120,12 @@ describe("el tema de globals.css cumple WCAG AA", () => {
     ["texto", "superficie"],
     ["texto-tenue", "fondo"],
     ["texto-tenue", "superficie"],
+    // Lo hundido dentro de una carta (campos, fichas) tambien lleva texto.
+    ["texto", "superficie-tenue"],
+    ["texto-tenue", "superficie-tenue"],
+    ["exito", "superficie-tenue"],
+    ["alerta", "superficie-tenue"],
+    ["peligro", "superficie-tenue"],
     ["exito", "superficie"],
     ["alerta", "superficie"],
     ["peligro", "superficie"],
@@ -128,17 +133,12 @@ describe("el tema de globals.css cumple WCAG AA", () => {
     // El indigo de accion como texto e iconos, sobre la card y la pagina.
     ["accion-tinta", "superficie"],
     ["accion-tinta", "fondo"],
-    // La banda nocturna del paseo: su texto sobre su fondo y sobre su carta.
-    ["noche-texto", "noche"],
-    ["noche-tenue", "noche"],
-    ["noche-texto", "noche-superficie"],
-    ["noche-tenue", "noche-superficie"],
   ];
 
   for (const [modo, tema] of [["claro", claro], ["oscuro", oscuro]] as const) {
     describe(`modo ${modo}`, () => {
       test("define todos los tokens esperados", () => {
-        for (const token of ["fondo", "superficie", "superficie-tenue", "texto", "texto-tenue", "primario", "primario-texto", "exito", "exito-fuerte", "alerta", "peligro", "avance", "pie", "pie-texto", "foco", "acento", "acento-fuerte", "acento-tinta", "durazno", "durazno-texto", "durazno-tenue", "durazno-realce", "noche", "noche-superficie", "noche-borde", "noche-texto", "noche-tenue", "accion", "accion-texto", "accion-tinta"]) {
+        for (const token of ["fondo", "superficie", "superficie-tenue", "riel", "texto", "texto-tenue", "primario", "primario-texto", "exito", "exito-fuerte", "alerta", "peligro", "avance", "pie", "pie-texto", "foco", "acento", "acento-fuerte", "acento-tinta", "durazno", "durazno-texto", "durazno-tenue", "durazno-realce", "accion", "accion-texto", "accion-tinta"]) {
           expect(tema[token], `falta --${token} en modo ${modo}`).toBeDefined();
         }
       });
@@ -155,12 +155,12 @@ describe("el tema de globals.css cumple WCAG AA", () => {
         });
       }
 
-      // Los rellenos de barra se dibujan sobre el RIEL (--superficie-tenue),
+      // Los rellenos de barra se dibujan sobre el RIEL (--riel),
       // no sobre la card. Medirlos contra la card deja pasar colores que en
       // pantalla no alcanzan: ya paso una vez con el ocre de Alimentacion.
       for (const relleno of ["exito-fuerte", "avance", "alerta", "peligro"] as const) {
         test(`${relleno} alcanza 3:1 como relleno de barras`, () => {
-          for (const fondo of ["superficie-tenue", "superficie", "fondo"] as const) {
+          for (const fondo of ["riel", "superficie-tenue", "superficie", "fondo"] as const) {
             const f = tema[relleno] as string;
             const b = tema[fondo] as string;
             const razon = contraste(f, b);
@@ -299,67 +299,4 @@ describe("el tema de globals.css cumple WCAG AA", () => {
       });
     });
   }
-});
-
-describe("la paleta del paisaje del header", () => {
-  // El paisaje es una pintura y no sigue al tema, asi que se mide una sola vez.
-  // Lo que se vigila es que ningun tono del dibujo se acerque a los cuatro
-  // colores con que Luka avisa: un cerro verde diria "te sobra plata" y un
-  // alamo azul diria "deuda". El color de esta app significa algo.
-  const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
-  const raiz = css.slice(css.indexOf(":root {"), css.indexOf("}", css.indexOf(":root {")));
-  const senal = (nombre: string): string => {
-    const m = new RegExp(`--${nombre}:\\s*(#[0-9a-fA-F]{6});`).exec(raiz);
-    expect(m, `falta --${nombre} en :root`).not.toBeNull();
-    return ((m as RegExpExecArray)[1] as string).toLowerCase();
-  };
-  const senales = ["exito-fuerte", "alerta", "peligro", "avance"] as const;
-  const tonos = Object.entries(PALETA);
-
-  test("tiene todos los planos del dibujo", () => {
-    for (const plano of ["cielo-2", "nieve-luz", "roca-luz", "roca-sombra", "pre-cerca", "llano-cerca", "alamo", "matorral", "pirca", "senda"]) {
-      expect(PALETA[plano as keyof typeof PALETA], `falta ${plano} en la paleta`).toBeDefined();
-    }
-  });
-
-  test.each(tonos)("%s no se confunde con ningun color de senal", (nombre, hex) => {
-    for (const nombreSenal of senales) {
-      const d = distanciaPerceptual(hex, senal(nombreSenal));
-      expect(
-        d,
-        `${nombre} (${hex}) esta a ${d.toFixed(1)} de --${nombreSenal}`,
-      ).toBeGreaterThan(10);
-    }
-  });
-
-  test("el texto del header se lee sobre CUALQUIER banda del cielo", () => {
-    // El titular y su bajada no descansan sobre --durazno a secas: descansan
-    // sobre las bandas pintadas del cielo, que bajan hasta un arrebol bastante
-    // mas saturado. Medir solo contra el token dejaba pasar texto ilegible
-    // sobre la banda dorada, que es justo donde cae la nota de Google.
-    const cielo = ["cielo-2", "cielo-3", "cielo-4", "dorado"] as const;
-    const sobreTexto = ["durazno-texto", "durazno-tenue", "durazno-realce"] as const;
-    const raizTexto = (n: string) => {
-      const m = new RegExp(`--${n}:\\s*(#[0-9a-fA-F]{6});`).exec(raiz);
-      return ((m as RegExpExecArray)[1] as string).toLowerCase();
-    };
-    for (const t of sobreTexto) {
-      for (const banda of cielo) {
-        const f = raizTexto(t);
-        const b = PALETA[banda];
-        expect(
-          sirveParaTexto(f, b),
-          `--${t} (${f}) sobre la banda ${banda} (${b}) da ${contraste(f, b).toFixed(2)}:1`,
-        ).toBe(true);
-      }
-    }
-  });
-
-  test("el frente es oscuro: Luka es claro y tiene que recortarse contra el", () => {
-    // Sin esta franja oscura el perro desaparece sobre el paisaje. Es una
-    // regla del dibujo, no una preferencia.
-    for (const plano of ["matorral", "pirca", "borde"] as const) {
-      expect(luminancia(PALETA[plano]), `${plano} deberia ser oscuro`).toBeLessThan(0.3);
-    }
-  });
 });

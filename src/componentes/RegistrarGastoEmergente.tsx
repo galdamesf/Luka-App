@@ -42,7 +42,7 @@ export function RegistrarGastoEmergente({ categorias, fechaInicial, accion, pres
         type="button"
         onClick={() => setAbierto(true)}
         aria-haspopup="dialog"
-        className="no-imprimir inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-accion px-4 text-sm font-bold text-accion-texto shadow-sm shadow-accion/30 transition-[filter,box-shadow] duration-150 hover:shadow-md hover:shadow-accion/40 hover:brightness-110"
+        className="boton-luka no-imprimir cursor-pointer"
       >
         <Icono nombre="plus" tamano={18} />
         Registrar gasto

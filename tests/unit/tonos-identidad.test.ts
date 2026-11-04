@@ -40,7 +40,7 @@ describe("tonos de identidad", () => {
   test("cada uno pasa 3:1 contra fondo, superficie y riel, en claro y en oscuro", () => {
     for (const [nombre, color] of tonos) {
       for (const [tema, tokens] of [["claro", claro], ["oscuro", oscuro]] as const) {
-        for (const fondo of ["fondo", "superficie", "superficie-tenue"] as const) {
+        for (const fondo of ["fondo", "superficie", "superficie-tenue", "riel"] as const) {
           const otro = tokens[fondo] as string;
           expect(
             sirveParaGrafico(color, otro),

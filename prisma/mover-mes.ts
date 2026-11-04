@@ -12,7 +12,7 @@
  * Con --dia 27 deja ademas guardado el dia de inicio del mes.
  *
  * Antes de aplicar, un respaldo:
- *   docker compose exec -T db pg_dump -U gastos control_gastos > ~/Desktop/respaldo-luka.sql
+ *   npm run db:respaldo
  */
 import { PrismaClient } from "@prisma/client";
 import { cargarEnv } from "../src/lib/env";

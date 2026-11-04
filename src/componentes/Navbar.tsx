@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { InterruptorTema } from "./InterruptorTema";
+import { ConfirmarSalida } from "./ConfirmarSalida";
 import { Icono } from "./Icono";
 import type { NombreIcono } from "./iconos";
 import { Luka } from "./Luka";
@@ -118,14 +118,9 @@ export function Navbar() {
 
           <div className="ml-auto flex items-center gap-1 print:hidden">
             <InterruptorTema />
-            {/* La salida: discreta, porque en una app de la casa se usa poco. */}
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/bienvenida" })}
-              className="cursor-pointer rounded-full px-2.5 py-2 text-sm font-semibold text-(--nav-tinta-suave) transition-colors hover:bg-(--nav-encima) hover:text-(--nav-tinta)"
-            >
-              Salir
-            </button>
+            {/* La salida: discreta, porque en una app de la casa se usa poco, y
+                con una pregunta antes de cerrar la sesion. */}
+            <ConfirmarSalida className="cursor-pointer rounded-full px-2.5 py-2 text-sm font-semibold text-(--nav-tinta-suave) transition-colors hover:bg-(--nav-encima) hover:text-(--nav-tinta)" />
           </div>
         </header>
       </div>

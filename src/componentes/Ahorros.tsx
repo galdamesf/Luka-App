@@ -106,7 +106,7 @@ export function Ahorros({ mes, delMes, acumulado, historial, meta, metaPct, acci
               {avanceMeta >= 100 ? "Meta cumplida" : `Llevas el ${porcentajeLegible(avanceMeta)}`}
             </span>
           </div>
-          <div aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-superficie-tenue">
+          <div aria-hidden="true" className="h-2 overflow-hidden rounded-full riel">
             <div className="h-full rounded-full bg-tono-esmeralda transition-[width] duration-500" style={{ width: `${Math.min(100, avanceMeta)}%` }} />
           </div>
           {avanceMeta < 100 && (
@@ -176,7 +176,7 @@ export function Ahorros({ mes, delMes, acumulado, historial, meta, metaPct, acci
           <button
             type="submit"
             disabled={pendiente}
-            className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg bg-accion px-4 text-sm font-bold text-accion-texto transition-[filter,opacity] duration-150 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="boton-luka cursor-pointer"
           >
             <Icono nombre="plus" tamano={16} />
             {pendiente ? "Guardando…" : `Agregar ahorro de ${nombreMes}`}

@@ -18,7 +18,10 @@ yarn-error.log*
 *.tsbuildinfo
 
 # Fotos de boletas: son tuyas, no van al repositorio
-boletas/
+/boletas/
+
+# Respaldos de la base (npm run db:respaldo): tienen tus datos
+/respaldos/
 
 # Prisma
 prisma/*.db

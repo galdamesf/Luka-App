@@ -60,7 +60,7 @@ export function CifrasQueda({ queda, mes, estado, diasRestantes, metaPct }: Prop
           Falta tu sueldo de {nombreMes}
         </h3>
         Sin él no se puede saber cuánto te queda libre ni cuánto puedes ahorrar.{" "}
-        <a href="#balance" className="font-semibold text-accion-tinta underline-offset-2 hover:underline">
+        <a href="#balance" className="font-semibold enlace-luka">
           Defínelo en el balance
         </a>
         .

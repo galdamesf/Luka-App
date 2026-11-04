@@ -154,8 +154,8 @@ export const CATEGORIA_CUOTAS = "Deudas y créditos";
 /**
  * Las superficies contra las que de verdad se dibujan las barras.
  *
- * OJO: NO son el fondo de la card. Son `--superficie-tenue`, el riel de la
- * barra, que es lo que queda inmediatamente detras del color.
+ * OJO: NO son el fondo de la card. Son `--riel`, el riel de la barra, que
+ * es lo que queda inmediatamente detras del color.
  *
  * El test medía contra la card y por eso daba todo en verde mientras cuatro
  * de los seis colores fallaban: contra el riel real el ocre quedaba en
@@ -163,8 +163,8 @@ export const CATEGORIA_CUOTAS = "Deudas y créditos";
  * oscuro. Por eso ahora el riel va mas claro que la card en modo claro y mas
  * oscuro en modo oscuro: las dos cosas abren el contraste.
  *
- * Si alguien cambia --superficie-tenue en globals.css, estos valores tienen
- * que cambiar con el, o el test vuelve a mentir.
+ * Si alguien cambia --riel en globals.css, estos valores tienen que cambiar
+ * con el, o el test vuelve a mentir.
  */
 export const FONDO_CLARO = "#ffffff";
 export const FONDO_OSCURO = "#181f30";

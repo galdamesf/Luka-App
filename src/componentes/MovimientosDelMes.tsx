@@ -77,7 +77,7 @@ export function MovimientosDelMes({ gastos, categorias, alEliminar, accionBoleta
         aria-expanded={verTodos}
         aria-controls="lista-gastos tabla-gastos"
         onClick={() => setVerTodos(!verTodos)}
-        className="inline-flex min-h-10 cursor-pointer items-center gap-1 rounded-md px-2 text-[13px] font-semibold text-accion-tinta transition-colors duration-150 hover:bg-superficie-tenue"
+        className="inline-flex min-h-10 cursor-pointer items-center gap-1 rounded-md px-2 text-[13px] font-semibold enlace-luka transition-colors duration-150 hover:bg-superficie-tenue"
       >
         {verTodos ? "Ver menos" : `Ver todos (${filtrados.length})`}
         <span className={`transition-transform duration-150 ${verTodos ? "rotate-180" : ""}`}>
@@ -134,7 +134,7 @@ export function MovimientosDelMes({ gastos, categorias, alEliminar, accionBoleta
               setBusqueda("");
               setCategoriaId("todas");
             }}
-            className="min-h-11 cursor-pointer rounded-md px-2 text-[13px] font-semibold text-accion-tinta hover:underline"
+            className="min-h-11 cursor-pointer rounded-md px-2 text-[13px] font-semibold enlace-luka"
           >
             Limpiar filtros
           </button>

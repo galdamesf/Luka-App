@@ -154,7 +154,7 @@ export function AjusteDiaInicio({ diaInicio, hoy, accion }: Props) {
             <button
               type="submit"
               disabled={pendiente}
-              className="inline-flex min-h-10 cursor-pointer items-center rounded-lg bg-accion px-4 text-sm font-bold text-accion-texto transition-[filter,opacity] duration-150 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              className="boton-luka cursor-pointer"
             >
               {pendiente ? "Guardando…" : "Guardar"}
             </button>
