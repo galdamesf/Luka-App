@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "predev": "prisma migrate deploy && prisma generate && prisma db seed",
+    "predev": "prisma migrate deploy && prisma generate && prisma db seed && tsx prisma/ordenar-boletas.ts",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import {
+  carpetaDelHogar,
   eliminarBoleta,
   firmaCorresponde,
   guardarBoleta,
@@ -239,5 +240,27 @@ describe("firmaCorresponde y tipoDeBoleta", () => {
     expect(tipoDeBoleta("0123456789abcdef0123456789abcdef.jpg")).toBe("image/jpeg");
     expect(tipoDeBoleta("0123456789abcdef0123456789abcdef.pdf")).toBe("application/pdf");
     expect(tipoDeBoleta("cosa.rara")).toBe("application/octet-stream");
+  });
+});
+
+describe("una carpeta por hogar", () => {
+  test("carpetaDelHogar arma boletas/<hogar>", () => {
+    expect(carpetaDelHogar("hogar-inicial", carpeta)).toBe(join(carpeta, "hogar-inicial"));
+    expect(carpetaDelHogar("cmw1eamar000mc77dtlpgc952", carpeta)).toBe(join(carpeta, "cmw1eamar000mc77dtlpgc952"));
+  });
+
+  test("un id sin forma de id no se vuelve ruta", () => {
+    for (const malo of ["", "..", "../otro", "a/b", "Hogar", "con espacio", ".oculto", "x".repeat(80)]) {
+      expect(() => carpetaDelHogar(malo, carpeta), `acepto "${malo}"`).toThrow(/no valido/i);
+    }
+  });
+
+  test("lo que guarda un hogar queda en su carpeta y otro hogar no lo encuentra", async () => {
+    const r = await guardarBoleta(archivoFalso(bytesDe("jpg"), "image/jpeg"), carpetaDelHogar("h1", carpeta));
+    if (!r.ok) throw new Error("no se guardo");
+
+    expect(await readdir(join(carpeta, "h1"))).toEqual([r.archivo]);
+    await expect(leerBoleta(r.archivo, carpetaDelHogar("h1", carpeta))).resolves.toBeInstanceOf(Uint8Array);
+    await expect(leerBoleta(r.archivo, carpetaDelHogar("h2", carpeta))).rejects.toThrow(/ENOENT/);
   });
 });

@@ -133,7 +133,7 @@ export async function accionPagarCuota(
 
   // La foto de la boleta, si se adjunto. Se guarda antes de pagar: si el
   // archivo no sirve, la cuota no se marca pagada a medias.
-  const boleta = await boletaDelFormulario(datos);
+  const boleta = await boletaDelFormulario(hogarId, datos);
   if ("error" in boleta) return { ok: false, mensaje: boleta.error, errores: {} };
 
   try {

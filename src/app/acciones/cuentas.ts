@@ -56,7 +56,7 @@ export async function accionCrearCuenta(
   try {
     const cuenta = await crearCuenta(hogarId, resultado.data);
 
-    const boleta = await procesarBoleta(datos);
+    const boleta = await procesarBoleta(hogarId, datos);
     if ("error" in boleta) {
       // La cuenta ya quedo creada: se avisa de la foto sin perder lo demas.
       revalidatePath("/");
@@ -94,7 +94,7 @@ export async function accionActualizarCuenta(
 
   // La foto va primero: si el archivo no sirve, no se guarda nada a medias y
   // el formulario sigue abierto con el motivo a la vista.
-  const boleta = await procesarBoleta(datos);
+  const boleta = await procesarBoleta(hogarId, datos);
   if ("error" in boleta) return { ok: false, mensaje: boleta.error, errores: {} };
 
   try {
@@ -152,7 +152,7 @@ export async function accionPagarCuenta(
     return { ok: false, mensaje: "Revisa la fecha y el monto.", errores: erroresDe(resultado.error) };
   }
 
-  const boleta = await procesarBoleta(datos);
+  const boleta = await procesarBoleta(hogarId, datos);
   if ("error" in boleta) {
     return { ok: false, mensaje: boleta.error, errores: {} };
   }
@@ -218,7 +218,7 @@ export async function accionAdjuntarBoletaAGasto(
   const id = esquemaId.safeParse(datos.get("id"));
   if (!id.success) return { ok: false, mensaje: "Falta el gasto.", errores: {} };
 
-  const boleta = await procesarBoleta(datos);
+  const boleta = await procesarBoleta(hogarId, datos);
   if ("error" in boleta) return { ok: false, mensaje: boleta.error, errores: {} };
   if (boleta.archivo === null) return { ok: false, mensaje: "No elegiste ninguna foto.", errores: {} };
 

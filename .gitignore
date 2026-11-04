@@ -17,8 +17,10 @@ yarn-error.log*
 # TypeScript incremental
 *.tsbuildinfo
 
-# Fotos de boletas: son tuyas, no van al repositorio
+# Fotos de boletas, y cualquier copia de la carpeta (boletas-copia/, etc.):
+# son tuyas, no van al repositorio
 /boletas/
+/boletas-*/
 
 # Respaldos de la base (npm run db:respaldo): tienen tus datos
 /respaldos/

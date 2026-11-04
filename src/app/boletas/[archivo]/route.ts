@@ -1,8 +1,10 @@
 import { leerHogarActual } from "@/lib/hogar-actual";
-import { leerBoleta, nombreValido, tipoDeBoleta } from "@/lib/boletas";
+import { carpetaDelHogar, leerBoleta, nombreValido, tipoDeBoleta } from "@/lib/boletas";
 
 /**
- * Sirve una foto de boleta desde el disco.
+ * Sirve una foto de boleta desde el disco, de la carpeta del hogar de quien
+ * mira (boletas/<hogar>/). La boleta de otro hogar responde 404, igual que
+ * una que no existe: ni siquiera se confirma que este en algun lado.
  *
  * El nombre pedido se valida contra el patron exacto que generamos al guardar,
  * antes de tocar el sistema de archivos. Cualquier cosa que no calce se
@@ -31,7 +33,8 @@ export async function GET(
   }
 
   try {
-    const bytes = await leerBoleta(archivo);
+    // Solo en la carpeta del hogar de quien mira: la de otro hogar no existe aqui.
+    const bytes = await leerBoleta(archivo, carpetaDelHogar(hogar.hogarId));
     return new Response(new Uint8Array(bytes), {
       headers: {
         "Content-Type": tipoDeBoleta(archivo),
