@@ -5,6 +5,7 @@ import { desdeFormData, erroresDe, esquemaDiaInicioFormulario } from "@/dominio/
 import type { EstadoFormulario } from "@/dominio/formulario";
 import { definirDiaInicioMes } from "@/datos/ajustes";
 import { hogarActual } from "@/lib/hogar-actual";
+import { puedeCambiarDiaDeInicio } from "@/dominio/hogar";
 
 // Cada accion pide primero el hogar de quien la usa, fuera de cualquier try:
 // si ya no es parte del hogar, hogarActual corta la sesion con una
@@ -14,7 +15,11 @@ export async function accionDefinirDiaInicio(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
-  const { hogarId } = await hogarActual();
+  const { hogarId, miembroId, rol } = await hogarActual();
+  // El dia de inicio cambia el mes de todos en el hogar: lo elige el dueno.
+  const motivo = puedeCambiarDiaDeInicio({ miembroId, rol });
+  if (motivo !== null) return { ok: false, mensaje: motivo, errores: {} };
+
   const resultado = esquemaDiaInicioFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {

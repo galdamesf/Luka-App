@@ -9,7 +9,7 @@ import {
 } from "@/dominio/esquemas";
 import type { EstadoFormulario } from "@/dominio/formulario";
 import { crearGasto, eliminarGasto } from "@/datos/gastos";
-import { guardarBoleta } from "@/lib/boletas";
+import { carpetaDelHogar, guardarBoleta } from "@/lib/boletas";
 import { hogarActual } from "@/lib/hogar-actual";
 
 /** Codigos de Prisma que sabemos traducir a algo legible. */
@@ -55,7 +55,7 @@ export async function accionCrearGasto(
 
   const adjunto = datos.get("boleta");
   if (adjunto !== null && typeof adjunto !== "string" && adjunto.size > 0) {
-    const guardado = await guardarBoleta(adjunto);
+    const guardado = await guardarBoleta(adjunto, carpetaDelHogar(hogarId));
     if (guardado.ok) boletaArchivo = guardado.archivo;
     else avisoFoto = ` La foto no se guardó: ${guardado.motivo}`;
   }

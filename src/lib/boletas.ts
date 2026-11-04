@@ -14,6 +14,13 @@ import { basename, join, resolve } from "node:path";
  *     navegador se puede mentir; la firma del archivo no tanto.
  *  3. Al servir, el nombre pedido tiene que calzar con el patron exacto que
  *     generamos. Cualquier otra cosa se rechaza sin tocar el disco.
+ *  4. Cada hogar tiene su carpeta: boletas/<hogar>/<archivo>. Se guarda y se
+ *     lee siempre dentro de la carpeta del hogar de quien mira, asi que la
+ *     boleta de otro hogar no se encuentra aunque se adivine su nombre.
+ *
+ * Las funciones de abajo reciben la carpeta sin valor por omision a
+ * proposito: olvidarse del hogar no compila, en vez de caer callado en la
+ * carpeta de todos.
  */
 
 export const TIPOS_PERMITIDOS = {
@@ -36,6 +43,20 @@ const NOMBRE_VALIDO = /^[a-f0-9]{32}\.(jpg|png|webp|heic|pdf)$/;
 /** Carpeta donde viven las boletas. Fuera de src para que no la escanee Next. */
 export function carpetaDeBoletas(): string {
   return process.env.CARPETA_BOLETAS ?? join(process.cwd(), "boletas");
+}
+
+/** Los ids de hogar que existen: "hogar-inicial" o un cuid. Nada de puntos ni barras. */
+const HOGAR_VALIDO = /^[a-z0-9][a-z0-9-]{0,62}$/;
+
+/**
+ * La carpeta de las boletas de un hogar, dentro de la carpeta de boletas.
+ * Lanza con un id que no tenga forma de id: el id termina en una ruta.
+ */
+export function carpetaDelHogar(hogarId: string, raiz = carpetaDeBoletas()): string {
+  if (!HOGAR_VALIDO.test(hogarId)) {
+    throw new Error(`Hogar no valido para una carpeta: "${hogarId}".`);
+  }
+  return join(resolve(raiz), hogarId);
 }
 
 /** Firmas de archivo. Un tipo declarado se puede mentir; esto cuesta mas. */
@@ -72,7 +93,7 @@ export function nombreValido(nombre: string): boolean {
  * Ruta en disco de una boleta. Lanza si el nombre no es uno nuestro o si la
  * ruta resultante se sale de la carpeta.
  */
-export function rutaDeBoleta(nombre: string, carpeta = carpetaDeBoletas()): string {
+export function rutaDeBoleta(nombre: string, carpeta: string): string {
   if (!nombreValido(nombre)) {
     throw new Error(`Nombre de boleta no valido: "${nombre}".`);
   }
@@ -98,7 +119,7 @@ export type ResultadoGuardado =
  */
 export async function guardarBoleta(
   archivo: { arrayBuffer(): Promise<ArrayBuffer>; size: number; type: string },
-  carpeta = carpetaDeBoletas(),
+  carpeta: string,
 ): Promise<ResultadoGuardado> {
   if (archivo.size === 0) {
     return { ok: false, motivo: "El archivo está vacío." };
@@ -126,18 +147,12 @@ export async function guardarBoleta(
   return { ok: true, archivo: nombre, bytes: bytes.length };
 }
 
-export async function leerBoleta(
-  nombre: string,
-  carpeta = carpetaDeBoletas(),
-): Promise<Uint8Array> {
+export async function leerBoleta(nombre: string, carpeta: string): Promise<Uint8Array> {
   return new Uint8Array(await readFile(rutaDeBoleta(nombre, carpeta)));
 }
 
 /** Borra una boleta. Si ya no esta, no reclama. */
-export async function eliminarBoleta(
-  nombre: string,
-  carpeta = carpetaDeBoletas(),
-): Promise<void> {
+export async function eliminarBoleta(nombre: string, carpeta: string): Promise<void> {
   if (!nombreValido(nombre)) return;
   await rm(rutaDeBoleta(nombre, carpeta), { force: true });
 }

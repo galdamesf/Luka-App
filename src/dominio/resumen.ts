@@ -1,6 +1,7 @@
 import { isoDesdeFecha } from "@/lib/fecha";
 import { aPeriodo, diaDelPeriodo, enPeriodo, type Periodo } from "@/lib/periodo";
 import type { MedioPago } from "./esquemas";
+import { primerNombre } from "./hogar";
 
 export type CategoriaPlana = {
   id: string;
@@ -34,6 +35,12 @@ export type GastoPlano = {
    * el aviso al borrar (la cuenta vuelve a pendiente).
    */
   cuenta?: { cuentaId: string; nombre: string } | null;
+  /**
+   * El primer nombre de quien lo anoto, si se sabe. Opcional: solo lo trae la
+   * lectura desde la base. La pagina lo muestra solo cuando en el hogar hay
+   * mas de una persona: con una sola, diria siempre lo mismo.
+   */
+  anotadoPor?: string | null;
 };
 
 /**
@@ -194,6 +201,7 @@ export function aPlano(fila: {
   categoria: { id: string; nombre: string; color: string; icono: string; esencial: boolean };
   cuota?: { deudaId: string; deuda?: { nombre: string } | null } | null;
   cuenta?: { id: string; nombre: string } | null;
+  anotadoPor?: { nombre: string | null; correo: string } | null;
 }): GastoPlano {
   return {
     id: fila.id,
@@ -216,6 +224,10 @@ export function aPlano(fila: {
       fila.cuenta === undefined || fila.cuenta === null
         ? null
         : { cuentaId: fila.cuenta.id, nombre: fila.cuenta.nombre },
+    // Sin lectura del autor (los tests, el reporte), queda sin decir: undefined.
+    ...(fila.anotadoPor === undefined
+      ? {}
+      : { anotadoPor: fila.anotadoPor === null ? null : primerNombre(fila.anotadoPor) }),
   };
 }
 
@@ -249,4 +261,9 @@ export function repartirGastos(
     esenciales: delMes.filter((g) => g.categoria.esencial),
     resto: delMes.filter((g) => !g.categoria.esencial),
   };
+}
+
+/** Los mismos gastos sin decir quien los anoto: para un hogar de una persona. */
+export function sinAutor(gastos: readonly GastoPlano[]): GastoPlano[] {
+  return gastos.map((g) => ({ ...g, anotadoPor: null }));
 }

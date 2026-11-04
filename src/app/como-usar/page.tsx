@@ -18,7 +18,7 @@ function etiquetaDe(seccion: SeccionGuia): string {
     const { numero, etiqueta } = SECCIONES_PANEL[seccion.seccionPanel];
     return `Sección ${numero} · ${etiqueta}`;
   }
-  return seccion.id === "informes" ? "En la barra de arriba" : "Antes de empezar";
+  return seccion.ubicacion ?? "Antes de empezar";
 }
 
 function fichaDe(seccion: SeccionGuia): string {
@@ -123,7 +123,7 @@ function Seccion({ seccion }: { seccion: SeccionGuia }) {
         href={seccion.enlace}
         className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-borde px-3.5 text-sm font-semibold text-texto transition-colors duration-150 hover:border-acento hover:bg-superficie"
       >
-        {seccion.id === "informes" ? "Ir a Informes" : "Ir a esta sección del panel"}
+        {seccion.textoEnlace ?? "Ir a esta sección del panel"}
         <Icono nombre="arrow-right" tamano={15} />
       </Link>
     </section>

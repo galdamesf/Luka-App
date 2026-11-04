@@ -4,8 +4,8 @@ import { Onda } from "./Onda";
 
 /**
  * Las preguntas, en cajas. Cada respuesta esta revisada contra la app
- * (auth.ts, lib/sesion.ts, acciones/cuentas.ts, acciones/finanzas.ts y
- * lib/periodo.ts).
+ * (auth.ts, lib/autorizados.ts, dominio/hogar.ts, lib/sesion.ts,
+ * acciones/cuentas.ts, acciones/finanzas.ts y lib/periodo.ts).
  *
  * Cada pregunta es un <details> nativo: abre y cierra sin JavaScript, y el
  * teclado y los lectores de pantalla lo entienden solos. Comparten `name`,
@@ -23,7 +23,11 @@ export const PREGUNTAS = [
   },
   {
     p: "¿Tengo que crear otra contraseña?",
-    r: "No. Entras con tu cuenta de Google, y solo pueden entrar los correos autorizados.",
+    r: "No. Entras con tu cuenta de Google. La primera vez, Luka te arma tu propio hogar, vacío y solo para ti.",
+  },
+  {
+    p: "¿Puedo llevar las cuentas con alguien de mi casa?",
+    r: "Sí. En «Hogar» invitas su correo de Google y anotan juntos en el mismo mes. Cada gasto dice quién lo anotó, y cada hogar ve solo lo suyo.",
   },
   {
     p: "¿La sesión queda abierta?",

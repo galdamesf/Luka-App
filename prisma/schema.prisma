@@ -54,6 +54,8 @@ model Hogar {
   presupuestos Presupuesto[]
   ahorros      Ahorro[]
   ajustes      Ajustes?
+  /// El codigo pendiente para borrar el hogar, si el dueno pidio uno.
+  codigoDeBorrado CodigoDeBorrado?
 
   @@map("hogares")
 }
@@ -75,11 +77,34 @@ model Miembro {
   entroEn    DateTime?  @map("entro_en")
 
   /// Si el hogar se borra, sus miembros se van con el.
-  hogar          Hogar   @relation(fields: [hogarId], references: [id], onDelete: Cascade)
-  gastosAnotados Gasto[]
+  hogar            Hogar             @relation(fields: [hogarId], references: [id], onDelete: Cascade)
+  gastosAnotados   Gasto[]
+  codigosDeBorrado CodigoDeBorrado[]
 
   @@index([hogarId])
   @@map("miembros")
+}
+
+/// El codigo que confirma que se borra un hogar. Llega al correo del dueno,
+/// vale unos minutos y aguanta pocos intentos (src/dominio/hogar.ts). Se
+/// guarda su huella, nunca el codigo. Uno por hogar: pedir otro reemplaza al
+/// anterior.
+model CodigoDeBorrado {
+  hogarId   String   @id @map("hogar_id")
+  /// Quien lo pidio: solo esa persona puede usarlo.
+  miembroId String   @map("miembro_id")
+  /// HMAC-SHA256 del codigo, en hexadecimal.
+  huella    String   @db.Char(64)
+  intentos  Int      @default(0)
+  creadoEn  DateTime @default(now()) @map("creado_en")
+  expiraEn  DateTime @map("expira_en")
+
+  /// Se va con el hogar, y con quien lo pidio si deja de estar.
+  hogar   Hogar   @relation(fields: [hogarId], references: [id], onDelete: Cascade)
+  miembro Miembro @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+
+  @@index([miembroId])
+  @@map("codigos_de_borrado")
 }
 
 model Categoria {

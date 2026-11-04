@@ -13,6 +13,7 @@ const ENLACES: readonly { href: string; etiqueta: string; icono?: NombreIcono }[
   { href: "/", etiqueta: "Inicio" },
   { href: "/informes", etiqueta: "Informes" },
   // En celular va solo el icono: con el texto completo, el navbar no cabe.
+  { href: "/hogar", etiqueta: "Hogar", icono: "users" },
   { href: "/como-usar", etiqueta: "¿Cómo usar?", icono: "circle-help" },
 ];
 

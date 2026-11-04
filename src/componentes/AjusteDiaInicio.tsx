@@ -14,6 +14,8 @@ type Props = {
   /** Hoy, "YYYY-MM-DD": la vista previa muestra en que mes estas con cada dia. */
   hoy: string;
   accion: AccionFormulario;
+  /** El dia lo elige el dueno del hogar; los demas lo ven, sin poder cambiarlo. */
+  puedeCambiar?: boolean;
 };
 
 const DIAS = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -23,7 +25,7 @@ const DIAS = Array.from({ length: 31 }, (_, i) => i + 1);
  * el selector. Muestra antes de guardar como quedarian este mes y el
  * siguiente, porque "dia 27" solo no dice en que mes quedas hoy.
  */
-export function AjusteDiaInicio({ diaInicio, hoy, accion }: Props) {
+export function AjusteDiaInicio({ diaInicio, hoy, accion, puedeCambiar = true }: Props) {
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [dia, setDia] = useState(diaInicio);
@@ -58,6 +60,20 @@ export function AjusteDiaInicio({ diaInicio, hoy, accion }: Props) {
   const [nombreEste] = nombreDelMes(este.mes).split(" ");
   const [nombreSiguiente] = nombreDelMes(siguiente.mes).split(" ");
 
+  const etiqueta = diaInicio === 1 ? "Mes calendario" : `Mes desde el día ${diaInicio}`;
+
+  if (!puedeCambiar) {
+    return (
+      <span
+        title="El día de inicio lo elige el dueño del hogar."
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-borde px-3 text-sm font-semibold text-texto-tenue"
+      >
+        <Icono nombre="calendar" tamano={16} />
+        {etiqueta}
+      </span>
+    );
+  }
+
   return (
     <>
       <button
@@ -67,7 +83,7 @@ export function AjusteDiaInicio({ diaInicio, hoy, accion }: Props) {
         className="no-imprimir inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-borde px-3 text-sm font-semibold text-texto-tenue transition-colors duration-150 hover:bg-superficie-tenue hover:text-texto"
       >
         <Icono nombre="calendar" tamano={16} />
-        {diaInicio === 1 ? "Mes calendario" : `Mes desde el día ${diaInicio}`}
+        {etiqueta}
       </button>
 
       <dialog

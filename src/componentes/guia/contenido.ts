@@ -72,6 +72,10 @@ export type SeccionGuia = {
   icono: NombreIcono;
   /** Donde esta en la app, para el boton "Ir a esta seccion". */
   enlace: string;
+  /** Lo que va arriba del titulo, si no es una seccion del panel. Sin esto: «Antes de empezar». */
+  ubicacion?: string;
+  /** El texto del boton que lleva a la seccion. Sin esto: «Ir a esta sección del panel». */
+  textoEnlace?: string;
   paraQueSirve: string;
   bloques: readonly BloqueGuia[];
 };
@@ -142,6 +146,7 @@ export const GUIA: readonly SeccionGuia[] = [
           "Luka no tiene por qué usar el mes del calendario. Si tu sueldo llega el 27, lo natural es que tu mes vaya del 27 al 26 del mes siguiente: así los gastos que haces con ese sueldo quedan todos juntos.",
           "El nombre del mes sigue una regla fija. Si tu mes empieza el día 16 o después, lleva el nombre del mes en que termina: del 27 de octubre al 26 de noviembre es «Noviembre», porque es el sueldo con que pagas noviembre. Si empieza entre el 1 y el 15, lleva el nombre del mes en que empieza.",
           "El cambio vale para todos los meses, también los anteriores: cada gasto se cuenta en el mes que le toca según su fecha.",
+          "Lo elige el dueño del hogar, para todos. Los demás ven el día elegido, pero no lo cambian.",
         ],
         pasos: [
           "Toca «Mes desde el día…» (o «Mes calendario», si nunca lo cambiaste).",
@@ -511,6 +516,7 @@ export const GUIA: readonly SeccionGuia[] = [
           "Arriba puedes buscar por descripción, categoría o medio de pago (no importan las tildes: «cafe» encuentra «Café») y filtrar por una categoría. Al lado ves cuántos movimientos coinciden y cuánto suman.",
           "Se ven los 10 más recientes; abajo, «Ver todos» muestra el resto. El buscador y el filtro buscan en todos, no solo en los que se ven.",
           "En la columna «Boleta», «boleta» abre la foto en la misma página y «adjuntar» te deja subirla si no la tiene. Los pagos de cuotas llevan la marca «cuota de deuda».",
+          "Si en tu hogar entró más de una persona, cada movimiento dice quién lo anotó, por ejemplo «anotó Ana».",
         ],
         imagen: {
           archivo: "movimientos",
@@ -538,6 +544,8 @@ export const GUIA: readonly SeccionGuia[] = [
     titulo: "Informes",
     icono: "file-text",
     enlace: "/informes",
+    ubicacion: "En la barra de arriba",
+    textoEnlace: "Ir a Informes",
     paraQueSirve:
       "Para mirar el mes con calma, comparar con meses anteriores o guardar un registro. Está en «Informes», en la barra de arriba.",
     bloques: [
@@ -559,6 +567,66 @@ export const GUIA: readonly SeccionGuia[] = [
           alt: "El reporte semanal con las pestañas de semanas, el botón «Descargar PDF», las cifras de la semana y la tabla por categoría.",
           pie: "Una semana en detalle, con su PDF.",
         },
+      },
+    ],
+  },
+  {
+    id: "hogar",
+    titulo: "Tu hogar: con quién compartes Luka",
+    icono: "users",
+    enlace: "/hogar",
+    ubicacion: "En la barra de arriba",
+    textoEnlace: "Ir a Hogar",
+    paraQueSirve:
+      "Luka lleva las cuentas de un hogar, no de una persona. En «Hogar», en la barra de arriba, ves quiénes están, invitas a alguien de tu casa y decides quién lo administra.",
+    bloques: [
+      {
+        titulo: "Quiénes están",
+        texto: [
+          "Todos los del hogar ven y anotan lo mismo: los gastos, las cuentas, el sueldo, las deudas y los presupuestos. Nadie de otro hogar ve nada del tuyo.",
+          "La lista parte con el dueño, sigue con los que ya entraron y termina con las invitaciones que todavía nadie acepta.",
+        ],
+        terminos: [
+          { termino: "«Dueño»", definicion: "Quien administra el hogar: invita, saca miembros, le cambia el nombre con «Cambiar nombre» y elige el día en que empieza el mes. Hay uno solo." },
+          { termino: "«Tú»", definicion: "Marca tu propia fila." },
+          { termino: "«Invitación pendiente»", definicion: "Un correo invitado que todavía no entra a Luka. El dueño la puede cancelar con «Cancelar invitación»." },
+        ],
+      },
+      {
+        titulo: "Invitar a alguien",
+        texto: [
+          "Solo el dueño invita. No se manda ningún correo: la invitación espera a que esa persona entre a Luka con su cuenta de Google.",
+        ],
+        pasos: [
+          "En «Invitar a alguien», escribe su correo de Google.",
+          "Toca «Invitar». Aparece en la lista como «Invitación pendiente».",
+          "Avísale que entre a Luka con ese mismo correo.",
+          "Al entrar, queda en tu hogar, con todo a la vista.",
+        ],
+        consejo:
+          "Cada correo puede estar en un solo hogar. Invita a la persona antes de que entre por primera vez: si entra antes, Luka le arma su propio hogar.",
+      },
+      {
+        titulo: "Pasar el hogar, sacar a alguien o salir",
+        texto: [
+          "Con «Pasarle el hogar», el dueño deja a otro miembro como dueño y él queda como miembro. Con «Sacar del hogar» saca a alguien; lo que esa persona anotó se queda en el hogar.",
+          "Un miembro se va cuando quiera con «Salir del hogar»: su sesión se cierra y, para volver, lo tienen que invitar de nuevo. El dueño, antes de salir, tiene que pasarle el hogar a alguien.",
+        ],
+      },
+      {
+        titulo: "Borrar el hogar",
+        texto: [
+          "Si eres el dueño y nadie más ha entrado a tu hogar, en lugar de «Salir del hogar» ves «Borrar este hogar». Sirve, por ejemplo, si armaste tu hogar y después te quieren invitar a otro.",
+          "Se borra todo lo que tiene: gastos, cuentas, deudas, presupuestos, ahorros y boletas, y no se puede deshacer. Por eso no basta con tener Luka abierto: hay que confirmar con un código que llega a tu correo.",
+        ],
+        pasos: [
+          "En «Borrar este hogar», toca «Borrar el hogar».",
+          "Toca «Enviar código». Te llega un correo de Luka con un código de 6 números.",
+          "Escríbelo en «Código del correo» y toca «Sí, borrar todo». Tienes 10 minutos y 5 intentos; si se te pasan, pide otro.",
+          "Tu sesión se cierra y el hogar ya no existe.",
+        ],
+        consejo:
+          "Después de borrarlo, espera la invitación antes de volver a entrar: si entras antes, Luka te arma un hogar nuevo.",
       },
     ],
   },
@@ -598,6 +666,16 @@ export const PREGUNTAS: readonly { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "¿Dónde quedan las fotos de las boletas?",
     respuesta:
-      "En tu computador, en la carpeta «boletas» del proyecto. No se suben a internet y no van al repositorio.",
+      "En tu computador, en la carpeta «boletas» del proyecto, con una carpeta para cada hogar. No se suben a internet y no van al repositorio.",
+  },
+  {
+    pregunta: "¿Puedo usar Luka con alguien de mi casa?",
+    respuesta:
+      "Sí. El dueño del hogar invita su correo de Google en «Hogar». Cuando esa persona entra a Luka con ese correo, ve y anota lo mismo que tú.",
+  },
+  {
+    pregunta: "Me quieren invitar a un hogar, pero ya tengo el mío. ¿Qué hago?",
+    respuesta:
+      "Cada correo está en un solo hogar, así que no te pueden invitar mientras tengas el tuyo. Si nadie más ha entrado a tu hogar, bórralo en «Hogar» con «Borrar el hogar» (se borra todo lo que tiene). Después te invitan y entras con el mismo correo.",
   },
 ];

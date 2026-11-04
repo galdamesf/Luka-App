@@ -29,7 +29,7 @@ describe("puedeEntrar (al volver de Google)", () => {
     expect(entra).toBe(true);
     expect(registrarEntrada).toHaveBeenCalledWith(
       { correo: "Fernando@Gmail.com", nombre: "Fernando" },
-      { listaDeAntes: ["fernando@gmail.com"], puertaAbierta: false },
+      { listaDeAntes: ["fernando@gmail.com"], puertaAbierta: true },
     );
   });
 
