@@ -1,10 +1,16 @@
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { PrismaClient } from "@prisma/client";
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { HOGAR_INICIAL, clienteDePrueba, limpiar } from "./base";
 import {
+  borrarHogar,
   ErrorDeHogar,
   hacerDueno,
   invitarMiembro,
+  pedirCodigoDeBorrado,
   leerHogar,
   miembrosQueEntraron,
   quitarMiembro,
@@ -13,10 +19,11 @@ import {
   salirDelHogar,
 } from "@/datos/hogares";
 import { fechaDesdeISO } from "@/lib/fecha";
+import type { Correo } from "@/lib/correo";
 
 /**
- * La pagina Hogar contra la base: invitar, sacar, pasar el hogar, salir y
- * cambiarle el nombre. Con el rol que dice la base, y siempre dentro del
+ * La pagina Hogar contra la base: invitar, sacar, pasar el hogar, salir,
+ * cambiarle el nombre y borrarlo. Con el rol que dice la base, y siempre dentro del
  * hogar de quien lo hace.
  */
 
@@ -200,5 +207,210 @@ describe("cambiar el nombre", () => {
   test("un miembro no, y un nombre vacio tampoco", async () => {
     await rechaza(renombrarHogar(HOGAR_INICIAL, miembro, "Otro", prisma), /dueño/);
     await rechaza(renombrarHogar(HOGAR_INICIAL, dueno, "   ", prisma), /Escribe un nombre/);
+  });
+});
+
+describe("borrar el hogar, con el codigo del correo", () => {
+  const SECRETO = "secreto-de-prueba";
+  let raiz: string;
+  let ana: string;
+  let enviados: Correo[];
+  /** Un «correo» que no sale a internet: guarda lo que se mando. */
+  const enviar = async (correo: Correo) => {
+    enviados.push(correo);
+  };
+  const codigoEnviado = () => /\b(\d{6})\b/.exec(enviados.at(-1)!.texto)![1]!;
+  const pedir = (hogarId: string, quienId: string, ahora = new Date()) =>
+    pedirCodigoDeBorrado(hogarId, quienId, { db: prisma, enviar, secreto: SECRETO, ahora });
+  const borrar = (hogarId: string, quienId: string, codigo: string, ahora = new Date()) =>
+    borrarHogar(hogarId, quienId, codigo, { db: prisma, raizBoletas: raiz, secreto: SECRETO, ahora });
+
+  beforeEach(async () => {
+    enviados = [];
+    raiz = await mkdtemp(join(tmpdir(), "boletas-"));
+    ana = (
+      await prisma.miembro.create({
+        data: { hogarId: OTRO, correo: "ana@gmail.com", nombre: "Ana Pérez", rol: "DUENO", entroEn: new Date() },
+      })
+    ).id;
+  });
+
+  afterEach(async () => {
+    await rm(raiz, { recursive: true, force: true });
+  });
+
+  /** Un hogar con un poco de todo, para ver que no quede nada. */
+  async function llenar(hogarId: string) {
+    const cat = await prisma.categoria.create({ data: { hogarId, nombre: "Feria", color: "#15803D", icono: "x" } });
+    const mes = fechaDesdeISO("2026-11-01");
+    const gasto = await prisma.gasto.create({
+      data: { hogarId, fecha: fechaDesdeISO("2026-11-03"), descripcion: "Pan", monto: 1_000, categoriaId: cat.id },
+    });
+    const deuda = await prisma.deuda.create({
+      data: { hogarId, nombre: "Crédito", montoCuota: 10_000, cuotasTotales: 12, primeraCuota: mes },
+    });
+    await prisma.cuotaPagada.create({ data: { deudaId: deuda.id, mes, pagadaEn: mes, monto: 10_000, gastoId: gasto.id } });
+    await prisma.cuenta.create({ data: { hogarId, nombre: "Luz", monto: 20_000, mes, categoriaId: cat.id } });
+    await prisma.presupuesto.create({ data: { hogarId, categoriaId: cat.id, mes, monto: 50_000 } });
+    await prisma.ahorro.create({ data: { hogarId, mes, monto: 30_000 } });
+    await prisma.sueldo.create({ data: { hogarId, monto: 900_000, vigenteDesde: mes } });
+    await prisma.ajustes.create({ data: { hogarId, diaInicioMes: 27 } });
+    await mkdir(join(raiz, hogarId), { recursive: true });
+    await writeFile(join(raiz, hogarId, `${"a".repeat(32)}.jpg`), "boleta");
+  }
+
+  const filasDe = async (hogarId: string) =>
+    Promise.all([
+      prisma.gasto.count({ where: { hogarId } }),
+      prisma.categoria.count({ where: { hogarId } }),
+      prisma.deuda.count({ where: { hogarId } }),
+      prisma.cuotaPagada.count({ where: { deuda: { hogarId } } }),
+      prisma.cuenta.count({ where: { hogarId } }),
+      prisma.presupuesto.count({ where: { hogarId } }),
+      prisma.ahorro.count({ where: { hogarId } }),
+      prisma.sueldo.count({ where: { hogarId } }),
+      prisma.ajustes.count({ where: { hogarId } }),
+      prisma.miembro.count({ where: { hogarId } }),
+      prisma.codigoDeBorrado.count({ where: { hogarId } }),
+    ]);
+
+  test("el codigo llega al correo del dueno, y en la base queda solo su huella", async () => {
+    expect(await pedir(OTRO, ana)).toEqual({ correo: "ana@gmail.com" });
+    expect(enviados).toHaveLength(1);
+    expect(enviados[0]).toMatchObject({ para: "ana@gmail.com", asunto: "Código para borrar «Casa de Ana» en Luka" });
+    expect(enviados[0]!.texto.startsWith("Hola, Ana:")).toBe(true);
+
+    const fila = await prisma.codigoDeBorrado.findUniqueOrThrow({ where: { hogarId: OTRO } });
+    expect(fila).toMatchObject({ miembroId: ana, intentos: 0 });
+    expect(fila.huella).toMatch(/^[0-9a-f]{64}$/);
+    expect(fila.huella).not.toContain(codigoEnviado());
+    expect(fila.expiraEn.getTime() - fila.creadoEn.getTime()).toBe(10 * 60_000);
+  });
+
+  test("con el codigo, el dueno que esta solo borra todo, y el otro hogar queda intacto", async () => {
+    await llenar(OTRO);
+    await llenar(HOGAR_INICIAL);
+    await prisma.miembro.create({ data: { hogarId: OTRO, correo: "invitada@gmail.com" } });
+    const antesDelOtro = await filasDe(HOGAR_INICIAL);
+
+    await pedir(OTRO, ana);
+    const codigo = codigoEnviado();
+    await borrar(OTRO, ana, ` ${codigo.slice(0, 3)} ${codigo.slice(3)} `);
+
+    expect(await prisma.hogar.count({ where: { id: OTRO } })).toBe(0);
+    expect(await filasDe(OTRO)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(await prisma.miembro.count({ where: { correo: "invitada@gmail.com" } })).toBe(0);
+    expect(existsSync(join(raiz, OTRO))).toBe(false);
+
+    expect(await filasDe(HOGAR_INICIAL)).toEqual(antesDelOtro);
+    expect(existsSync(join(raiz, HOGAR_INICIAL, `${"a".repeat(32)}.jpg`))).toBe(true);
+  });
+
+  test("sin pedir el codigo, no se borra", async () => {
+    await rechaza(borrar(OTRO, ana, "123456"), /Primero pide el código/);
+    await rechaza(borrar(OTRO, ana, "hola"), /6 números/);
+    expect(await prisma.hogar.count({ where: { id: OTRO } })).toBe(1);
+  });
+
+  test("un codigo equivocado cuenta el intento, y al quinto no queda ninguno, ni con el bueno", async () => {
+    await llenar(OTRO);
+    await pedir(OTRO, ana);
+    const bueno = codigoEnviado();
+    const malo = bueno === "000000" ? "111111" : "000000";
+
+    await rechaza(borrar(OTRO, ana, malo), /Te quedan 4 intentos/);
+    for (let i = 0; i < 3; i++) await rechaza(borrar(OTRO, ana, malo), /Ese código no es/);
+    await rechaza(borrar(OTRO, ana, malo), /se acabaron los intentos/);
+    expect((await prisma.codigoDeBorrado.findUniqueOrThrow({ where: { hogarId: OTRO } })).intentos).toBe(5);
+
+    await rechaza(borrar(OTRO, ana, bueno), /Se acabaron los intentos/);
+    expect(await prisma.gasto.count({ where: { hogarId: OTRO } })).toBe(1);
+    expect(existsSync(join(raiz, OTRO))).toBe(true);
+  });
+
+  test("varios intentos a la vez no se saltan el limite", async () => {
+    await pedir(OTRO, ana);
+    const bueno = codigoEnviado();
+    const malos = Array.from({ length: 12 }, (_, i) => String((Number(bueno) + i + 1) % 1_000_000).padStart(6, "0"));
+    await Promise.allSettled(malos.map((m) => borrar(OTRO, ana, m)));
+    expect((await prisma.codigoDeBorrado.findUniqueOrThrow({ where: { hogarId: OTRO } })).intentos).toBe(5);
+  });
+
+  test("el codigo vence a los 10 minutos", async () => {
+    const antes = new Date(Date.now() - 11 * 60_000);
+    await pedir(OTRO, ana, antes);
+    await rechaza(borrar(OTRO, ana, codigoEnviado()), /venció/);
+    expect(await prisma.hogar.count({ where: { id: OTRO } })).toBe(1);
+  });
+
+  test("otro codigo, recien despues de un minuto; y el nuevo reemplaza al anterior", async () => {
+    const t0 = new Date();
+    await pedir(OTRO, ana, t0);
+    const primero = codigoEnviado();
+    await rechaza(pedir(OTRO, ana, new Date(t0.getTime() + 30_000)), /espera 30 segundos/);
+    expect(enviados).toHaveLength(1);
+
+    await pedir(OTRO, ana, new Date(t0.getTime() + 61_000));
+    const segundo = codigoEnviado();
+    expect(await prisma.codigoDeBorrado.count({ where: { hogarId: OTRO } })).toBe(1);
+    if (primero !== segundo) await rechaza(borrar(OTRO, ana, primero), /Ese código no es/);
+    await borrar(OTRO, ana, segundo);
+    expect(await prisma.hogar.count({ where: { id: OTRO } })).toBe(0);
+  });
+
+  test("si el correo no sale, no queda codigo y se puede pedir otro al tiro", async () => {
+    const fallar = async () => {
+      throw new Error("smtp caido");
+    };
+    await rechaza(pedirCodigoDeBorrado(OTRO, ana, { db: prisma, enviar: fallar, secreto: SECRETO }), /No se pudo mandar el correo/);
+    expect(await prisma.codigoDeBorrado.count()).toBe(0);
+    await pedir(OTRO, ana);
+    expect(enviados).toHaveLength(1);
+  });
+
+  test("sin correo configurado no se pide codigo", async () => {
+    await rechaza(pedirCodigoDeBorrado(OTRO, ana, { db: prisma, enviar: null, secreto: SECRETO }), /no puede mandar correos/);
+    expect(await prisma.codigoDeBorrado.count()).toBe(0);
+  });
+
+  test("con alguien mas que ya entro no se pide codigo ni se borra: le quitaria sus datos", async () => {
+    await rechaza(pedir(HOGAR_INICIAL, dueno), /estás solo/);
+    await rechaza(borrar(HOGAR_INICIAL, dueno, "123456"), /estás solo/);
+    expect(enviados).toHaveLength(0);
+    expect(await prisma.hogar.count({ where: { id: HOGAR_INICIAL } })).toBe(1);
+  });
+
+  test("un miembro no pide codigo, ni el dueno de otro hogar", async () => {
+    await rechaza(pedir(HOGAR_INICIAL, miembro), /dueño/);
+    await rechaza(pedir(HOGAR_INICIAL, ana), /Ya no eres parte/);
+    expect(enviados).toHaveLength(0);
+  });
+
+  test("el codigo de un hogar no sirve para borrar otro", async () => {
+    // Pedro, dueno solo de un tercer hogar, recibe su propio codigo.
+    const tercero = await prisma.hogar.create({ data: { nombre: "Casa de Pedro" } });
+    const pedro = await prisma.miembro.create({
+      data: { hogarId: tercero.id, correo: "pedro@gmail.com", rol: "DUENO", entroEn: new Date() },
+    });
+    await pedir(tercero.id, pedro.id);
+    const dePedro = codigoEnviado();
+    await pedir(OTRO, ana);
+    const deAna = codigoEnviado();
+    if (dePedro !== deAna) await rechaza(borrar(OTRO, ana, dePedro), /Ese código no es/);
+    expect(await prisma.hogar.count({ where: { id: OTRO } })).toBe(1);
+  });
+
+  test("despues de borrar su hogar, a esa persona ya se la puede invitar a otro", async () => {
+    await rechaza(invitarMiembro(HOGAR_INICIAL, dueno, "ana@gmail.com", prisma), /ya es parte de un hogar/);
+    await pedir(OTRO, ana);
+    await borrar(OTRO, ana, codigoEnviado());
+
+    await invitarMiembro(HOGAR_INICIAL, dueno, "ana@gmail.com", prisma);
+    const entra = await registrarEntrada(
+      { correo: "ana@gmail.com", nombre: "Ana" },
+      { listaDeAntes: [], puertaAbierta: true },
+      prisma,
+    );
+    expect(entra).toMatchObject({ hogarId: HOGAR_INICIAL, rol: "MIEMBRO" });
   });
 });

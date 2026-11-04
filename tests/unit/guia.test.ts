@@ -27,6 +27,15 @@ describe("la guia ¿Como usar?", () => {
     }
   });
 
+  test("las secciones con pagina propia dicen donde estan y a donde lleva su boton", () => {
+    const conPagina = GUIA.filter((s) => s.seccionPanel === undefined && s.enlace !== "/");
+    expect(conPagina.map((s) => s.enlace).sort()).toEqual(["/hogar", "/informes"]);
+    for (const s of conPagina) {
+      expect(s.ubicacion, s.id).toBeDefined();
+      expect(s.textoEnlace, s.id).toMatch(/^Ir a /);
+    }
+  });
+
   test("los primeros pasos llevan a una seccion que existe en la guia", () => {
     const ids = new Set(GUIA.map((s) => s.id));
     for (const paso of PRIMEROS_PASOS) expect(ids.has(paso.destino.slice(1))).toBe(true);

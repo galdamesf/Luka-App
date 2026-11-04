@@ -12,16 +12,24 @@ export const metadata: Metadata = {
  *
  * Es pantalla de sistema, no de campana: fondo del tema, una carta al
  * centro, el boton con las reglas de marca de Google (fondo blanco, su logo
- * tal cual, tipografia sobria) y la unica letra chica que importa: solo los
- * correos autorizados entran. Si Google devuelve a alguien que no esta en la
- * lista, llega aqui con ?error=AccessDenied y se le dice en castellano. Si
- * alguien deja de ser parte de su hogar, su sesion se cierra y llega aqui con
- * ?error=SinHogar.
+ * tal cual, tipografia sobria) y la unica letra chica que importa: a que
+ * hogar llegas. La puerta esta abierta (src/lib/autorizados.ts): quien entra
+ * por primera vez tiene su propio hogar, y quien tiene una invitacion cae en
+ * el hogar que lo invito.
+ *
+ * Los ?error= que llegan aqui, cada uno dicho en castellano:
+ * - AccessDenied: Google no confirmo el correo.
+ * - SinHogar: la persona dejo de ser parte de su hogar y su sesion se cerro.
+ * - Salida: salio del hogar desde la pagina Hogar.
+ * - HogarBorrado: borro su hogar desde la pagina Hogar.
  */
 function mensajeDeError(error: string): string {
-  if (error === "AccessDenied") return "Ese correo no está autorizado para entrar a esta app.";
+  if (error === "AccessDenied") return "Google no confirmó ese correo. Prueba con otra cuenta de Google.";
   if (error === "SinHogar") return "Tu sesión se cerró porque ya no eres parte de ese hogar. Entra de nuevo para seguir.";
   if (error === "Salida") return "Saliste del hogar. Para volver, alguien del hogar tiene que invitarte de nuevo.";
+  if (error === "HogarBorrado") {
+    return "Tu hogar quedó borrado. Si te invitaron a otro, entra con el mismo correo; si no, Luka te arma uno nuevo.";
+  }
   return "No se pudo completar el ingreso. Inténtalo de nuevo.";
 }
 
@@ -71,8 +79,8 @@ export default async function Ingresar({
           </button>
         </form>
 
-        <p className="mt-4 text-xs text-texto-tenue">
-          Solo los correos autorizados pueden entrar.
+        <p className="mt-4 text-xs leading-relaxed text-pretty text-texto-tenue">
+          La primera vez, Luka te arma tu propio hogar. Si alguien te invitó al suyo, entra con ese mismo correo.
         </p>
       </div>
 

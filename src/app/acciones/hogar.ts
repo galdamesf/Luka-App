@@ -3,11 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { signOut } from "@/auth";
 import { esquemaId } from "@/dominio/esquemas";
+import { CODIGO_DE_BORRADO } from "@/dominio/hogar";
 import type { EstadoFormulario } from "@/dominio/formulario";
 import {
+  borrarHogar,
   ErrorDeHogar,
   hacerDueno,
   invitarMiembro,
+  pedirCodigoDeBorrado,
   quitarMiembro,
   renombrarHogar,
   salirDelHogar,
@@ -106,4 +109,34 @@ export async function accionSalirDelHogar(
   // termina con una redireccion, y un catch la volveria un error.
   await signOut({ redirectTo: "/ingresar?error=Salida" });
   return LISTO("Saliste del hogar.");
+}
+
+export async function accionPedirCodigoDeBorrado(
+  _previo: EstadoFormulario,
+  _datos: FormData,
+): Promise<EstadoFormulario> {
+  const { hogarId, miembroId } = await hogarActual();
+  let correo: string;
+  try {
+    ({ correo } = await pedirCodigoDeBorrado(hogarId, miembroId));
+  } catch (error) {
+    return fallo(error);
+  }
+  return LISTO(`Te mandamos un código a ${correo}. Vence en ${CODIGO_DE_BORRADO.minutosDeVigencia} minutos.`);
+}
+
+export async function accionBorrarHogar(
+  _previo: EstadoFormulario,
+  datos: FormData,
+): Promise<EstadoFormulario> {
+  const { hogarId, miembroId } = await hogarActual();
+  try {
+    await borrarHogar(hogarId, miembroId, String(datos.get("codigo") ?? ""));
+  } catch (error) {
+    return fallo(error);
+  }
+  // El hogar ya no existe: igual que al salir, la sesion se cierra aqui y la
+  // pantalla de ingreso lo explica. Fuera del try por la misma razon.
+  await signOut({ redirectTo: "/ingresar?error=HogarBorrado" });
+  return LISTO("Hogar borrado.");
 }

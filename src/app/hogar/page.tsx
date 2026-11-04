@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
 import { leerHogar } from "@/datos/hogares";
+import { puedeBorrarHogar } from "@/dominio/hogar";
+import { configuracionDeCorreo } from "@/lib/correo";
 import { hogarActual } from "@/lib/hogar-actual";
 import { NombreDelHogar } from "@/componentes/hogar/NombreDelHogar";
 import { ListaMiembros } from "@/componentes/hogar/ListaMiembros";
 import { InvitarMiembro } from "@/componentes/hogar/InvitarMiembro";
 import { ConfirmarAccion } from "@/componentes/hogar/ConfirmarAccion";
+import { BorrarHogar } from "@/componentes/hogar/BorrarHogar";
 import {
+  accionBorrarHogar,
   accionHacerDueno,
   accionInvitar,
+  accionPedirCodigoDeBorrado,
   accionQuitarMiembro,
   accionRenombrarHogar,
   accionSalirDelHogar,
@@ -22,7 +27,9 @@ const TARJETA = "rounded-2xl border border-borde bg-superficie p-5 shadow-sm sm:
 /**
  * El hogar: quienes lo comparten, y lo que el dueno puede hacer con eso
  * (invitar, sacar, pasar el hogar, cambiarle el nombre). Cualquiera puede
- * salir; el dueno, despues de pasarle el hogar a otro.
+ * salir; el dueno, despues de pasarle el hogar a otro. El dueno que esta
+ * solo, en vez de salir, puede borrar el hogar, con un codigo que le llega
+ * al correo.
  */
 export default async function PaginaHogar() {
   // Cada visita revisa contra la base que la persona siga en el hogar con
@@ -32,6 +39,9 @@ export default async function PaginaHogar() {
   const hogar = await leerHogar(hogarId);
   const soyDueno = rol === "DUENO";
   const entraron = hogar.miembros.filter((m) => m.entroEn !== null).length;
+  const puedeBorrar = puedeBorrarHogar({ miembroId, rol }, hogar.miembros) === null;
+  const miCorreo = hogar.miembros.find((m) => m.id === miembroId)?.correo ?? "";
+  const hayCorreo = configuracionDeCorreo() !== null;
 
   return (
     <main
@@ -84,9 +94,27 @@ export default async function PaginaHogar() {
 
       <section aria-labelledby="titulo-salir" className={`mt-6 ${TARJETA}`}>
         <h2 id="titulo-salir" className="text-lg font-bold tracking-tight">
-          Salir del hogar
+          {puedeBorrar ? "Borrar este hogar" : "Salir del hogar"}
         </h2>
-        {soyDueno ? (
+        {puedeBorrar ? (
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+            <p className="max-w-[48ch] text-sm leading-relaxed text-texto-tenue">
+              Eres el único que ha entrado a este hogar. Si quieres irte, por ejemplo porque te invitaron a otro, puedes
+              borrarlo con todo lo que tiene.{" "}
+              {hayCorreo
+                ? "Para confirmar, te mandamos un código a tu correo."
+                : "Para eso, Luka tiene que poder mandarte un código por correo, y todavía no está configurado."}
+            </p>
+            {hayCorreo && (
+              <BorrarHogar
+                nombreDelHogar={hogar.nombre}
+                correo={miCorreo}
+                accionPedirCodigo={accionPedirCodigoDeBorrado}
+                accionBorrar={accionBorrarHogar}
+              />
+            )}
+          </div>
+        ) : soyDueno ? (
           <p className="mt-1 text-sm leading-relaxed text-texto-tenue">
             Como dueño, antes de salir tienes que pasarle el hogar a otro miembro que ya haya entrado: un hogar no
             puede quedar sin dueño.

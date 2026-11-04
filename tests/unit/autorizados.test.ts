@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { PUERTA_ABIERTA, correosAutorizados, reglasDeEntrada } from "@/lib/autorizados";
 
@@ -26,8 +28,15 @@ describe("reglasDeEntrada", () => {
     expect(reglasDeEntrada({}).listaDeAntes).toEqual([]);
   });
 
-  test("la puerta sigue cerrada mientras las paginas lean los datos de todos", () => {
-    expect(PUERTA_ABIERTA).toBe(false);
-    expect(reglasDeEntrada({}).puertaAbierta).toBe(false);
+  test("la puerta esta abierta: cada hogar ve solo lo suyo", () => {
+    expect(PUERTA_ABIERTA).toBe(true);
+    expect(reglasDeEntrada({}).puertaAbierta).toBe(true);
+  });
+
+  test("con la puerta abierta, ninguna pantalla dice que solo entran los correos autorizados", () => {
+    for (const ruta of ["app/ingresar/page.tsx", "componentes/portada/Preguntas.tsx", "componentes/guia/contenido.ts"]) {
+      const texto = readFileSync(join(process.cwd(), "src", ruta), "utf8");
+      expect(texto, ruta).not.toMatch(/correos?\s+(no\s+(está\s+)?)?autorizad/i);
+    }
   });
 });

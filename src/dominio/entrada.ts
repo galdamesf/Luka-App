@@ -6,11 +6,11 @@
  *  1. Si su correo ya es miembro de un hogar (o tiene una invitacion
  *     pendiente), entra a ese hogar.
  *  2. Si «Mi hogar» (el hogar inicial, el de los datos de antes de los
- *     hogares) todavia no tiene dueno y su correo es el primero de
+ *     hogares) todavia existe y no tiene dueno, y su correo es el primero de
  *     CORREOS_AUTORIZADOS, entra como su dueno. Pasa una sola vez: despues, a
  *     «Mi hogar» se entra solo con invitacion, igual que a cualquier hogar.
  *     Asi, a quien sacaron del hogar no vuelve a entrar solo por estar en el
- *     .env.
+ *     .env. Y si su dueno lo borro, la lista no lo revive.
  *  3. Si la puerta esta abierta, se le crea un hogar nuevo, vacio, con las
  *     categorias de partida, y queda como su dueno.
  *  4. Si no, no entra.
@@ -54,7 +54,7 @@ export function limpiarNombre(nombre: string | null | undefined): string | null 
 export function decidirEntrada({
   correo,
   yaEsMiembro,
-  hogarInicialConDueno,
+  hogarInicialLibre,
   listaDeAntes,
   puertaAbierta,
 }: ReglasDeEntrada & {
@@ -62,12 +62,12 @@ export function decidirEntrada({
   correo: string | null;
   /** Si el correo ya esta en la tabla de miembros, haya entrado o no. */
   yaEsMiembro: boolean;
-  /** Si «Mi hogar» ya tiene dueno: entonces la lista ya no abre nada. */
-  hogarInicialConDueno: boolean;
+  /** Si «Mi hogar» existe y todavia no tiene dueno. Si no, la lista ya no abre nada. */
+  hogarInicialLibre: boolean;
 }): DecisionDeEntrada {
   if (correo === null) return { tipo: "rechazada" };
   if (yaEsMiembro) return { tipo: "miembro" };
-  if (!hogarInicialConDueno && listaDeAntes[0] === correo) return { tipo: "dueno-del-hogar-inicial" };
+  if (hogarInicialLibre && listaDeAntes[0] === correo) return { tipo: "dueno-del-hogar-inicial" };
   return puertaAbierta ? { tipo: "hogar-nuevo" } : { tipo: "rechazada" };
 }
 

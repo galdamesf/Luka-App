@@ -41,8 +41,8 @@ describe("decidirEntrada", () => {
   const abierta: ReglasDeEntrada = { ...cerrada, puertaAbierta: true };
   const decidir = (
     correo: string | null,
-    { yaEsMiembro = false, hogarInicialConDueno = false, reglas = cerrada } = {},
-  ) => decidirEntrada({ correo, yaEsMiembro, hogarInicialConDueno, ...reglas });
+    { yaEsMiembro = false, hogarInicialLibre = true, reglas = cerrada } = {},
+  ) => decidirEntrada({ correo, yaEsMiembro, hogarInicialLibre, ...reglas });
 
   test("quien ya es miembro (o tiene invitacion) entra a su hogar", () => {
     expect(decidir("pedro@gmail.com", { yaEsMiembro: true })).toEqual({ tipo: "miembro" });
@@ -56,8 +56,12 @@ describe("decidirEntrada", () => {
     expect(decidir("fernando@gmail.com")).toEqual({ tipo: "dueno-del-hogar-inicial" });
   });
 
-  test("con «Mi hogar» ya con dueno, la lista no abre nada: a quien sacaron no vuelve solo", () => {
-    expect(decidir("fernando@gmail.com", { hogarInicialConDueno: true })).toEqual({ tipo: "rechazada" });
+  test("con «Mi hogar» ya con dueno (o borrado), la lista no abre nada: a quien sacaron no vuelve solo", () => {
+    expect(decidir("fernando@gmail.com", { hogarInicialLibre: false })).toEqual({ tipo: "rechazada" });
+  });
+
+  test("con la puerta abierta, el primero de la lista sin «Mi hogar» libre tiene uno nuevo", () => {
+    expect(decidir("fernando@gmail.com", { reglas: abierta, hogarInicialLibre: false })).toEqual({ tipo: "hogar-nuevo" });
   });
 
   test("los demas de la lista necesitan invitacion, como cualquiera", () => {
@@ -70,7 +74,7 @@ describe("decidirEntrada", () => {
 
   test("con la puerta abierta, alguien nuevo tiene su propio hogar", () => {
     expect(decidir("desconocido@gmail.com", { reglas: abierta })).toEqual({ tipo: "hogar-nuevo" });
-    expect(decidir("ana@gmail.com", { reglas: abierta, hogarInicialConDueno: true })).toEqual({ tipo: "hogar-nuevo" });
+    expect(decidir("ana@gmail.com", { reglas: abierta, hogarInicialLibre: false })).toEqual({ tipo: "hogar-nuevo" });
   });
 
   test("con la lista vacia y la puerta cerrada solo entran los miembros", () => {

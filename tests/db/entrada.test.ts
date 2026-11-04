@@ -139,6 +139,15 @@ describe("registrarEntrada con la puerta abierta", () => {
     expect(await prisma.hogar.count()).toBe(1);
   });
 
+  test("si «Mi hogar» se borro, la lista no lo revive: el primero de la lista tiene uno nuevo", async () => {
+    await prisma.hogar.delete({ where: { id: HOGAR_INICIAL } });
+    expect(await entrar("fernando@gmail.com", "Fernando", CERRADA)).toBeNull();
+
+    const hogar = await entrar("fernando@gmail.com", "Fernando", ABIERTA);
+    expect(hogar?.rol).toBe("DUENO");
+    expect(hogar?.hogarId).not.toBe(HOGAR_INICIAL);
+  });
+
   test("volver a entrar no crea un segundo hogar", async () => {
     await entrar("pedro@gmail.com", "Pedro", ABIERTA);
     await entrar("pedro@gmail.com", "Pedro", ABIERTA);

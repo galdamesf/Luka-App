@@ -1,15 +1,21 @@
 import { describe, expect, test } from "vitest";
 import {
+  CODIGO_DE_BORRADO,
+  codigoEquivocado,
   errorDeNombreDeHogar,
+  limpiarCodigo,
   nombreParaMostrar,
   ordenarMiembros,
   primerNombre,
+  puedeBorrarHogar,
   puedeCambiarDiaDeInicio,
   puedeHacerDueno,
   puedeInvitar,
   puedeQuitar,
   puedeRenombrar,
   puedeSalir,
+  revisarCodigo,
+  segundosParaReenviar,
   type MiembroDelHogar,
 } from "@/dominio/hogar";
 
@@ -67,6 +73,62 @@ describe("puedeSalir", () => {
   test("un miembro sale cuando quiere; el dueno, despues de pasar el hogar", () => {
     expect(puedeSalir(miembro)).toBeNull();
     expect(puedeSalir(dueno)).toMatch(/pásale el hogar/);
+  });
+});
+
+describe("puedeBorrarHogar", () => {
+  const yo = fila("d", { rol: "DUENO" });
+
+  test("el dueno que esta solo puede borrar el hogar, aunque tenga invitaciones pendientes", () => {
+    expect(puedeBorrarHogar(dueno, [yo])).toBeNull();
+    expect(puedeBorrarHogar(dueno, [yo, fila("abuela", { entroEn: null })])).toBeNull();
+  });
+
+  test("con alguien mas que ya entro, no: le borraria sus datos", () => {
+    expect(puedeBorrarHogar(dueno, [yo, fila("m")])).toMatch(/estás solo/);
+  });
+
+  test("un miembro no borra el hogar", () => {
+    expect(puedeBorrarHogar(miembro, [fila("m")])).toMatch(/dueño/);
+  });
+});
+
+describe("el codigo para borrar el hogar", () => {
+  const ahora = new Date("2026-11-04T03:00:00.000Z");
+  const enMinutos = (m: number) => new Date(ahora.getTime() + m * 60_000);
+  const pendiente = { miembroId: "d", expiraEn: enMinutos(10), intentos: 0 };
+
+  test("seis digitos, diez minutos, cinco intentos y un minuto entre envios", () => {
+    expect(CODIGO_DE_BORRADO).toEqual({ digitos: 6, minutosDeVigencia: 10, intentos: 5, segundosParaReenviar: 60 });
+  });
+
+  test("limpiarCodigo acepta los 6 digitos con espacios o guion, y nada mas", () => {
+    expect(limpiarCodigo("004217")).toBe("004217");
+    expect(limpiarCodigo(" 004 217 ")).toBe("004217");
+    expect(limpiarCodigo("004-217")).toBe("004217");
+    for (const malo of ["", "12345", "1234567", "12a456", "１２３４５６"]) expect(limpiarCodigo(malo), malo).toBeNull();
+  });
+
+  test("otro codigo, recien despues de un minuto", () => {
+    expect(segundosParaReenviar(null, ahora)).toBe(0);
+    expect(segundosParaReenviar(ahora, ahora)).toBe(60);
+    expect(segundosParaReenviar(new Date(ahora.getTime() - 45_500), ahora)).toBe(15);
+    expect(segundosParaReenviar(new Date(ahora.getTime() - 60_000), ahora)).toBe(0);
+  });
+
+  test("revisarCodigo: tiene que haber uno, de quien lo usa, vigente y con intentos", () => {
+    expect(revisarCodigo(pendiente, dueno, ahora)).toBeNull();
+    expect(revisarCodigo(null, dueno, ahora)).toMatch(/Primero pide el código/);
+    expect(revisarCodigo({ ...pendiente, miembroId: "otro" }, dueno, ahora)).toMatch(/Primero pide el código/);
+    expect(revisarCodigo({ ...pendiente, expiraEn: ahora }, dueno, ahora)).toMatch(/venció/);
+    expect(revisarCodigo({ ...pendiente, intentos: 5 }, dueno, ahora)).toMatch(/Se acabaron los intentos/);
+    expect(revisarCodigo({ ...pendiente, intentos: 4 }, dueno, ahora)).toBeNull();
+  });
+
+  test("codigoEquivocado dice cuantos intentos quedan", () => {
+    expect(codigoEquivocado(1)).toBe("Ese código no es. Te quedan 4 intentos.");
+    expect(codigoEquivocado(4)).toBe("Ese código no es. Te queda 1 intento.");
+    expect(codigoEquivocado(5)).toMatch(/se acabaron los intentos/);
   });
 });
 

@@ -358,6 +358,12 @@ describe("las tarjetas y las preguntas", async () => {
   test("la respuesta de la sesion dice los plazos de la app", () => {
     expect(preguntas).toContain(`tras ${MINUTOS_SIN_USO} minutos sin uso, a las ${HORAS_MAXIMAS} horas como máximo`);
   });
+
+  test("las preguntas cuentan como se entra hoy: con tu propio hogar, o invitado a uno", () => {
+    const respuestas = PREGUNTAS.map((p) => p.r).join(" ");
+    expect(respuestas).toContain("Luka te arma tu propio hogar");
+    expect(respuestas).toContain("En «Hogar» invitas su correo de Google");
+  });
 });
 
 /* ---------------------------- Cierre y pie ---------------------------- */
