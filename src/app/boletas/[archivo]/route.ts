@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { leerHogarActual } from "@/lib/hogar-actual";
 import { leerBoleta, nombreValido, tipoDeBoleta } from "@/lib/boletas";
 
 /**
@@ -10,14 +10,15 @@ import { leerBoleta, nombreValido, tipoDeBoleta } from "@/lib/boletas";
  *
  * Y antes que nada, la sesion: el middleware no pasa por aqui (la ruta
  * termina en .jpg o .pdf, y su matcher deja fuera todo lo que tiene
- * extension), asi que la puerta se revisa en la ruta misma. Sin sesion, 401.
+ * extension), asi que la puerta se revisa en la ruta misma, contra la base:
+ * sin sesion, o si la persona ya no es parte de su hogar, 401.
  */
 export async function GET(
   _peticion: Request,
   { params }: { params: Promise<{ archivo: string }> },
 ) {
-  const sesion = await auth();
-  if (!sesion?.user) {
+  const hogar = await leerHogarActual();
+  if (hogar === null) {
     return new Response("Necesitas entrar a Luka para ver esta boleta", {
       status: 401,
     });

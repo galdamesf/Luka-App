@@ -6,21 +6,27 @@ export type AjustesPlanos = {
   diaInicioMes: number;
 };
 
-/** Sin fila guardada, la app usa el mes calendario. */
+/** Sin fila guardada, el hogar usa el mes calendario. */
 export const AJUSTES_POR_OMISION: AjustesPlanos = { diaInicioMes: 1 };
 
-const ID = "app";
-
-export async function leerAjustes(db: ClienteDb = prisma): Promise<AjustesPlanos> {
-  const fila = await db.ajustes.findUnique({ where: { id: ID }, select: { diaInicioMes: true } });
+/** Los ajustes del hogar: una fila por hogar, con el hogar como llave. */
+export async function leerAjustes(hogarId: string, db: ClienteDb = prisma): Promise<AjustesPlanos> {
+  const fila = await db.ajustes.findUnique({
+    where: { hogarId },
+    select: { diaInicioMes: true },
+  });
   return fila ?? AJUSTES_POR_OMISION;
 }
 
-export async function definirDiaInicioMes(dia: number, db: ClienteDb = prisma): Promise<AjustesPlanos> {
+export async function definirDiaInicioMes(
+  hogarId: string,
+  dia: number,
+  db: ClienteDb = prisma,
+): Promise<AjustesPlanos> {
   return db.ajustes.upsert({
-    where: { id: ID },
+    where: { hogarId },
     update: { diaInicioMes: dia },
-    create: { id: ID, diaInicioMes: dia },
+    create: { hogarId, diaInicioMes: dia },
     select: { diaInicioMes: true },
   });
 }

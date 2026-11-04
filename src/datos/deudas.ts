@@ -38,20 +38,25 @@ function aPlano(fila: FilaDeuda): DeudaPlana {
  * Se traen todas y no solo las vigentes del mes: el calculo de que cuota toca
  * vive en el dominio (cuotaEnMes), que ademas necesita las terminadas para
  * poder mostrarlas en el historial.
+ *
+ * Como en todo el acceso a datos, solo las del hogar de quien mira.
  */
-export async function listarDeudas(db: ClienteDb = prisma): Promise<DeudaPlana[]> {
+export async function listarDeudas(hogarId: string, db: ClienteDb = prisma): Promise<DeudaPlana[]> {
   const filas = (await db.deuda.findMany({
+    where: { hogarId },
     orderBy: [{ activa: "desc" }, { montoCuota: "desc" }, { nombre: "asc" }],
   })) as FilaDeuda[];
   return filas.map(aPlano);
 }
 
 export async function crearDeuda(
+  hogarId: string,
   datos: DeudaValidada,
   db: ClienteDb = prisma,
 ): Promise<DeudaPlana> {
   const fila = (await db.deuda.create({
     data: {
+      hogarId,
       nombre: datos.nombre,
       montoCuota: datos.montoCuota,
       cuotasTotales: datos.cuotasTotales,
@@ -68,17 +73,17 @@ export async function crearDeuda(
  * Marca una deuda como pagada o anulada. No se borra: borrarla haria que los
  * meses pasados dejaran de cuadrar.
  */
-export async function desactivarDeuda(id: string, db: ClienteDb = prisma): Promise<void> {
-  await db.deuda.update({ where: { id }, data: { activa: false } });
+export async function desactivarDeuda(hogarId: string, id: string, db: ClienteDb = prisma): Promise<void> {
+  await db.deuda.update({ where: { id, hogarId }, data: { activa: false } });
 }
 
-export async function reactivarDeuda(id: string, db: ClienteDb = prisma): Promise<void> {
-  await db.deuda.update({ where: { id }, data: { activa: true } });
+export async function reactivarDeuda(hogarId: string, id: string, db: ClienteDb = prisma): Promise<void> {
+  await db.deuda.update({ where: { id, hogarId }, data: { activa: true } });
 }
 
 /** Para deshacer una deuda recien creada por error. */
-export async function eliminarDeuda(id: string, db: ClienteDb = prisma): Promise<void> {
-  await db.deuda.delete({ where: { id } });
+export async function eliminarDeuda(hogarId: string, id: string, db: ClienteDb = prisma): Promise<void> {
+  await db.deuda.delete({ where: { id, hogarId } });
 }
 
 /**
@@ -87,10 +92,12 @@ export async function eliminarDeuda(id: string, db: ClienteDb = prisma): Promise
  * El par (deuda, mes) es unico en la base, asi que dos clics seguidos en
  * "pagar" no dejan dos registros: el segundo choca contra el indice.
  *
- * El gasto se registra en la categoria de deudas. Si alguien la borro o la
- * renombro, se vuelve a crear aqui mismo: pagar no deberia fallar por eso.
+ * El gasto se registra en la categoria de deudas del hogar de la deuda, y el
+ * gasto queda en ese mismo hogar. Si alguien borro o renombro la categoria,
+ * se vuelve a crear aqui mismo: pagar no deberia fallar por eso.
  */
 export async function pagarCuota(
+  hogarId: string,
   deudaId: string,
   mes: string,
   fechaPago: string,
@@ -99,7 +106,8 @@ export async function pagarCuota(
   db: typeof prisma = prisma,
 ): Promise<void> {
   await db.$transaction(async (tx: ClienteTx) => {
-    const deuda = await tx.deuda.findUniqueOrThrow({ where: { id: deudaId } });
+    // Una deuda de otro hogar no se encuentra: no se paga.
+    const deuda = await tx.deuda.findFirstOrThrow({ where: { id: deudaId, hogarId } });
 
     const yaPagada = await tx.cuotaPagada.findUnique({
       where: { deudaId_mes: { deudaId, mes: rangoDelMesISO(mes).desde } },
@@ -109,11 +117,12 @@ export async function pagarCuota(
 
     const categoria =
       (await tx.categoria.findUnique({
-        where: { nombre: CATEGORIA_CUOTAS },
+        where: { hogarId_nombre: { hogarId: deuda.hogarId, nombre: CATEGORIA_CUOTAS } },
         select: { id: true },
       })) ??
       (await tx.categoria.create({
         data: {
+          hogarId: deuda.hogarId,
           nombre: CATEGORIA_CUOTAS,
           color: colorDeGrupo("otros"),
           icono: "credit-card",
@@ -124,6 +133,7 @@ export async function pagarCuota(
 
     const gasto = await tx.gasto.create({
       data: {
+        hogarId: deuda.hogarId,
         fecha: fechaDesdeISO(fechaPago),
         descripcion: deuda.nombre.slice(0, 120),
         monto: montoReal,
@@ -152,31 +162,35 @@ export async function pagarCuota(
  * intermedio que las restricciones rechazan.
  */
 export async function revertirCuota(
+  hogarId: string,
   deudaId: string,
   mes: string,
   db: typeof prisma = prisma,
 ): Promise<void> {
   await db.$transaction(async (tx: ClienteTx) => {
-    const cuota = await tx.cuotaPagada.findUnique({
-      where: { deudaId_mes: { deudaId, mes: rangoDelMesISO(mes).desde } },
+    // El pago se busca por su deuda Y el hogar de la deuda: el pago de otro
+    // hogar no se encuentra, y no hay nada que deshacer.
+    const cuota = await tx.cuotaPagada.findFirst({
+      where: { deudaId, mes: rangoDelMesISO(mes).desde, deuda: { hogarId } },
       select: { id: true, gastoId: true },
     });
     if (cuota === null) return;
 
     await tx.cuotaPagada.delete({ where: { id: cuota.id } });
     if (cuota.gastoId !== null) {
-      await tx.gasto.delete({ where: { id: cuota.gastoId } });
+      await tx.gasto.delete({ where: { id: cuota.gastoId, hogarId } });
     }
   });
 }
 
 /** Las cuotas pagadas de un mes, para que el balance sepa que descontar. */
 export async function listarPagosDelMes(
+  hogarId: string,
   mes: string,
   db: ClienteDb = prisma,
 ): Promise<PagoCuota[]> {
   const filas = (await db.cuotaPagada.findMany({
-    where: { mes: rangoDelMesISO(mes).desde },
+    where: { mes: rangoDelMesISO(mes).desde, deuda: { hogarId } },
     select: {
       deudaId: true,
       mes: true,
@@ -214,11 +228,12 @@ export async function listarPagosDelMes(
  * plazo de la deuda. El nombre, el monto y la nota se pueden cambiar siempre.
  */
 export async function actualizarDeuda(
+  hogarId: string,
   datos: EdicionDeudaValidada,
   db: ClienteDb = prisma,
 ): Promise<DeudaPlana> {
-  const actual = await db.deuda.findUnique({
-    where: { id: datos.id },
+  const actual = await db.deuda.findFirst({
+    where: { id: datos.id, hogarId },
     select: { primeraCuota: true, cuotasTotales: true, _count: { select: { cuotasPagadas: true } } },
   });
 
@@ -235,7 +250,7 @@ export async function actualizarDeuda(
   }
 
   const fila = (await db.deuda.update({
-    where: { id: datos.id },
+    where: { id: datos.id, hogarId },
     data: {
       nombre: datos.nombre,
       montoCuota: datos.montoCuota,

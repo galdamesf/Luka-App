@@ -61,3 +61,47 @@ export function sesionVigente(
 export function ahoraEnSegundos(): number {
   return Math.floor(Date.now() / 1000);
 }
+
+/**
+ * El hogar que lleva la sesion: con que hogar entro, como que miembro y con
+ * que rol. Se guarda en el token al entrar con Google (src/auth.ts).
+ */
+export type HogarDeSesion = {
+  hogarId: string;
+  miembroId: string;
+  rol: "DUENO" | "MIEMBRO";
+};
+
+/**
+ * Lee el hogar del token. null si falta o viene a medias: un token de antes
+ * de los hogares no trae hogar y tiene que quedar afuera, no romper.
+ */
+export function hogarDelToken(token: Record<string, unknown>): HogarDeSesion | null {
+  const { hogarId, miembroId, rol } = token;
+  if (typeof hogarId !== "string" || hogarId === "") return null;
+  if (typeof miembroId !== "string" || miembroId === "") return null;
+  if (rol !== "DUENO" && rol !== "MIEMBRO") return null;
+  return { hogarId, miembroId, rol };
+}
+
+/** sesionVigente, y ademas con un hogar: sin hogar no hay nada que mostrar. */
+export function tokenVigente(
+  token: Record<string, unknown>,
+  ahora: number,
+  arranqueActual: string,
+): boolean {
+  return sesionVigente(token, ahora, arranqueActual) && hogarDelToken(token) !== null;
+}
+
+/**
+ * Si lo que dice la sesion sigue siendo cierto en la base: la persona sigue
+ * siendo ese miembro de ese hogar. Si la sacaron, o la sacaron y la invitaron
+ * a otro hogar, ya no coincide y la sesion se termina.
+ */
+export function mismoHogar(
+  sesion: HogarDeSesion | null,
+  enLaBase: HogarDeSesion | null,
+): boolean {
+  if (sesion === null || enLaBase === null) return false;
+  return sesion.hogarId === enLaBase.hogarId && sesion.miembroId === enLaBase.miembroId;
+}

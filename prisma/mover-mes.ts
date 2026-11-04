@@ -11,6 +11,9 @@
  *
  * Con --dia 27 deja ademas guardado el dia de inicio del mes.
  *
+ * Mueve lo de un solo hogar. Si en la base hay uno solo, es ese; si hay
+ * varios, se elige con el correo de un miembro: --correo tu@gmail.com
+ *
  * Antes de aplicar, un respaldo:
  *   npm run db:respaldo
  */
@@ -19,6 +22,7 @@ import { cargarEnv } from "../src/lib/env";
 import { formatearCLP } from "../src/lib/dinero";
 import { cambiosDelPlan, planearMovimiento } from "../src/dominio/mover-mes";
 import { aplicarMovimiento, leerDeudasParaMover, leerParaMover } from "../src/datos/mover-mes";
+import { normalizarCorreo } from "../src/dominio/entrada";
 
 cargarEnv();
 
@@ -29,11 +33,14 @@ async function main() {
   const aplicar = argumentos.includes("--aplicar");
   const posDia = argumentos.indexOf("--dia");
   const dia = posDia === -1 ? null : Number(argumentos[posDia + 1]);
-  // Los dos meses son lo que no es opcion ni el valor de --dia.
-  const [desde, hasta] = argumentos.filter((a, i) => !a.startsWith("--") && (posDia === -1 || i !== posDia + 1));
+  const posCorreo = argumentos.indexOf("--correo");
+  const correo = posCorreo === -1 ? null : (argumentos[posCorreo + 1] ?? "");
+  // Los dos meses son lo que no es opcion ni el valor de --dia o --correo.
+  const valores = new Set([posDia + 1, posCorreo + 1].filter((i) => i > 0));
+  const [desde, hasta] = argumentos.filter((a, i) => !a.startsWith("--") && !valores.has(i));
 
   if (desde === undefined || hasta === undefined || !MES.test(desde) || !MES.test(hasta) || desde === hasta) {
-    console.error("Uso: npm run db:mover-mes -- 2026-10 2026-11 [--aplicar] [--dia 27]");
+    console.error("Uso: npm run db:mover-mes -- 2026-10 2026-11 [--aplicar] [--dia 27] [--correo tu@gmail.com]");
     process.exitCode = 1;
     return;
   }
@@ -45,11 +52,19 @@ async function main() {
 
   const prisma = new PrismaClient();
   try {
+    const hogar = await elegirHogar(prisma, correo);
+    if (hogar === null) {
+      process.exitCode = 1;
+      return;
+    }
+    const hogarId = hogar.id;
+    console.log(`\nHogar: ${hogar.nombre}`);
+
     const plan = planearMovimiento(
-      await leerParaMover(desde, prisma),
-      await leerParaMover(hasta, prisma),
+      await leerParaMover(hogarId, desde, prisma),
+      await leerParaMover(hogarId, hasta, prisma),
       { desde, hasta },
-      await leerDeudasParaMover(prisma),
+      await leerDeudasParaMover(hogarId, prisma),
     );
     const cuota = (numero: number | null, total: number) =>
       numero === null ? "sin cuota" : `cuota ${numero} de ${total}`;
@@ -91,14 +106,48 @@ async function main() {
       return;
     }
 
-    await aplicarMovimiento(plan, hasta, prisma);
+    await aplicarMovimiento(hogarId, plan, hasta, prisma);
     if (dia !== null) {
-      await prisma.ajustes.upsert({ where: { id: "app" }, update: { diaInicioMes: dia }, create: { id: "app", diaInicioMes: dia } });
+      await prisma.ajustes.upsert({
+        where: { hogarId },
+        update: { diaInicioMes: dia },
+        create: { hogarId, diaInicioMes: dia },
+      });
     }
     console.log("\nListo.\n");
   } finally {
     await prisma.$disconnect();
   }
+}
+
+/**
+ * El hogar a mover: el del correo si se dio uno; si no, el unico que haya.
+ * Con varios hogares y sin correo, no adivina: lo pide.
+ */
+async function elegirHogar(
+  prisma: PrismaClient,
+  correo: string | null,
+): Promise<{ id: string; nombre: string } | null> {
+  if (correo !== null) {
+    const normalizado = normalizarCorreo(correo);
+    const miembro =
+      normalizado === null
+        ? null
+        : await prisma.miembro.findUnique({
+            where: { correo: normalizado },
+            select: { hogar: { select: { id: true, nombre: true } } },
+          });
+    if (miembro === null) {
+      console.error(`Ningún hogar tiene a ${correo} como miembro.`);
+      return null;
+    }
+    return miembro.hogar;
+  }
+
+  const hogares = await prisma.hogar.findMany({ select: { id: true, nombre: true }, take: 2 });
+  if (hogares.length === 1) return hogares[0]!;
+  console.error("Hay varios hogares: di de cuál con --correo tu@gmail.com");
+  return null;
 }
 
 main().catch((error) => {

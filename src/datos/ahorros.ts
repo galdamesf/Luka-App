@@ -27,30 +27,36 @@ function aPlano(fila: FilaAhorro): AhorroPlano {
 /**
  * Todos los ahorros hasta `mes`, ese incluido, del mas nuevo al mas antiguo.
  * De ahi salen los del mes, el total acumulado y el historial: son pocas
- * filas al ano, no vale la pena una consulta por cada cosa.
+ * filas al ano, no vale la pena una consulta por cada cosa. Solo los del
+ * hogar de quien mira, como todo el acceso a datos.
  */
 export async function listarAhorrosHasta(
+  hogarId: string,
   mes: string,
   db: ClienteDb = prisma,
 ): Promise<AhorroPlano[]> {
   const filas = (await db.ahorro.findMany({
-    where: { mes: { lte: rangoDelMesISO(mes).desde } },
+    where: { hogarId, mes: { lte: rangoDelMesISO(mes).desde } },
     orderBy: [{ mes: "desc" }, { creadoEn: "desc" }],
   })) as FilaAhorro[];
   return filas.map(aPlano);
 }
 
 export async function crearAhorro(
+  hogarId: string,
   datos: AhorroValidado,
   db: ClienteDb = prisma,
 ): Promise<AhorroPlano> {
   const fila = (await db.ahorro.create({
-    data: { mes: rangoDelMesISO(datos.mes).desde, monto: datos.monto, nota: datos.nota },
+    data: { hogarId, mes: rangoDelMesISO(datos.mes).desde, monto: datos.monto, nota: datos.nota },
   })) as FilaAhorro;
   return aPlano(fila);
 }
 
-/** Borra un ahorro. Si ya no existe no pasa nada: el resultado es el mismo. */
-export async function eliminarAhorro(id: string, db: ClienteDb = prisma): Promise<void> {
-  await db.ahorro.deleteMany({ where: { id } });
+/**
+ * Borra un ahorro. Si ya no existe (o es de otro hogar) no pasa nada: para
+ * este hogar, el resultado es el mismo.
+ */
+export async function eliminarAhorro(hogarId: string, id: string, db: ClienteDb = prisma): Promise<void> {
+  await db.ahorro.deleteMany({ where: { id, hogarId } });
 }

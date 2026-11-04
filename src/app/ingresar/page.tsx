@@ -14,8 +14,16 @@ export const metadata: Metadata = {
  * centro, el boton con las reglas de marca de Google (fondo blanco, su logo
  * tal cual, tipografia sobria) y la unica letra chica que importa: solo los
  * correos autorizados entran. Si Google devuelve a alguien que no esta en la
- * lista, llega aqui con ?error=AccessDenied y se le dice en castellano.
+ * lista, llega aqui con ?error=AccessDenied y se le dice en castellano. Si
+ * alguien deja de ser parte de su hogar, su sesion se cierra y llega aqui con
+ * ?error=SinHogar.
  */
+function mensajeDeError(error: string): string {
+  if (error === "AccessDenied") return "Ese correo no está autorizado para entrar a esta app.";
+  if (error === "SinHogar") return "Tu sesión se cerró porque ya no eres parte de ese hogar. Entra de nuevo para seguir.";
+  return "No se pudo completar el ingreso. Inténtalo de nuevo.";
+}
+
 export default async function Ingresar({
   searchParams,
 }: {
@@ -39,9 +47,7 @@ export default async function Ingresar({
             role="alert"
             className="mt-5 rounded-xl border border-peligro/40 bg-peligro/10 px-4 py-3 text-sm text-pretty"
           >
-            {error === "AccessDenied"
-              ? "Ese correo no está autorizado para entrar a esta app."
-              : "No se pudo completar el ingreso. Inténtalo de nuevo."}
+            {mensajeDeError(error)}
           </p>
         ) : null}
 

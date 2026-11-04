@@ -20,6 +20,7 @@ import { esquemaMes } from "@/dominio/esquemas";
 import { hoyISO } from "@/lib/fecha";
 import { enPeriodo, periodoDe, periodoDeFecha, periodoVecino } from "@/lib/periodo";
 import { leerAjustes } from "@/datos/ajustes";
+import { hogarActual } from "@/lib/hogar-actual";
 import { accionCrearGasto, accionEliminarGasto } from "./acciones/gastos";
 import { accionCrearAhorro, accionEliminarAhorro } from "./acciones/ahorros";
 import { accionDefinirDiaInicio } from "./acciones/ajustes";
@@ -81,11 +82,15 @@ type Props = {
 };
 
 export default async function Home({ searchParams }: Props) {
+  // Cada visita revisa contra la base que la persona siga en el hogar con
+  // que entro (si no, la sesion se cierra aqui mismo), y de ese hogar, y de
+  // ningun otro, se lee todo lo que sigue.
+  const { hogarId } = await hogarActual();
   const parametros = await searchParams;
 
   // El mes de gastos empieza el dia que eligio la persona (el de su pago).
   // Con dia 27, el 2 de noviembre es noviembre: del 27 oct al 26 nov.
-  const { diaInicioMes } = await leerAjustes();
+  const { diaInicioMes } = await leerAjustes(hogarId);
   const hoy = hoyISO();
 
   // Un ?mes= invalido no es motivo para mostrar un error: se cae al mes actual.
@@ -95,8 +100,9 @@ export default async function Home({ searchParams }: Props) {
   const periodoAnterior = periodoVecino(periodo, -1);
 
   // Antes de leer: crear las cuentas mensuales que falten en este mes. Es
-  // idempotente (indice unico por nombre y mes), asi que recargar no duplica.
-  await regenerarMensuales(mes);
+  // idempotente (indice unico por hogar, nombre y mes), asi que recargar no
+  // duplica.
+  await regenerarMensuales(hogarId, mes);
 
   const mesAnterior = periodoAnterior.mes;
 
@@ -104,23 +110,23 @@ export default async function Home({ searchParams }: Props) {
     gastos, gastosAnterior, pagos, presupuestos, categorias, sueldo, deudas, cuentas,
     sueldoAnterior, pagosAnterior, cuentasAnterior, presupuestosAnterior, ahorros,
   ] = await Promise.all([
-    listarGastosDelMes(periodo),
+    listarGastosDelMes(hogarId, periodo),
     // Para el detalle al pasar el mouse por una categoria, la variacion del
     // total y el Health Score del mes anterior.
-    listarGastosDelMes(periodoAnterior),
-    listarPagosDelMes(mes),
-    listarPresupuestosDelMes(mes),
-    listarCategoriasActivas(),
-    sueldoDelMes(mes),
-    listarDeudas(),
-    listarCuentasDelMes(mes),
+    listarGastosDelMes(hogarId, periodoAnterior),
+    listarPagosDelMes(hogarId, mes),
+    listarPresupuestosDelMes(hogarId, mes),
+    listarCategoriasActivas(hogarId),
+    sueldoDelMes(hogarId, mes),
+    listarDeudas(hogarId),
+    listarCuentasDelMes(hogarId, mes),
     // Lo del mes anterior, solo para comparar el Health Score.
-    sueldoDelMes(mesAnterior),
-    listarPagosDelMes(mesAnterior),
-    listarCuentasDelMes(mesAnterior),
-    listarPresupuestosDelMes(mesAnterior),
+    sueldoDelMes(hogarId, mesAnterior),
+    listarPagosDelMes(hogarId, mesAnterior),
+    listarCuentasDelMes(hogarId, mesAnterior),
+    listarPresupuestosDelMes(hogarId, mesAnterior),
     // Hasta este mes: de ahi salen los del mes, el total y el historial.
-    listarAhorrosHasta(mes),
+    listarAhorrosHasta(hogarId, mes),
   ]);
 
   const resumen = resumirMes(gastos, periodo);

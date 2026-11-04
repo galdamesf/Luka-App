@@ -1,6 +1,6 @@
 import { listarGastosDelMes } from "@/datos/gastos";
 import { sueldoDelMes } from "@/datos/sueldos";
-import { listarDeudas } from "@/datos/deudas";
+import { listarDeudas, listarPagosDelMes } from "@/datos/deudas";
 import { listarCuentasDelMes } from "@/datos/cuentas";
 import { serieHistorica } from "@/datos/historico";
 import { armarInforme } from "@/dominio/informe";
@@ -11,6 +11,7 @@ import { esquemaMes } from "@/dominio/esquemas";
 import { hoyISO } from "@/lib/fecha";
 import { periodoDe, periodoDeFecha, periodoVecino } from "@/lib/periodo";
 import { leerAjustes } from "@/datos/ajustes";
+import { hogarActual } from "@/lib/hogar-actual";
 import { SelectorMes } from "@/componentes/SelectorMes";
 import { BotonImprimir } from "@/componentes/BotonImprimir";
 import { SecuenciaBalance } from "@/componentes/SecuenciaBalance";
@@ -35,27 +36,33 @@ export const dynamic = "force-dynamic";
 type Props = { searchParams: Promise<{ mes?: string }> };
 
 export default async function Informes({ searchParams }: Props) {
+  // Cada visita revisa contra la base que la persona siga en el hogar con
+  // que entro (si no, la sesion se cierra aqui mismo), y de ese hogar, y de
+  // ningun otro, se lee todo lo que sigue.
+  const { hogarId } = await hogarActual();
   const parametros = await searchParams;
-  const { diaInicioMes } = await leerAjustes();
+  const { diaInicioMes } = await leerAjustes(hogarId);
   const hoy = hoyISO();
   const elegido = esquemaMes.safeParse(parametros.mes);
   const mes = elegido.success ? elegido.data : periodoDeFecha(hoy, diaInicioMes).mes;
   const periodo = periodoDe(mes, diaInicioMes);
   const periodoAnterior = periodoVecino(periodo, -1);
 
-  const [gastos, gastosAnterior, sueldo, deudas, cuentas, serie] = await Promise.all([
-    listarGastosDelMes(periodo),
-    listarGastosDelMes(periodoAnterior),
-    sueldoDelMes(mes),
-    listarDeudas(),
-    listarCuentasDelMes(mes),
+  const [gastos, gastosAnterior, sueldo, deudas, pagos, cuentas, serie] = await Promise.all([
+    listarGastosDelMes(hogarId, periodo),
+    listarGastosDelMes(hogarId, periodoAnterior),
+    sueldoDelMes(hogarId, mes),
+    listarDeudas(hogarId),
+    // Sin los pagos, el balance no descuenta las cuotas ya pagadas.
+    listarPagosDelMes(hogarId, mes),
+    listarCuentasDelMes(hogarId, mes),
     // Doce meses hasta el elegido: suficiente para ver estacionalidad sin
     // que el eje se llene de etiquetas.
-    serieHistorica(mes, 12, undefined, diaInicioMes),
+    serieHistorica(hogarId, mes, 12, undefined, diaInicioMes),
   ]);
 
   const informe = armarInforme(gastos, gastosAnterior, periodo);
-  const balance = calcularBalance({ mes, sueldo, resumen: informe.resumen, deudas });
+  const balance = calcularBalance({ mes, sueldo, resumen: informe.resumen, deudas, pagos });
   const resumenCuentas = resumirCuentas(cuentas, periodo, hoy);
   const estadisticas = analizarHistorico(serie);
 

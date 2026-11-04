@@ -25,38 +25,64 @@ beforeEach(async () => {
 
 const MES = fechaDesdeISO("2026-11-01");
 
-async function crearCategoria(hogarId?: string, nombre = "Supermercado") {
+async function crearCategoria(hogarId: string = HOGAR_INICIAL, nombre = "Supermercado") {
   return prisma.categoria.create({
-    data: { nombre, color: "#15803D", icono: "shopping-cart", esencial: true, ...(hogarId ? { hogarId } : {}) },
+    data: { hogarId, nombre, color: "#15803D", icono: "shopping-cart", esencial: true },
   });
 }
 
-async function crearGasto(categoriaId: string, datos: { hogarId?: string; anotadoPorId?: string } = {}) {
+async function crearGasto(categoriaId: string, datos: { anotadoPorId?: string } = {}) {
   return prisma.gasto.create({
-    data: { fecha: fechaDesdeISO("2026-11-03"), descripcion: "Feria", monto: 12_000, categoriaId, ...datos },
+    data: {
+      hogarId: HOGAR_INICIAL,
+      fecha: fechaDesdeISO("2026-11-03"),
+      descripcion: "Feria",
+      monto: 12_000,
+      categoriaId,
+      ...datos,
+    },
   });
 }
 
-describe("mientras el codigo no pasa el hogar", () => {
-  test("todo lo que se crea sin hogar cae en el hogar inicial", async () => {
+describe("el hogar es obligatorio", () => {
+  // Antes de que todo el codigo pasara el hogar, cada tabla ponia el hogar
+  // inicial por omision. Ya no: una fila sin hogar se rechaza, en vez de caer
+  // callada en «Mi hogar».
+  const TABLAS = ["categorias", "gastos", "sueldos", "deudas", "cuentas", "presupuestos", "ahorros", "ajustes"];
+
+  test("en cada tabla, hogar_id es obligatorio y no tiene valor por omision", async () => {
+    const columnas = await prisma.$queryRaw<{ tabla: string; nula: string; omision: string | null }[]>`
+      SELECT table_name::text AS tabla, is_nullable::text AS nula, column_default::text AS omision
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND column_name = 'hogar_id'
+    `;
+    for (const tabla of TABLAS) {
+      const columna = columnas.find((c) => c.tabla === tabla);
+      expect(columna, `${tabla} no tiene hogar_id`).toBeDefined();
+      expect(columna, tabla).toMatchObject({ nula: "NO", omision: null });
+    }
+  });
+
+  // El mensaje cambia segun el motor de Prisma: unos nombran la columna y
+  // otros solo dan el codigo de Postgres para "falta un valor obligatorio"
+  // (23502). Cualquiera de los dos dice lo mismo: la fila no entro.
+  const FALTA_OBLIGATORIO = /23502|null value in column "hogar_id"/;
+
+  test.each([
+    ["categorias", `INSERT INTO categorias (id, nombre, color, icono) VALUES ('c', 'X', '#15803D', 'x')`],
+    ["sueldos", `INSERT INTO sueldos (id, monto, vigente_desde, actualizado_en) VALUES ('s', 1, '2026-11-01', now())`],
+    ["deudas", `INSERT INTO deudas (id, nombre, monto_cuota, cuotas_totales, primera_cuota, actualizado_en) VALUES ('d', 'X', 1, 1, '2026-11-01', now())`],
+    ["ahorros", `INSERT INTO ahorros (id, mes, monto, actualizado_en) VALUES ('a', '2026-11-01', 1, now())`],
+    ["ajustes", `INSERT INTO ajustes (dia_inicio_mes, actualizado_en) VALUES (1, now())`],
+  ])("%s sin hogar no entra", async (_tabla, sql) => {
+    await expect(prisma.$executeRawUnsafe(sql)).rejects.toThrow(FALTA_OBLIGATORIO);
+  });
+
+  test("lo creado con su hogar queda en ese hogar", async () => {
     const categoria = await crearCategoria();
     const gasto = await crearGasto(categoria.id);
-    const sueldo = await prisma.sueldo.create({ data: { monto: 1_000_000, vigenteDesde: MES } });
-    const deuda = await prisma.deuda.create({
-      data: { nombre: "Notebook", montoCuota: 50_000, cuotasTotales: 12, primeraCuota: MES },
-    });
-    const cuenta = await prisma.cuenta.create({
-      data: { nombre: "Luz", monto: 30_000, mes: MES, categoriaId: categoria.id },
-    });
-    const presupuesto = await prisma.presupuesto.create({
-      data: { categoriaId: categoria.id, mes: MES, monto: 200_000 },
-    });
-    const ahorro = await prisma.ahorro.create({ data: { mes: MES, monto: 40_000 } });
-    const ajustes = await prisma.ajustes.create({ data: { diaInicioMes: 27 } });
-
-    for (const fila of [categoria, gasto, sueldo, deuda, cuenta, presupuesto, ahorro, ajustes]) {
-      expect(fila.hogarId).toBe(HOGAR_INICIAL);
-    }
+    expect(categoria.hogarId).toBe(HOGAR_INICIAL);
+    expect(gasto.hogarId).toBe(HOGAR_INICIAL);
     expect(gasto.anotadoPorId).toBeNull();
   });
 });
@@ -92,10 +118,42 @@ describe("hogares", () => {
     expect(await prisma.miembro.count()).toBe(0);
   });
 
-  test("cada hogar tiene a lo mas un juego de ajustes", async () => {
-    await prisma.ajustes.create({ data: { diaInicioMes: 27 } });
-    // Otra fila para el mismo hogar choca (por el hogar o por el id 'app').
-    await expect(prisma.ajustes.create({ data: { id: "otro", diaInicioMes: 1 } })).rejects.toThrow();
+  test("cada hogar tiene a lo mas un juego de ajustes, y cada uno el suyo", async () => {
+    const otro = await prisma.hogar.create({ data: { nombre: "Casa de Ana" } });
+    await prisma.ajustes.create({ data: { hogarId: HOGAR_INICIAL, diaInicioMes: 27 } });
+    await prisma.ajustes.create({ data: { hogarId: otro.id, diaInicioMes: 5 } });
+    await expect(prisma.ajustes.create({ data: { hogarId: HOGAR_INICIAL, diaInicioMes: 1 } })).rejects.toThrow();
+    expect(await prisma.ajustes.count()).toBe(2);
+  });
+});
+
+describe("lo unico pasa a ser unico dentro de cada hogar", () => {
+  test("dos hogares pueden tener cada uno su «Supermercado»; uno solo, no dos", async () => {
+    const otro = await prisma.hogar.create({ data: { nombre: "Casa de Ana" } });
+    await crearCategoria();
+    await crearCategoria(otro.id);
+    expect(await prisma.categoria.count({ where: { nombre: "Supermercado" } })).toBe(2);
+    await expect(crearCategoria(otro.id)).rejects.toThrow();
+  });
+
+  test("cada hogar tiene su sueldo del mes", async () => {
+    const otro = await prisma.hogar.create({ data: { nombre: "Casa de Ana" } });
+    await prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, monto: 1_000_000, vigenteDesde: MES } });
+    await prisma.sueldo.create({ data: { hogarId: otro.id, monto: 800_000, vigenteDesde: MES } });
+    await expect(prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, monto: 5, vigenteDesde: MES } })).rejects.toThrow();
+  });
+
+  test("la misma cuenta del mismo mes puede estar en dos hogares, no dos veces en uno", async () => {
+    const otro = await prisma.hogar.create({ data: { nombre: "Casa de Ana" } });
+    const mia = await crearCategoria();
+    const suya = await crearCategoria(otro.id);
+    await prisma.cuenta.create({ data: { hogarId: HOGAR_INICIAL, nombre: "Luz", monto: 30_000, mes: MES, categoriaId: mia.id } });
+    await prisma.cuenta.create({
+      data: { hogarId: otro.id, nombre: "Luz", monto: 25_000, mes: MES, categoriaId: suya.id },
+    });
+    await expect(
+      prisma.cuenta.create({ data: { hogarId: HOGAR_INICIAL, nombre: "Luz", monto: 1, mes: MES, categoriaId: mia.id } }),
+    ).rejects.toThrow();
   });
 });
 

@@ -191,6 +191,7 @@ describe("calcularBalance", () => {
       sueldo: 1200000,
       resumen,
       deudas: [deuda({ id: "d1", primeraCuota: "2026-08" })],
+      pagos: [],
     });
 
     expect(b.cuotas).toBe(0);
@@ -256,6 +257,7 @@ describe("calcularBalance", () => {
         deuda({ id: "d3", nombre: "Terminada", montoCuota: 999999, primeraCuota: "2025-01", cuotasTotales: 3 }),
         deuda({ id: "d4", nombre: "Futura", montoCuota: 777777, primeraCuota: "2027-01", cuotasTotales: 6 }),
       ],
+      pagos: [],
     });
 
     expect(b.cuotasDelMes).toHaveLength(2);
@@ -273,6 +275,7 @@ describe("calcularBalance", () => {
         deuda({ id: "a", nombre: "Chica", montoCuota: 20000, primeraCuota: "2026-10" }),
         deuda({ id: "b", nombre: "Grande", montoCuota: 200000, primeraCuota: "2026-10" }),
       ],
+      pagos: [],
     });
     expect(b.cuotasDelMes.map((c) => c.deuda.nombre)).toEqual(["Grande", "Chica"]);
   });
@@ -284,6 +287,7 @@ describe("calcularBalance", () => {
         deuda({ id: "a", nombre: "Zapatos", montoCuota: 50000, primeraCuota: "2026-10" }),
         deuda({ id: "b", nombre: "Auto", montoCuota: 50000, primeraCuota: "2026-10" }),
       ],
+      pagos: [],
     });
     expect(b.cuotasDelMes.map((c) => c.deuda.nombre)).toEqual(["Auto", "Zapatos"]);
   });
@@ -291,20 +295,21 @@ describe("calcularBalance", () => {
   test("marca el rojo cuando se gastó más de lo que entró", () => {
     const b = calcularBalance({
       mes: "2026-10", sueldo: 600000, resumen, deudas: [deuda()],
+      pagos: [],
     });
     expect(b.saldo).toBeLessThan(0);
     expect(b.enRojo).toBe(true);
   });
 
   test("sin sueldo definido lo señala en vez de asumir cero en silencio", () => {
-    const b = calcularBalance({ mes: "2026-10", sueldo: null, resumen, deudas: [] });
+    const b = calcularBalance({ mes: "2026-10", sueldo: null, resumen, deudas: [], pagos: [] });
     expect(b.sinSueldo).toBe(true);
     expect(b.sueldo).toBe(0);
     expect(b.porcentajeComprometido).toBe(0);
   });
 
   test("sueldo definido en cero no es lo mismo que sin sueldo", () => {
-    const b = calcularBalance({ mes: "2026-10", sueldo: 0, resumen, deudas: [] });
+    const b = calcularBalance({ mes: "2026-10", sueldo: 0, resumen, deudas: [], pagos: [] });
     expect(b.sinSueldo).toBe(false);
   });
 
@@ -312,6 +317,7 @@ describe("calcularBalance", () => {
     const b = calcularBalance({
       mes: "2026-10", sueldo: 1000000, resumen,
       deudas: [deuda({ montoCuota: 130000, primeraCuota: "2026-10" })],
+      pagos: [],
     });
     // 570.000 de básicos + 130.000 de cuota sobre 1.000.000.
     expect(b.porcentajeComprometido).toBeCloseTo(70, 6);
@@ -319,7 +325,7 @@ describe("calcularBalance", () => {
 
   test("un mes sin gastos ni deudas deja el sueldo entero", () => {
     const vacio = resumirMes([], "2026-10", NOVIEMBRE);
-    const b = calcularBalance({ mes: "2026-10", sueldo: 1200000, resumen: vacio, deudas: [] });
+    const b = calcularBalance({ mes: "2026-10", sueldo: 1200000, resumen: vacio, deudas: [], pagos: [] });
     expect(b.disponible).toBe(1200000);
     expect(b.saldo).toBe(1200000);
     expect(b.enRojo).toBe(false);
@@ -394,6 +400,7 @@ describe("la boleta de las cuotas en el balance", () => {
       sueldo: 1200000,
       resumen,
       deudas: [deuda({ id: "d1", primeraCuota: "2026-08" })],
+      pagos: [],
     });
     expect(pendiente.cuotasDelMes[0]!.gastoId).toBeNull();
     expect(pendiente.cuotasDelMes[0]!.boletaArchivo).toBeNull();

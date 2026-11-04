@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-// La ruta pregunta por la sesion a src/auth.ts; aqui se reemplaza para no
-// levantar next-auth.
-const auth = vi.fn();
-vi.mock("@/auth", () => ({ auth: () => auth() }));
+// La ruta pregunta por el hogar de la sesion (src/lib/hogar-actual.ts, que
+// revisa la cookie y la base); aqui se reemplaza para no levantar next-auth.
+const leerHogarActual = vi.fn();
+vi.mock("@/lib/hogar-actual", () => ({ leerHogarActual: () => leerHogarActual() }));
 
 const { GET } = await import("@/app/boletas/[archivo]/route");
 
@@ -14,30 +14,35 @@ function pedir(archivo: string) {
 }
 
 beforeEach(() => {
-  auth.mockReset();
+  leerHogarActual.mockReset();
 });
+
+const HOGAR = { hogarId: "h1", miembroId: "m1", rol: "DUENO" };
 
 describe("GET /boletas/[archivo]", () => {
   test("sin sesion responde 401, aunque el nombre sea valido", async () => {
-    auth.mockResolvedValue(null);
+    leerHogarActual.mockResolvedValue(null);
     const respuesta = await pedir("0dd4ebe6b6759cc0c283d2e7adb19d7f.jpg");
     expect(respuesta.status).toBe(401);
   });
 
-  test("una sesion sin usuario tampoco pasa", async () => {
-    auth.mockResolvedValue({ expires: "2099-01-01T00:00:00.000Z" });
+  test("con sesion pero ya fuera de su hogar, tampoco pasa", async () => {
+    // leerHogarActual devuelve null tambien cuando la base ya no lo tiene
+    // como miembro del hogar con que entro.
+    leerHogarActual.mockResolvedValue(null);
     const respuesta = await pedir("0dd4ebe6b6759cc0c283d2e7adb19d7f.jpg");
     expect(respuesta.status).toBe(401);
+    expect(leerHogarActual).toHaveBeenCalledOnce();
   });
 
-  test("con sesion, sigue validando el nombre antes de tocar el disco", async () => {
-    auth.mockResolvedValue({ user: { email: "f@gmail.com" } });
+  test("con su hogar, sigue validando el nombre antes de tocar el disco", async () => {
+    leerHogarActual.mockResolvedValue(HOGAR);
     const respuesta = await pedir("..%2F.env");
     expect(respuesta.status).toBe(400);
   });
 
-  test("con sesion y un nombre valido que no existe, 404", async () => {
-    auth.mockResolvedValue({ user: { email: "f@gmail.com" } });
+  test("con su hogar y un nombre valido que no existe, 404", async () => {
+    leerHogarActual.mockResolvedValue(HOGAR);
     const respuesta = await pedir("00000000000000000000000000000000.jpg");
     expect(respuesta.status).toBe(404);
   });

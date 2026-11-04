@@ -14,6 +14,7 @@ import {
   crearPresupuesto,
   eliminarPresupuesto,
 } from "@/datos/presupuestos";
+import { hogarActual } from "@/lib/hogar-actual";
 
 function traducirError(error: unknown): string {
   const texto = error instanceof Error ? error.message : String(error);
@@ -28,6 +29,10 @@ function traducirError(error: unknown): string {
   if (texto.includes("presupuestos_mes_dia_uno")) {
     return "El mes no es válido.";
   }
+  // La categoria no existe o es de otro hogar (llave por categoria y hogar).
+  if (texto.includes("presupuestos_categoria_id_hogar_id_fkey")) {
+    return "La categoría elegida ya no existe. Recarga la página.";
+  }
   return texto;
 }
 
@@ -35,6 +40,8 @@ export async function accionCrearPresupuesto(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  // Fuera del try: la redireccion de hogarActual no tiene que volverse error.
+  const { hogarId } = await hogarActual();
   const resultado = esquemaPresupuestoFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -46,7 +53,7 @@ export async function accionCrearPresupuesto(
   }
 
   try {
-    await crearPresupuesto(resultado.data);
+    await crearPresupuesto(hogarId, resultado.data);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
@@ -59,6 +66,7 @@ export async function accionActualizarPresupuesto(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const resultado = esquemaEdicionPresupuestoFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -70,7 +78,7 @@ export async function accionActualizarPresupuesto(
   }
 
   try {
-    await actualizarPresupuesto(resultado.data);
+    await actualizarPresupuesto(hogarId, resultado.data);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
@@ -80,9 +88,10 @@ export async function accionActualizarPresupuesto(
 }
 
 export async function accionEliminarPresupuesto(datos: FormData): Promise<void> {
+  const { hogarId } = await hogarActual();
   const id = esquemaId.safeParse(datos.get("id"));
   if (!id.success) return;
 
-  await eliminarPresupuesto(id.data);
+  await eliminarPresupuesto(hogarId, id.data);
   revalidatePath("/");
 }

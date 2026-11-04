@@ -6,6 +6,7 @@ import { esquemaMes } from "@/dominio/esquemas";
 import { hoyISO } from "@/lib/fecha";
 import { periodoDe, periodoDeFecha } from "@/lib/periodo";
 import { leerAjustes } from "@/datos/ajustes";
+import { hogarActual } from "@/lib/hogar-actual";
 import { rangoCorto, rangoDeDias } from "@/componentes/formato";
 import { SelectorMes } from "@/componentes/SelectorMes";
 import { Icono } from "@/componentes/Icono";
@@ -29,14 +30,18 @@ type Props = { searchParams: Promise<{ mes?: string; semana?: string }> };
  * dashboard: la en curso, o la ultima con gastos.
  */
 export default async function ReporteSemana({ searchParams }: Props) {
+  // Cada visita revisa contra la base que la persona siga en el hogar con
+  // que entro (si no, la sesion se cierra aqui mismo), y de ese hogar, y de
+  // ningun otro, se lee todo lo que sigue.
+  const { hogarId } = await hogarActual();
   const parametros = await searchParams;
-  const { diaInicioMes } = await leerAjustes();
+  const { diaInicioMes } = await leerAjustes(hogarId);
   const hoy = hoyISO();
   const elegido = esquemaMes.safeParse(parametros.mes);
   const mes = elegido.success ? elegido.data : periodoDeFecha(hoy, diaInicioMes).mes;
   const periodo = periodoDe(mes, diaInicioMes);
 
-  const gastos = await listarGastosDelMes(periodo);
+  const gastos = await listarGastosDelMes(hogarId, periodo);
   const ritmo = ritmoSemanal(gastos, periodo, hoy);
   const pedida = Number(parametros.semana);
   const semana = ritmo.semanas.some((s) => s.semana === pedida) ? pedida : ritmo.semanaInicial;

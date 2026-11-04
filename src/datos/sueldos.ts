@@ -3,6 +3,11 @@ import { mesDesdeFecha, rangoDelMesISO } from "@/lib/fecha";
 import { sueldoVigente } from "@/dominio/balance";
 import type { ClienteDb } from "./gastos";
 
+/*
+  Los sueldos de cada hogar: uno por mes desde el que rige. Como en todo el
+  acceso a datos, cada funcion recibe primero el hogar de quien mira.
+*/
+
 export type SueldoPlano = {
   id: string;
   monto: number;
@@ -30,8 +35,9 @@ function aPlano(fila: FilaSueldo): SueldoPlano {
 }
 
 /** Todos los sueldos, del mas reciente al mas antiguo. */
-export async function listarSueldos(db: ClienteDb = prisma): Promise<SueldoPlano[]> {
+export async function listarSueldos(hogarId: string, db: ClienteDb = prisma): Promise<SueldoPlano[]> {
   const filas = (await db.sueldo.findMany({
+    where: { hogarId },
     orderBy: { vigenteDesde: "desc" },
   })) as FilaSueldo[];
   return filas.map(aPlano);
@@ -42,6 +48,7 @@ export async function listarSueldos(db: ClienteDb = prisma): Promise<SueldoPlano
  * reemplaza: corregir un monto mal tipeado no deberia crear una fila nueva.
  */
 export async function definirSueldo(
+  hogarId: string,
   mes: string,
   monto: number,
   nota: string | null,
@@ -50,9 +57,9 @@ export async function definirSueldo(
   const vigenteDesde = rangoDelMesISO(mes).desde;
 
   const fila = (await db.sueldo.upsert({
-    where: { vigenteDesde },
+    where: { hogarId_vigenteDesde: { hogarId, vigenteDesde } },
     update: { monto, nota },
-    create: { monto, nota, vigenteDesde },
+    create: { hogarId, monto, nota, vigenteDesde },
   })) as FilaSueldo;
 
   return aPlano(fila);
@@ -65,13 +72,14 @@ export async function definirSueldo(
  * hay que cargar el historial completo para responder.
  */
 export async function sueldoDelMes(
+  hogarId: string,
   mes: string,
   db: ClienteDb = prisma,
 ): Promise<number | null> {
   const { desde } = rangoDelMesISO(mes);
 
   const filas = (await db.sueldo.findMany({
-    where: { vigenteDesde: { lte: desde } },
+    where: { hogarId, vigenteDesde: { lte: desde } },
     orderBy: { vigenteDesde: "desc" },
     take: 1,
   })) as FilaSueldo[];
@@ -79,6 +87,8 @@ export async function sueldoDelMes(
   return sueldoVigente(filas.map(aPlano), mes);
 }
 
-export async function eliminarSueldo(mes: string, db: ClienteDb = prisma): Promise<void> {
-  await db.sueldo.delete({ where: { vigenteDesde: rangoDelMesISO(mes).desde } });
+export async function eliminarSueldo(hogarId: string, mes: string, db: ClienteDb = prisma): Promise<void> {
+  await db.sueldo.delete({
+    where: { hogarId_vigenteDesde: { hogarId, vigenteDesde: rangoDelMesISO(mes).desde } },
+  });
 }

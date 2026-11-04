@@ -21,11 +21,16 @@ import {
   revertirPago,
 } from "@/datos/cuentas";
 import { boletaDelFormulario } from "@/lib/boleta-formulario";
+import { hogarActual } from "@/lib/hogar-actual";
+
+// Cada accion pide primero el hogar de quien la usa, fuera de cualquier try:
+// si ya no es parte del hogar, hogarActual corta la sesion con una
+// redireccion, y un catch la convertiria en un mensaje de error.
 
 function traducirError(error: unknown): string {
   const texto = error instanceof Error ? error.message : String(error);
 
-  if (texto.includes("cuentas_nombre_mes_key")) {
+  if (texto.includes("cuentas_hogar_id_nombre_mes_key")) {
     return "Ya tienes una cuenta con ese nombre en ese mes.";
   }
   if (texto.includes("cuentas_monto_positivo")) return "El monto debe ser mayor que cero.";
@@ -41,6 +46,7 @@ export async function accionCrearCuenta(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const resultado = esquemaCuentaFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -48,7 +54,7 @@ export async function accionCrearCuenta(
   }
 
   try {
-    const cuenta = await crearCuenta(resultado.data);
+    const cuenta = await crearCuenta(hogarId, resultado.data);
 
     const boleta = await procesarBoleta(datos);
     if ("error" in boleta) {
@@ -57,7 +63,7 @@ export async function accionCrearCuenta(
       return { ok: true, mensaje: `Cuenta creada, pero la foto no: ${boleta.error}`, errores: {} };
     }
     if (boleta.archivo !== null) {
-      await adjuntarBoletaACuenta(cuenta.id, boleta.archivo);
+      await adjuntarBoletaACuenta(hogarId, cuenta.id, boleta.archivo);
     }
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
@@ -75,6 +81,7 @@ export async function accionActualizarCuenta(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const resultado = esquemaEdicionCuentaFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -91,8 +98,8 @@ export async function accionActualizarCuenta(
   if ("error" in boleta) return { ok: false, mensaje: boleta.error, errores: {} };
 
   try {
-    await actualizarCuenta(resultado.data);
-    if (boleta.archivo !== null) await adjuntarBoletaACuenta(resultado.data.id, boleta.archivo);
+    await actualizarCuenta(hogarId, resultado.data);
+    if (boleta.archivo !== null) await adjuntarBoletaACuenta(hogarId, resultado.data.id, boleta.archivo);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
@@ -111,6 +118,7 @@ export async function accionMarcarPagada(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const id = esquemaId.safeParse(datos.get("id"));
   const fecha = fechaISO.safeParse(datos.get("hoy"));
   if (!id.success || !fecha.success) {
@@ -123,7 +131,7 @@ export async function accionMarcarPagada(
   }
 
   try {
-    await pagarCuenta(id.data, fecha.data, Math.round(monto), null);
+    await pagarCuenta(hogarId, id.data, fecha.data, Math.round(monto), null);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
@@ -137,6 +145,7 @@ export async function accionPagarCuenta(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const resultado = esquemaPagoFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -150,6 +159,7 @@ export async function accionPagarCuenta(
 
   try {
     await pagarCuenta(
+      hogarId,
       resultado.data.id,
       resultado.data.fechaPago,
       resultado.data.monto,
@@ -174,13 +184,14 @@ export async function accionRevertirPago(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const id = esquemaId.safeParse(datos.get("id"));
   if (!id.success) {
     return { ok: false, mensaje: "No pude identificar la cuenta.", errores: {} };
   }
 
   try {
-    await revertirPago(id.data);
+    await revertirPago(hogarId, id.data);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
@@ -190,10 +201,11 @@ export async function accionRevertirPago(
 }
 
 export async function accionEliminarCuenta(datos: FormData): Promise<void> {
+  const { hogarId } = await hogarActual();
   const id = esquemaId.safeParse(datos.get("id"));
   if (!id.success) return;
 
-  await eliminarCuenta(id.data);
+  await eliminarCuenta(hogarId, id.data);
   revalidatePath("/");
 }
 
@@ -202,6 +214,7 @@ export async function accionAdjuntarBoletaAGasto(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
+  const { hogarId } = await hogarActual();
   const id = esquemaId.safeParse(datos.get("id"));
   if (!id.success) return { ok: false, mensaje: "Falta el gasto.", errores: {} };
 
@@ -210,7 +223,7 @@ export async function accionAdjuntarBoletaAGasto(
   if (boleta.archivo === null) return { ok: false, mensaje: "No elegiste ninguna foto.", errores: {} };
 
   try {
-    await adjuntarBoletaAGasto(id.data, boleta.archivo);
+    await adjuntarBoletaAGasto(hogarId, id.data, boleta.archivo);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
