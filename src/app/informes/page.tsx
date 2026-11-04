@@ -1,6 +1,6 @@
 import { listarGastosDelMes } from "@/datos/gastos";
 import { sueldoDelMes } from "@/datos/sueldos";
-import { listarDeudas } from "@/datos/deudas";
+import { listarDeudas, listarPagosDelMes } from "@/datos/deudas";
 import { listarCuentasDelMes } from "@/datos/cuentas";
 import { serieHistorica } from "@/datos/historico";
 import { armarInforme } from "@/dominio/informe";
@@ -43,11 +43,13 @@ export default async function Informes({ searchParams }: Props) {
   const periodo = periodoDe(mes, diaInicioMes);
   const periodoAnterior = periodoVecino(periodo, -1);
 
-  const [gastos, gastosAnterior, sueldo, deudas, cuentas, serie] = await Promise.all([
+  const [gastos, gastosAnterior, sueldo, deudas, pagos, cuentas, serie] = await Promise.all([
     listarGastosDelMes(periodo),
     listarGastosDelMes(periodoAnterior),
     sueldoDelMes(mes),
     listarDeudas(),
+    // Sin los pagos, el balance no descuenta las cuotas ya pagadas.
+    listarPagosDelMes(mes),
     listarCuentasDelMes(mes),
     // Doce meses hasta el elegido: suficiente para ver estacionalidad sin
     // que el eje se llene de etiquetas.
@@ -55,7 +57,7 @@ export default async function Informes({ searchParams }: Props) {
   ]);
 
   const informe = armarInforme(gastos, gastosAnterior, periodo);
-  const balance = calcularBalance({ mes, sueldo, resumen: informe.resumen, deudas });
+  const balance = calcularBalance({ mes, sueldo, resumen: informe.resumen, deudas, pagos });
   const resumenCuentas = resumirCuentas(cuentas, periodo, hoy);
   const estadisticas = analizarHistorico(serie);
 

@@ -12,6 +12,8 @@ import {
   desactivarDeuda,
   eliminarDeuda,
   listarDeudas,
+  listarPagosDelMes,
+  pagarCuota,
   reactivarDeuda,
 } from "@/datos/deudas";
 import { crearGasto } from "@/datos/gastos";
@@ -199,28 +201,41 @@ describe("de la base al balance, de punta a punta", () => {
       prisma,
     );
 
-    await crearDeuda(datosDeuda({ nombre: "Crédito", montoCuota: 118000, cuotasTotales: 24, primeraCuota: "2025-11" }), prisma);
+    const credito = await crearDeuda(
+      datosDeuda({ nombre: "Crédito", montoCuota: 118000, cuotasTotales: 24, primeraCuota: "2025-11" }),
+      prisma,
+    );
     await crearDeuda(datosDeuda({ nombre: "Notebook", montoCuota: 54990, cuotasTotales: 12, primeraCuota: "2026-06" }), prisma);
     // Terminada antes de octubre: no debe cobrar.
     await crearDeuda(datosDeuda({ nombre: "Vieja", montoCuota: 999999, cuotasTotales: 3, primeraCuota: "2025-01" }), prisma);
 
-    const [gastos, sueldo, deudas] = await Promise.all([
+    // Se paga la cuota del credito como en la app: crea su gasto y su pago.
+    // La del notebook queda pendiente.
+    await pagarCuota(credito.id, "2026-10", "2026-10-05", 118000, null, prisma);
+
+    const [gastos, sueldo, deudas, pagos] = await Promise.all([
       listarGastosDelMes("2026-10", prisma),
       sueldoDelMes("2026-10", prisma),
       listarDeudas(prisma),
+      listarPagosDelMes("2026-10", prisma),
     ]);
 
     const resumen = resumirMes(gastos, "2026-10", new Date("2026-11-15T12:00:00.000Z"));
-    const balance = calcularBalance({ mes: "2026-10", sueldo, resumen, deudas });
+    const balance = calcularBalance({ mes: "2026-10", sueldo, resumen, deudas, pagos });
 
     expect(balance.sueldo).toBe(1250000);
+    // El gasto que creo el pago de la cuota no entra en los basicos: ya se
+    // descuenta como cuota, y contarlo aqui lo restaria dos veces.
     expect(balance.gastosBasicos).toBe(450000);
     expect(balance.gastosDiscrecionales).toBe(28900);
     // Solo las dos vigentes: la vieja termino en marzo de 2025.
     expect(balance.cuotasDelMes).toHaveLength(2);
-    expect(balance.cuotas).toBe(118000 + 54990);
-    expect(balance.disponible).toBe(1250000 - 450000 - 172990);
-    expect(balance.saldo).toBe(1250000 - 450000 - 172990 - 28900);
+    // Del sueldo sale solo la cuota pagada; la pendiente se muestra aparte.
+    expect(balance.cuotas).toBe(118000);
+    expect(balance.cuotasPorPagar).toBe(54990);
+    expect(balance.cuotasComprometidas).toBe(118000 + 54990);
+    expect(balance.disponible).toBe(1250000 - 450000 - 118000);
+    expect(balance.saldo).toBe(1250000 - 450000 - 118000 - 28900);
     expect(balance.enRojo).toBe(false);
     expect(balance.sinSueldo).toBe(false);
 
@@ -237,6 +252,7 @@ describe("de la base al balance, de punta a punta", () => {
       sueldo: await sueldoDelMes("2026-10", prisma),
       resumen,
       deudas: await listarDeudas(prisma),
+      pagos: [],
     });
 
     expect(balance.sinSueldo).toBe(true);

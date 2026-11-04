@@ -140,8 +140,12 @@ type Entrada = {
   sueldo: number | null;
   resumen: ResumenMensual;
   deudas: readonly DeudaPlana[];
-  /** Cuotas ya pagadas. Sin esto, ninguna cuota se descuenta. */
-  pagos?: readonly PagoCuota[];
+  /**
+   * Las cuotas ya pagadas (listarPagosDelMes). Es obligatorio a proposito:
+   * sin los pagos ninguna cuota se descuenta y el balance sale inflado sin
+   * avisar. Asi TypeScript no deja olvidarlo; sin pagos, se pasa [].
+   */
+  pagos: readonly PagoCuota[];
 };
 
 /**
@@ -157,7 +161,7 @@ export function calcularBalance({
   sueldo,
   resumen,
   deudas,
-  pagos = [],
+  pagos,
 }: Entrada): Balance {
   // Un pago por deuda, el de ESTE mes. Si llegaran dos (no deberia: la base
   // lo impide), manda el primero y no se suma dos veces.

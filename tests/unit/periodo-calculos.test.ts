@@ -113,7 +113,7 @@ describe("cuentas con dia 27", () => {
 
 describe("panel con dia 27", () => {
   const resumen = resumirMes(gastos, NOVIEMBRE, new Date("2026-11-02T15:00:00Z"));
-  const balance = calcularBalance({ mes: "2026-11", sueldo: 1_000_000, resumen, deudas: [] });
+  const balance = calcularBalance({ mes: "2026-11", sueldo: 1_000_000, resumen, deudas: [], pagos: [] });
   const panel = armarResumenPanel({
     mes: NOVIEMBRE,
     hoy: HOY,

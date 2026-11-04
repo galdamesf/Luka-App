@@ -41,7 +41,7 @@ function entrada({
   gastos = [], cuentas = [], techos = [], deudas = [],
 }: Escenario = {}): EntradaSalud {
   const resumen = resumirMes(gastos, mes, new Date(`${hoy}T15:00:00.000Z`));
-  const balance = calcularBalance({ mes, sueldo, resumen, deudas });
+  const balance = calcularBalance({ mes, sueldo, resumen, deudas, pagos: [] });
   const panel = armarResumenPanel({
     mes, hoy, balance, resumen,
     cuentas: resumirCuentas(cuentas, mes, hoy), gastosMesAnterior: [],
