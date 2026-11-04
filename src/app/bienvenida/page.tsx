@@ -11,7 +11,7 @@ import { Paralaje } from "@/componentes/portada/Paralaje";
 export const metadata: Metadata = {
   title: "Luka · Sigue el rastro de tu dinero",
   description:
-    "Control de gastos mensuales del hogar. Todo se queda en tu computador.",
+    "Control de gastos mensuales del hogar, con boletas y presupuestos. Cada hogar ve solo lo suyo.",
 };
 
 /**

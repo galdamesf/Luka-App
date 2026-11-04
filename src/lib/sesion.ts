@@ -12,6 +12,8 @@
  *  2. 8 horas desde que se entro con Google, aunque se haya usado todo el rato.
  *  3. Un arranque nuevo del servidor: cada `npm run dev` deja sin efecto las
  *     sesiones del arranque anterior. Apagar la terminal es cerrar la puerta.
+ *     En la nube la marca nace con cada build: cada despliegue de Luka cierra
+ *     las sesiones abiertas.
  *
  * 2 y 3 las decide sesionVigente(), logica pura para poder probarla sin
  * levantar Next. La marca del arranque nace en next.config.ts.

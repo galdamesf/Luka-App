@@ -78,8 +78,8 @@ export function PieDePagina() {
               Tus datos
             </p>
             <p className="mt-4 text-sm text-pie-texto/75">
-              Se guardan en tu computador, en tu propia base de datos. Las boletas que
-              subes quedan en el disco, junto al proyecto.
+              Se guardan en una base de datos privada, con cada hogar por separado, y las
+              boletas en un almacenamiento privado. Solo las personas de tu hogar los ven.
             </p>
           </div>
 

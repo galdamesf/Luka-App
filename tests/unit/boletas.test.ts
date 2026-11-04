@@ -156,7 +156,7 @@ describe("tamano", () => {
     };
     const r = await guardarBoleta(gigante, carpeta);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.motivo).toMatch(/10 MB/);
+    if (!r.ok) expect(r.motivo).toMatch(/no puede pesar más de 4 MB/);
   });
 });
 

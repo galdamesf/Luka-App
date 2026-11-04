@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Luka } from "@/componentes/Luka";
+import { hoyISO } from "@/lib/fecha";
 import { ANCLA_PREGUNTAS, ANCLA_QUE_HACEMOS } from "./enlaces";
 
 /**
@@ -66,7 +67,8 @@ export function PiePortada() {
       </div>
       <div className="border-t border-pie-texto/10">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-5 py-5 text-xs text-pie-texto/65">
-          <p>© {new Date().getFullYear()} Luka · Hecho en Chile, para la casa.</p>
+          {/* El año en hora de Chile: el servidor corre en UTC. */}
+          <p>© {hoyISO().slice(0, 4)} Luka · Hecho en Chile, para la casa.</p>
           <p>Las cifras de esta página son de un mes de ejemplo.</p>
         </div>
       </div>

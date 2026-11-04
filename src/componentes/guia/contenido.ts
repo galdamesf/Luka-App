@@ -346,7 +346,7 @@ export const GUIA: readonly SeccionGuia[] = [
           pie: "El formulario de gasto. La foto de la boleta es opcional.",
         },
         consejo:
-          "Las fotos de las boletas se guardan en tu computador, en la carpeta «boletas» del proyecto. No se suben a internet.",
+          "Puedes subir una foto (JPG, PNG, WEBP o HEIC) o un PDF de hasta 4 MB. Si la foto pesa más, Luka la achica sola antes de subirla. Las boletas se guardan en un almacenamiento privado y solo las ven las personas de tu hogar.",
       },
       {
         titulo: "Pagos del mes: tus cuentas y cuotas",
@@ -666,7 +666,7 @@ export const PREGUNTAS: readonly { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "¿Dónde quedan las fotos de las boletas?",
     respuesta:
-      "En tu computador, en la carpeta «boletas» del proyecto, con una carpeta para cada hogar. No se suben a internet y no van al repositorio.",
+      "En un almacenamiento privado, con una carpeta para cada hogar. Solo se ven desde Luka, con la sesión iniciada y siendo parte de ese hogar: no tienen un enlace público.",
   },
   {
     pregunta: "¿Puedo usar Luka con alguien de mi casa?",

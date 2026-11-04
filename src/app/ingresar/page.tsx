@@ -48,7 +48,7 @@ export default async function Ingresar({
           Entra a Luka
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-texto-tenue">
-          Tu mes, anotado y sumado. Todo vive en tu computador.
+          Tu mes, anotado y sumado. Solo tu hogar lo ve.
         </p>
 
         {error ? (
