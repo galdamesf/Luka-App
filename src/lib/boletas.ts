@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
+import { TAMANO_MAXIMO_BOLETA } from "@/dominio/tamano-boleta";
 
 /**
  * Guardado de fotos de boletas en disco.
@@ -34,8 +35,11 @@ export const TIPOS_PERMITIDOS = {
 export type TipoPermitido = keyof typeof TIPOS_PERMITIDOS;
 export type Extension = (typeof TIPOS_PERMITIDOS)[TipoPermitido];
 
-/** 10 MB: una foto de celular pesa 2 a 5. */
-export const TAMANO_MAXIMO = 10 * 1024 * 1024;
+/**
+ * 4 MB por boleta (src/dominio/tamano-boleta.ts). Las fotos mas pesadas se
+ * achican en el navegador antes de subir (src/lib/achicar-foto.ts).
+ */
+export const TAMANO_MAXIMO = TAMANO_MAXIMO_BOLETA;
 
 /** Lo que generamos: 32 caracteres hex y una extension conocida. */
 const NOMBRE_VALIDO = /^[a-f0-9]{32}\.(jpg|png|webp|heic|pdf)$/;
@@ -48,15 +52,17 @@ export function carpetaDeBoletas(): string {
 /** Los ids de hogar que existen: "hogar-inicial" o un cuid. Nada de puntos ni barras. */
 const HOGAR_VALIDO = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
-/**
- * La carpeta de las boletas de un hogar, dentro de la carpeta de boletas.
- * Lanza con un id que no tenga forma de id: el id termina en una ruta.
- */
-export function carpetaDelHogar(hogarId: string, raiz = carpetaDeBoletas()): string {
+/** Lanza con un id de hogar que no tenga forma de id: el id termina en una ruta. */
+export function exigirHogarValido(hogarId: string): string {
   if (!HOGAR_VALIDO.test(hogarId)) {
     throw new Error(`Hogar no valido para una carpeta: "${hogarId}".`);
   }
-  return join(resolve(raiz), hogarId);
+  return hogarId;
+}
+
+/** La carpeta de las boletas de un hogar, dentro de la carpeta de boletas. */
+export function carpetaDelHogar(hogarId: string, raiz = carpetaDeBoletas()): string {
+  return join(resolve(raiz), exigirHogarValido(hogarId));
 }
 
 /** Firmas de archivo. Un tipo declarado se puede mentir; esto cuesta mas. */
@@ -113,20 +119,25 @@ export type ResultadoGuardado =
   | { ok: true; archivo: string; bytes: number }
   | { ok: false; motivo: string };
 
+/** Lo que llega del navegador: un File, o algo que se le parezca en los tests. */
+export type ArchivoSubido = { arrayBuffer(): Promise<ArrayBuffer>; size: number; type: string };
+
+export type BoletaValida = { ok: true; nombre: string; bytes: Uint8Array; tipo: TipoPermitido };
+
 /**
- * Guarda un archivo subido y devuelve el nombre generado.
- * No confia en `archivo.name` ni en `archivo.type` para decidir donde escribir.
+ * Revisa un archivo subido (tamano, tipo y firma) y le da su nombre, sin
+ * guardarlo en ninguna parte. Donde se guarda lo decide el almacen
+ * (src/lib/almacen-boletas.ts). No confia en `archivo.name` para nada.
  */
-export async function guardarBoleta(
-  archivo: { arrayBuffer(): Promise<ArrayBuffer>; size: number; type: string },
-  carpeta: string,
-): Promise<ResultadoGuardado> {
+export async function validarBoleta(
+  archivo: ArchivoSubido,
+): Promise<BoletaValida | { ok: false; motivo: string }> {
   if (archivo.size === 0) {
     return { ok: false, motivo: "El archivo está vacío." };
   }
   if (archivo.size > TAMANO_MAXIMO) {
     const mb = Math.round(TAMANO_MAXIMO / 1024 / 1024);
-    return { ok: false, motivo: `La imagen no puede pesar más de ${mb} MB.` };
+    return { ok: false, motivo: `El archivo no puede pesar más de ${mb} MB.` };
   }
 
   const extension = TIPOS_PERMITIDOS[archivo.type as TipoPermitido];
@@ -140,11 +151,22 @@ export async function guardarBoleta(
   }
 
   const nombre = `${randomBytes(16).toString("hex")}.${extension}`;
+  return { ok: true, nombre, bytes, tipo: archivo.type as TipoPermitido };
+}
+
+/**
+ * Valida un archivo subido y lo guarda en una carpeta del disco. Devuelve el
+ * nombre generado. No confia en `archivo.name` ni en `archivo.type` para
+ * decidir donde escribir.
+ */
+export async function guardarBoleta(archivo: ArchivoSubido, carpeta: string): Promise<ResultadoGuardado> {
+  const valida = await validarBoleta(archivo);
+  if (!valida.ok) return valida;
 
   await mkdir(carpeta, { recursive: true });
-  await writeFile(rutaDeBoleta(nombre, carpeta), bytes);
+  await writeFile(rutaDeBoleta(valida.nombre, carpeta), valida.bytes);
 
-  return { ok: true, archivo: nombre, bytes: bytes.length };
+  return { ok: true, archivo: valida.nombre, bytes: valida.bytes.length };
 }
 
 export async function leerBoleta(nombre: string, carpeta: string): Promise<Uint8Array> {

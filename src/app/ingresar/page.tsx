@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Luka } from "@/componentes/Luka";
 import { signIn } from "@/auth";
+import { RUTAS_LEGALES } from "@/dominio/legal";
 
 export const metadata: Metadata = {
   title: "Entrar a Luka",
@@ -48,7 +49,7 @@ export default async function Ingresar({
           Entra a Luka
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-texto-tenue">
-          Tu mes, anotado y sumado. Todo vive en tu computador.
+          Tu mes, anotado y sumado. Solo tu hogar lo ve.
         </p>
 
         {error ? (
@@ -81,6 +82,17 @@ export default async function Ingresar({
 
         <p className="mt-4 text-xs leading-relaxed text-pretty text-texto-tenue">
           La primera vez, Luka te arma tu propio hogar. Si alguien te invitó al suyo, entra con ese mismo correo.
+        </p>
+        <p className="mt-3 text-xs leading-relaxed text-pretty text-texto-tenue">
+          Al entrar aceptas los{" "}
+          <Link href={RUTAS_LEGALES.terminos} className="font-semibold enlace-luka">
+            términos de uso
+          </Link>{" "}
+          y la{" "}
+          <Link href={RUTAS_LEGALES.privacidad} className="font-semibold enlace-luka">
+            política de privacidad
+          </Link>
+          .
         </p>
       </div>
 

@@ -6,6 +6,7 @@
     "dev": "next dev",
     "predev": "prisma migrate deploy && prisma generate && prisma db seed && tsx prisma/ordenar-boletas.ts",
     "build": "next build",
+    "vercel-build": "prisma generate && DATABASE_URL=\"${DATABASE_URL_UNPOOLED:-$DATABASE_URL}\" prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -25,6 +26,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
+    "@vercel/blob": "2.8.2",
     "next": "^15.1.3",
     "next-auth": "^5.0.0-beta.32",
     "nodemailer": "8.0.11",

@@ -19,7 +19,7 @@ import { Onda } from "./Onda";
 export const PREGUNTAS = [
   {
     p: "¿Dónde quedan mis datos?",
-    r: "En tu computador, en una base de datos local. No hay una nube con tus gastos.",
+    r: "En una base de datos privada, con cada hogar por separado: tus gastos y boletas solo los ven las personas de tu hogar. No se venden ni se comparten.",
   },
   {
     p: "¿Tengo que crear otra contraseña?",
@@ -32,7 +32,7 @@ export const PREGUNTAS = [
   {
     p: "¿La sesión queda abierta?",
     // Los plazos salen de lib/sesion.ts: si cambian alla, cambian aca.
-    r: `No. Se cierra sola tras ${MINUTOS_SIN_USO} minutos sin uso, a las ${HORAS_MAXIMAS} horas como máximo y cada vez que reinicias Luka.`,
+    r: `No. Se cierra sola tras ${MINUTOS_SIN_USO} minutos sin uso, a las ${HORAS_MAXIMAS} horas como máximo y cada vez que Luka se actualiza.`,
   },
   {
     p: "¿Qué pasa cuando pago una cuenta?",

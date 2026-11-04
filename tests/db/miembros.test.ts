@@ -20,6 +20,7 @@ import {
 } from "@/datos/hogares";
 import { fechaDesdeISO } from "@/lib/fecha";
 import type { Correo } from "@/lib/correo";
+import { almacenEnDisco } from "@/lib/almacen-boletas";
 
 /**
  * La pagina Hogar contra la base: invitar, sacar, pasar el hogar, salir,
@@ -223,7 +224,7 @@ describe("borrar el hogar, con el codigo del correo", () => {
   const pedir = (hogarId: string, quienId: string, ahora = new Date()) =>
     pedirCodigoDeBorrado(hogarId, quienId, { db: prisma, enviar, secreto: SECRETO, ahora });
   const borrar = (hogarId: string, quienId: string, codigo: string, ahora = new Date()) =>
-    borrarHogar(hogarId, quienId, codigo, { db: prisma, raizBoletas: raiz, secreto: SECRETO, ahora });
+    borrarHogar(hogarId, quienId, codigo, { db: prisma, almacen: almacenEnDisco(raiz), secreto: SECRETO, ahora });
 
   beforeEach(async () => {
     enviados = [];

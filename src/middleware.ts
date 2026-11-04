@@ -13,6 +13,8 @@ const { auth } = NextAuth(configuracionBase);
  *   a localhost:3000 sin haber entrado ve la portada, no su plata.
  * - Con sesion, /bienvenida e /ingresar mandan a /: ya estas adentro, no hay
  *   nada que venderte ni puerta que cruzar.
+ * - /privacidad y /terminos se ven siempre, con o sin sesion: Google los pide
+ *   publicos para el ingreso con Google.
  * - /api/auth queda fuera del matcher (es la puerta misma), igual que los
  *   archivos estaticos de Next.
  *
@@ -23,6 +25,8 @@ export default auth((peticion) => {
   const { pathname } = peticion.nextUrl;
   const conSesion = Boolean(peticion.auth?.user);
   const esPublica = pathname === "/bienvenida" || pathname === "/ingresar";
+  const esLegal = pathname === "/privacidad" || pathname === "/terminos";
+  if (esLegal) return NextResponse.next();
 
   if (!conSesion && !esPublica) {
     return NextResponse.redirect(new URL("/bienvenida", peticion.nextUrl));

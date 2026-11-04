@@ -1,6 +1,5 @@
-import { rm } from "node:fs/promises";
 import { Prisma, type PrismaClient } from "@prisma/client";
-import { carpetaDeBoletas, carpetaDelHogar } from "@/lib/boletas";
+import { almacenDelEntorno, type AlmacenDeBoletas } from "@/lib/almacen-boletas";
 import { codigoAlAzar, huellaDelCodigo, mismaHuella, secretoDeCodigos } from "@/lib/codigos";
 import { enviarCorreoDelEntorno, type EnviarCorreo } from "@/lib/correo";
 import { prisma } from "@/lib/prisma";
@@ -380,8 +379,8 @@ export async function pedirCodigoDeBorrado(
  * transaccion: dos intentos a la vez esperan su turno, asi que no hay forma
  * de probar mas codigos que los intentos que se permiten.
  *
- * La base va en una transaccion: se borra todo o nada. Las boletas del disco
- * se borran despues, cuando la base ya no las nombra. Si eso falla, el hogar
+ * La base va en una transaccion: se borra todo o nada. Las boletas (del disco
+ * o del Blob) se borran despues, cuando la base ya no las nombra. Si eso falla, el hogar
  * igual quedo borrado: se avisa en el registro del servidor y no se finge un
  * error que no deshace nada.
  */
@@ -389,13 +388,13 @@ export async function borrarHogar(
   hogarId: string,
   quienId: string,
   codigoEscrito: string,
-  opciones: Omit<OpcionesDeCodigo, "enviar"> & { raizBoletas?: string } = {},
+  opciones: Omit<OpcionesDeCodigo, "enviar"> & { almacen?: AlmacenDeBoletas } = {},
 ): Promise<void> {
-  const { db = prisma, ahora = new Date(), raizBoletas = carpetaDeBoletas() } = opciones;
+  const { db = prisma, ahora = new Date() } = opciones;
   const codigo = limpiarCodigo(codigoEscrito);
   if (codigo === null) throw new ErrorDeHogar("El código son los 6 números que te llegaron al correo.");
   const secreto = opciones.secreto ?? secretoDeCodigos();
-  const carpeta = carpetaDelHogar(hogarId, raizBoletas);
+  const almacen = opciones.almacen ?? almacenDelEntorno();
 
   const motivo = await db.$transaction(async (tx) => {
     const quien = await quienEs(tx, hogarId, quienId);
@@ -437,8 +436,8 @@ export async function borrarHogar(
   if (motivo !== null) throw new ErrorDeHogar(motivo);
 
   try {
-    await rm(carpeta, { recursive: true, force: true });
+    await almacen.borrarDelHogar(hogarId);
   } catch (error) {
-    console.error(`El hogar ${hogarId} se borro, pero no su carpeta de boletas (${carpeta}):`, error);
+    console.error(`El hogar ${hogarId} se borro, pero no sus boletas (${almacen.tipo}):`, error);
   }
 }

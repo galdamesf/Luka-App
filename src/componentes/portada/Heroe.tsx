@@ -10,7 +10,7 @@ import { ANCLA_QUE_HACEMOS } from "./enlaces";
  *
  * «Entrar con Google» entra de una (el mismo ingreso de /ingresar), por eso
  * es un formulario y no un enlace. Abajo, lo que tranquiliza: sin contrasena
- * nueva, los datos en tu computador y la sesion que se cierra sola.
+ * nueva, cada hogar ve solo lo suyo y la sesion se cierra sola.
  */
 export function Heroe() {
   return (
@@ -54,7 +54,7 @@ export function Heroe() {
         <span aria-hidden="true" className="hidden @md:inline">
           ·
         </span>
-        <span>Tus datos en tu computador</span>
+        <span>Solo tu hogar ve tus datos</span>
         <span aria-hidden="true" className="hidden @md:inline">
           ·
         </span>

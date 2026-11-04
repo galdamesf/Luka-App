@@ -37,13 +37,19 @@ describe("el middleware decide solo con la cookie", () => {
     expect(leer("auth.ts")).toMatch(/from\s+["']@\/lib\/ingreso["']/);
   });
 
+  test("la politica de privacidad y los terminos se ven siempre, con o sin sesion", () => {
+    const middleware = leer("middleware.ts");
+    expect(middleware).toMatch(/esLegal = pathname === "\/privacidad" \|\| pathname === "\/terminos"/);
+    expect(middleware).toMatch(/if \(esLegal\) return NextResponse\.next\(\)/);
+  });
+
   test("el middleware usa la configuracion base, no la completa", () => {
     expect(leer("middleware.ts")).toMatch(/from\s+["']@\/auth\.config["']/);
   });
 });
 
 describe("cada pagina revisa el hogar en cada visita", () => {
-  const PUBLICAS = ["app/bienvenida/page.tsx", "app/ingresar/page.tsx"];
+  const PUBLICAS = ["app/bienvenida/page.tsx", "app/ingresar/page.tsx", "app/privacidad/page.tsx", "app/terminos/page.tsx"];
   const paginas = archivos(join(RAIZ, "app"), "page.tsx").filter((p) => !PUBLICAS.includes(p));
 
   test("hay paginas que revisar", () => {

@@ -23,19 +23,72 @@ import { Sticker } from "./Stickers";
  */
 export function Cierre() {
   return (
-    <section aria-labelledby="portada-cierre" className="con-onda relative isolate overflow-hidden bg-durazno text-durazno-texto">
+    <section
+      aria-labelledby="portada-cierre"
+      className="con-onda relative isolate overflow-hidden bg-durazno text-durazno-texto"
+    >
       {/* Pocos stickers en celular, todos en pantallas anchas, siempre en los margenes:
           ninguno toca un texto entre 390 y 1440 px (medido, no a ojo). */}
-      <Sticker nombre="calendario" paralaje={0.3} giro={-12} className="absolute top-[9%] left-[4%] size-12 @3xl:size-16" />
-      <Sticker nombre="moneda" paralaje={0.45} giro={10} className="absolute top-[8%] right-[5%] size-11 @3xl:size-14" />
-      <Sticker nombre="boleta" paralaje={0.15} giro={-8} className="absolute top-[46%] left-[8%] hidden size-16 @3xl:block" />
-      <Sticker nombre="casa" paralaje={0.35} giro={6} className="absolute top-[10%] left-[15%] hidden size-14 @6xl:block" />
-      <Sticker nombre="gota" paralaje={0.25} giro={-6} className="absolute top-[44%] right-[9%] hidden size-14 @3xl:block" />
-      <Sticker nombre="auto" paralaje={0.5} giro={-10} className="absolute top-[12%] right-[15%] hidden size-16 @6xl:block" />
-      <Sticker nombre="ampolleta" paralaje={0.2} giro={12} className="absolute bottom-[12%] left-[13%] hidden size-14 @6xl:block" />
-      <Sticker nombre="tarjeta" paralaje={0.4} giro={8} className="absolute right-[14%] bottom-[14%] hidden size-14 @6xl:block" />
-      <Sticker nombre="carro" paralaje={0.12} giro={-4} className="absolute bottom-[7%] left-[4%] hidden size-14 @3xl:block" />
-      <Sticker nombre="huellas" paralaje={0.3} giro={-20} className="absolute right-[5%] bottom-[7%] size-12 @3xl:size-14" />
+      <Sticker
+        nombre="calendario"
+        paralaje={0.3}
+        giro={-12}
+        className="absolute top-[9%] left-[4%] size-12 @3xl:size-16"
+      />
+      <Sticker
+        nombre="moneda"
+        paralaje={0.45}
+        giro={10}
+        className="absolute top-[8%] right-[5%] size-11 @3xl:size-14"
+      />
+      <Sticker
+        nombre="boleta"
+        paralaje={0.15}
+        giro={-8}
+        className="absolute top-[46%] left-[8%] hidden size-16 @3xl:block"
+      />
+      <Sticker
+        nombre="casa"
+        paralaje={0.35}
+        giro={6}
+        className="absolute top-[10%] left-[15%] hidden size-14 @6xl:block"
+      />
+      <Sticker
+        nombre="gota"
+        paralaje={0.25}
+        giro={-6}
+        className="absolute top-[44%] right-[9%] hidden size-14 @3xl:block"
+      />
+      <Sticker
+        nombre="auto"
+        paralaje={0.5}
+        giro={-10}
+        className="absolute top-[12%] right-[15%] hidden size-16 @6xl:block"
+      />
+      <Sticker
+        nombre="ampolleta"
+        paralaje={0.2}
+        giro={12}
+        className="absolute bottom-[12%] left-[13%] hidden size-14 @6xl:block"
+      />
+      <Sticker
+        nombre="tarjeta"
+        paralaje={0.4}
+        giro={8}
+        className="absolute right-[14%] bottom-[14%] hidden size-14 @6xl:block"
+      />
+      <Sticker
+        nombre="carro"
+        paralaje={0.12}
+        giro={-4}
+        className="absolute bottom-[7%] left-[4%] hidden size-14 @3xl:block"
+      />
+      <Sticker
+        nombre="huellas"
+        paralaje={0.3}
+        giro={-20}
+        className="absolute right-[5%] bottom-[7%] size-12 @3xl:size-14"
+      />
 
       <div
         data-paralaje="0.1"
@@ -43,7 +96,6 @@ export function Cierre() {
         data-paralaje-max="40"
         className="relative mx-auto flex max-w-2xl flex-col items-center px-5 pt-16 pb-24 text-center @3xl:pt-20 @3xl:pb-28"
       >
-        <p className="text-xs font-extrabold tracking-[0.18em] text-durazno-realce uppercase">Hecho para la casa</p>
         <h2
           id="portada-cierre"
           className="mt-16 text-[clamp(1.8rem,4.6cqi,2.7rem)] leading-[1.12] font-black tracking-[-0.02em] text-balance @3xl:mt-20"
@@ -63,7 +115,10 @@ export function Cierre() {
           .
         </h2>
         <form action={entrarConGoogle} className="mt-8">
-          <button type="submit" className="boton-luka boton-luka-grande cursor-pointer">
+          <button
+            type="submit"
+            className="boton-luka boton-luka-grande cursor-pointer"
+          >
             <span className="grid size-9 place-items-center rounded-[9px] bg-white">
               <LogoGoogle className="size-5" />
             </span>
@@ -75,7 +130,7 @@ export function Cierre() {
           <span aria-hidden="true" className="hidden @md:inline">
             ·
           </span>
-          <span>Todo queda en tu computador</span>
+          <span>Cada hogar ve solo lo suyo</span>
           <span aria-hidden="true" className="hidden @md:inline">
             ·
           </span>
