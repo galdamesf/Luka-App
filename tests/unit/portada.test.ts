@@ -114,13 +114,6 @@ describe("Luka", () => {
     }
   });
 
-  test("el paseo del header encuentra las patas, la cabeza y la cola", () => {
-    const html = dibujar("rastreando");
-    for (const n of [1, 2, 3, 4]) expect(html).toContain(`data-pata="${n}"`);
-    expect(html).toContain("data-cabeza");
-    expect(html).toContain("data-cola");
-  });
-
   test("dos Lukas en la misma pagina recortan cada uno con lo suyo", () => {
     const html = renderToStaticMarkup(
       createElement(Fragment, null, createElement(Luka, { pose: "lupa" }), createElement(Luka, { pose: "lupa" })),

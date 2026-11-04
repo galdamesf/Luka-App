@@ -5,8 +5,6 @@ export type PoseLuka = "rastreando" | "echado" | "lupa";
 
 type Props = {
   pose?: PoseLuka;
-  /** En el paseo del header: el movimiento lo calcula EscenaPaseo, no el CSS. */
-  paseando?: boolean;
   /**
    * Sin movimiento: el dibujo no lleva las clases que anima globals.css. La
    * portada lo usa asi (alli nada queda en bucle). La lupa va siempre quieta.
@@ -230,32 +228,31 @@ function Collar() {
 }
 
 /**
- * Rastreando: el logo. Las clases y los data-* son los que mueven las
- * animaciones de globals.css (cola, olfato, oreja, pestaneo, cuerpo) y el
- * paso del paseo en EscenaPaseo.
+ * Rastreando: el logo. Las clases son las que mueven las animaciones de
+ * globals.css (cola, olfato, oreja, pestaneo, cuerpo y patas).
  */
 function Rastreando({ uid, mueve }: { uid: string; mueve: boolean }) {
   return (
     <>
       <Recortes uid={uid} />
       <g className={si(mueve, "luka-cuerpo")}>
-        <g className={si(mueve, "luka-cola")} data-cola>
+        <g className={si(mueve, "luka-cola")}>
           <Cola uid={uid} />
         </g>
-        <g className={si(mueve, "luka-pata")} data-pata="3" style={{ transformOrigin: "224.5px 236px" }}>
+        <g className={si(mueve, "luka-pata")} style={{ transformOrigin: "224.5px 236px" }}>
           <Pata d="M216 222c10 0 17 10 17 24v22h-17z" color={COLOR.tanOscuro} pie={COLOR.pieLejano} pieX={224} dedos={false} />
         </g>
-        <g className={si(mueve, "luka-pata")} data-pata="4" style={{ transformOrigin: "157.5px 236px" }}>
+        <g className={si(mueve, "luka-pata")} style={{ transformOrigin: "157.5px 236px" }}>
           <Pata d="M150 226c9 0 15 9 15 21v21h-15z" color={COLOR.tanOscuro} pie={COLOR.pieLejano} pieX={157} dedos={false} />
         </g>
         <Lomo uid={uid} />
-        <g className={si(mueve, "luka-pata")} data-pata="1" style={{ transformOrigin: "176.5px 236px" }}>
+        <g className={si(mueve, "luka-pata")} style={{ transformOrigin: "176.5px 236px" }}>
           <Pata d="M168 226c10 0 17 10 17 24v18h-17z" color={COLOR.pata} pie={COLOR.pie} pieX={176} />
         </g>
-        <g className={si(mueve, "luka-pata")} data-pata="2" style={{ transformOrigin: "140.5px 236px" }}>
+        <g className={si(mueve, "luka-pata")} style={{ transformOrigin: "140.5px 236px" }}>
           <Pata d={D.pataCerca} color={COLOR.pata} pie={COLOR.pie} pieX={140} />
         </g>
-        <g className={si(mueve, "luka-olfato")} data-cabeza>
+        <g className={si(mueve, "luka-olfato")}>
           <Cabeza
             uid={uid}
             mueve={mueve}
@@ -381,7 +378,6 @@ export function Luka({
   pose = "rastreando",
   alto,
   descripcion = null,
-  paseando = false,
   quieto = false,
   className = "",
 }: Props) {
@@ -398,7 +394,7 @@ export function Luka({
     <svg
       viewBox={VIEWBOX[pose]}
       style={estilo}
-      className={`shrink-0 ${paseando ? "luka-pasea" : ""} ${className}`}
+      className={`shrink-0 ${className}`}
       {...accesible}
     >
       {pose === "rastreando" && <Rastreando uid={uid} mueve={mueve} />}
