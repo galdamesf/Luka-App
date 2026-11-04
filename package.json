@@ -16,6 +16,7 @@
     "db:seed": "prisma db seed",
     "db:mover-mes": "tsx prisma/mover-mes.ts",
     "db:respaldo": "tsx prisma/respaldo.ts",
+    "nube:subir": "tsx prisma/subir-a-la-nube.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
     "test": "vitest run",

@@ -5,9 +5,13 @@ build/
 .DS_Store
 *.pem
 
-# Variables de entorno (se versiona solo .env.example)
+# Variables de entorno (se versiona solo .env.example). Incluye
+# .env.nube.local, la conexion a la nube de npm run nube:subir.
 .env
 .env*.local
+
+# Vercel CLI (vercel link)
+.vercel/
 
 npm-debug.log*
 yarn-debug.log*
