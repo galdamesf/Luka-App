@@ -5,6 +5,8 @@ import { fechaCorta, formatearCLP, nombreDelMes, porcentajeLegible } from "./for
 type Props = {
   panel: ResumenPanel;
   mes: string;
+  /** Si en el hogar hay mas de una persona: la barra es la de los sueldos de todos. */
+  compartido?: boolean;
 };
 
 // Clases enteras: Tailwind no genera las que se arman con plantilla.
@@ -61,7 +63,7 @@ function Pedazos({ pedazos, clases }: { pedazos: PedazoBarra[]; clases: Record<T
  * Todo lo que dice la barra esta tambien escrito en la leyenda: la barra
  * ayuda a verlo de un golpe, pero no es la unica forma de saberlo.
  */
-export function BarraDelMes({ panel, mes }: Props) {
+export function BarraDelMes({ panel, mes, compartido = false }: Props) {
   const { sinSueldo, sueldo, gastado, porPagar, barra } = panel;
   // Con el mes calendario "dia 29" se entiende solo; si el mes parte el 27,
   // el dia del periodo no calza con el del calendario y va la fecha.
@@ -107,7 +109,7 @@ export function BarraDelMes({ panel, mes }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="space-y-1">
           <h3 id="titulo-barra-mes" className="text-sm font-semibold text-texto-tenue">
-            Tu sueldo de {nombre}
+            {compartido ? "Los sueldos de" : "Tu sueldo de"} {nombre}
           </h3>
           <p className="text-2xl font-bold tracking-tight">
             <span className="cifra">{formatearCLP(gastado)}</span>{" "}

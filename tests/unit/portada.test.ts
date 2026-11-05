@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 import { contraste, sirveParaGrafico, sirveParaTexto } from "@/lib/contraste";
 import { Luka, type PoseLuka } from "@/componentes/Luka";
+import { RESPONSABLE } from "@/dominio/legal";
 
 // El heroe importa la accion de entrada, que a su vez trae Auth.js. Aqui solo
 // interesa lo que se dibuja, asi que la accion se reemplaza por una vacia.
@@ -34,7 +35,7 @@ describe("los tonos de la portada", () => {
   const oscuro = { ...app.oscuro, ...tokensDe(':root[data-theme="dark"] body:has(.portada) {') };
   const oscuroDelSistema = tokensDe(':root:not([data-theme="light"]) body:has(.portada) {');
 
-  const PROPIOS = ["fondo", "superficie", "superficie-tenue", "borde", "texto", "texto-tenue", "texto-suave", "titulo", "foco"];
+  const PROPIOS = ["fondo", "superficie", "superficie-tenue", "borde", "texto", "texto-tenue", "texto-suave", "titulo", "anotacion", "foco"];
 
   test("claro y oscuro redefinen los mismos tokens", () => {
     for (const token of PROPIOS) {
@@ -43,13 +44,21 @@ describe("los tonos de la portada", () => {
     }
   });
 
+  test("los titulos no van en durazno: el naranja queda para lo que resalta", () => {
+    for (const tema of [claro, oscuro]) {
+      expect(tema["titulo"]).not.toBe(tema["anotacion"]);
+      expect(tema["titulo"]).not.toBe(tema["acento"]);
+    }
+    expect(css).toMatch(/\.pregunta\[open\] > summary \{ color: var\(--anotacion\); \}/);
+  });
+
   test("el oscuro del sistema y el oscuro elegido son el mismo", () => {
     expect(oscuroDelSistema).toEqual(tokensDe(':root[data-theme="dark"] body:has(.portada) {'));
   });
 
   // Todo texto de la portada va sobre el papel, una carta o la cabecera de
   // una tabla. Los tres niveles de texto y los titulos se miden contra los tres.
-  const TEXTOS = ["texto", "texto-tenue", "texto-suave", "titulo"] as const;
+  const TEXTOS = ["texto", "texto-tenue", "texto-suave", "titulo", "anotacion"] as const;
   const FONDOS = ["fondo", "superficie", "superficie-tenue"] as const;
   // El semaforo de los presupuestos se lee como texto («te quedan $15.000»)
   // dentro de las cartas.
@@ -327,6 +336,40 @@ describe("las tarjetas y las preguntas", async () => {
     expect(tarjetas.match(/<h3/g)).toHaveLength(6);
   });
 
+  test("«¿Qué hacemos?» son seis paneles que se recorren de lado, con flechas y teclado", () => {
+    expect(tarjetas).toMatch(/<h2 id="portada-tarjetas"[^>]*>Lo que hace Luka, en <span class="palabra-subrayada text-anotacion">seis paneles<svg[^>]*class="trazo-subrayado"/);
+    expect(tarjetas).toContain("desliza, o usa las flechas");
+    const lienzo = /<div[^>]*id="lienzo-que-hacemos"[^>]*>/.exec(tarjetas)?.[0] ?? "";
+    expect(lienzo).toContain('tabindex="0"');
+    expect(lienzo).toContain("snap-x");
+    const flechas = [...tarjetas.matchAll(/<button[^>]*aria-controls="lienzo-que-hacemos"[^>]*>/g)].map((m) => m[0]);
+    expect(flechas).toHaveLength(2);
+    expect(flechas[0]).toContain('aria-label="Panel anterior"');
+    // Al cargar se esta en el primero: la flecha de atras parte apagada.
+    expect(flechas[0]).toContain('aria-disabled="true"');
+    expect(flechas[1]).toContain('aria-label="Panel siguiente"');
+  });
+
+  test("cada panel lleva su numero y su dibujo, y solo el de la salud va relleno de durazno", () => {
+    const paneles = tarjetas.split("<li").slice(1);
+    expect(paneles).toHaveLength(6);
+    paneles.forEach((html, i) => {
+      expect(html).toMatch(new RegExp(`<span aria-hidden="true"[^>]*>${i + 1}</span>`));
+      expect(html).toMatch(/<svg[^>]*class="dibujo/);
+    });
+    const rellenos = TARJETAS.filter((t) => t.destacado).map((t) => t.titulo);
+    expect(rellenos).toEqual(["La salud de tu mes"]);
+    expect(paneles.filter((html) => html.includes("bg-acento"))).toHaveLength(1);
+  });
+
+  test("los dibujos solo se esconden si se van a dibujar, y con movimiento reducido no se animan", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
+    expect(css).toMatch(/\.lienzo\[data-animar\] \.panel-luka:not\(\[data-visto\]\) \.dibujo path \{ stroke-dashoffset: 1; \}/);
+    expect(css).toMatch(/\.lienzo \.dibujo path \{ animation: none !important; stroke-dashoffset: 0 !important; \}/);
+    // Sin JavaScript, el lienzo no lleva data-animar: los dibujos se ven enteros.
+    expect(tarjetas).not.toContain("data-animar");
+  });
+
   test("las tarjetas llevan el mismo canto que los botones y esquinas de 24 px", () => {
     const css = readFileSync(resolve(process.cwd(), "src/app/globals.css"), "utf8");
     const boton = css.slice(css.indexOf(".boton-luka {"), css.indexOf("}", css.indexOf(".boton-luka {")));
@@ -353,6 +396,29 @@ describe("las tarjetas y las preguntas", async () => {
     expect(details[0]).toMatch(/\sopen=""/);
     for (const d of details.slice(1)) expect(d).not.toMatch(/\sopen/);
     for (const d of details) expect(d).toContain('name="preguntas-portada"');
+  });
+
+  test("la cabecera de las preguntas: titular con su subrayado y a quien escribir", () => {
+    expect(preguntas).toMatch(/<h2 id="portada-preguntas"[^>]*>Lo que más nos <span class="palabra-subrayada text-anotacion">preguntan<svg[^>]*class="trazo-subrayado"/);
+    expect(preguntas).toContain(`href="mailto:${RESPONSABLE.correo}"`);
+  });
+
+  test("las dos cabeceras van centradas, solo con el titular y lo de abajo, en dos capas de parallax", () => {
+    for (const [html, id] of [
+      [tarjetas, "portada-tarjetas"],
+      [preguntas, "portada-preguntas"],
+    ] as const) {
+      const cabecera = new RegExp(`<header class="[^"]*text-center[^"]*"><h2 id="${id}"[\\s\\S]*?</header>`).exec(html)?.[0] ?? "";
+      expect(cabecera, id).not.toBe("");
+      // Sin numero de fondo ni etiqueta sobre el titular.
+      expect(cabecera).not.toContain("cifra-de-fondo");
+      expect(cabecera).not.toMatch(/¿Qué hacemos\?|Preguntas frecuentes/);
+      // La palabra clave va en durazno, subrayada a mano.
+      expect(cabecera).toMatch(/<span class="palabra-subrayada text-anotacion">[^<]+<svg[^>]*class="trazo-subrayado"/);
+      // El titular y lo de abajo se mueven cada uno a su velocidad.
+      const velocidades = [...cabecera.matchAll(/data-paralaje="([^"]+)"/g)].map((m) => Number(m[1]));
+      expect(new Set(velocidades).size).toBe(2);
+    }
   });
 
   test("la respuesta de la sesion dice los plazos de la app", () => {

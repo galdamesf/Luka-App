@@ -214,7 +214,7 @@ function recomendar(entrada: EntradaSalud, puntaje: number): Recomendacion {
   if (libre < meta) {
     return {
       titulo: `Te faltan ${pesos(meta - libre)} para la meta de ahorro`,
-      texto: `La meta es guardar el ${META_AHORRO}% del sueldo. Mira en qué semana y en qué categorías se fue más plata.`,
+      texto: `La meta es guardar el ${META_AHORRO}% del sueldo. Mira en qué semana y en qué categorías se fue más dinero.`,
       accion: "Ver el ritmo semanal",
       destino: "#semanas",
     };

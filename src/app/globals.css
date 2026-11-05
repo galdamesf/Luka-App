@@ -247,6 +247,7 @@
   /* Solo existen dentro de la portada (ver «La portada Mediodía», al final). */
   --color-texto-suave: var(--texto-suave);
   --color-titulo: var(--titulo);
+  --color-anotacion: var(--anotacion);
 }
 
 * {
@@ -458,6 +459,50 @@ body {
 /* El acordeon de preguntas: el marcador nativo se esconde y el + gira solo. */
 .pregunta summary::-webkit-details-marker { display: none; }
 
+/* Una pregunta abierta (la de la portada y la de la guia) se nota: el borde
+   toma el canto del acento y el fondo, un tinte suave del acento sobre la
+   carta. El texto sigue en sus tokens de siempre, que se leen sobre ese
+   tinte igual que sobre la carta. */
+.tarjeta-pregunta {
+  transition: border-color 200ms, background-color 200ms;
+}
+.tarjeta-pregunta[open] {
+  border-color: var(--acento-canto);
+  background-color: color-mix(in oklab, var(--acento) 12%, var(--superficie));
+}
+/* En la portada, la pregunta abierta es la unica con el titulo en naranja. */
+.pregunta[open] > summary { color: var(--anotacion); }
+
+/* El lienzo de «¿Que hacemos?» (Lienzo.tsx): va a sangre y se desliza de lado.
+   --lienzo-borde alinea el primer panel, y cada encaje, con el borde del
+   contenido de la portada (64 rem con 1,25 rem de margen): el 100 % es el
+   ancho del propio lienzo. */
+.lienzo {
+  --lienzo-borde: max(1.25rem, calc((100% - 64rem) / 2 + 1.25rem));
+  scroll-padding-inline: var(--lienzo-borde);
+  scrollbar-width: thin;
+  scrollbar-color: var(--borde) transparent;
+  overscroll-behavior-x: contain;
+}
+.lienzo > ul { padding-inline: var(--lienzo-borde); }
+.lienzo .dibujo path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+/* Solo si de verdad se va a dibujar (data-animar lo pone Lienzo.tsx): antes de
+   verse, el panel espera sin trazar; al verse, sus trazos salen uno tras otro.
+   El texto nunca se esconde. */
+.lienzo[data-animar] .panel-luka:not([data-visto]) .dibujo path { stroke-dashoffset: 1; }
+.lienzo[data-animar] .panel-luka[data-visto] .dibujo path {
+  animation: trazo-dibuja 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(160ms + var(--i, 0) * 90ms);
+}
+
 /* El boton de Google, con sus reglas de marca: fondo blanco SIEMPRE (tambien
    en tema oscuro), su logo tal cual y texto sobrio. Google no permite pintarlo
    del color de la app. */
@@ -495,12 +540,15 @@ body {
    La portada Mediodía (/bienvenida).
 
    La portada no usa el gris frío de la app: claro va sobre papel tibio con
-   cartas blancas y títulos en naranja quemado; oscuro, sobre la noche de
-   siempre con títulos en durazno. En vez de inventar otro juego de nombres,
-   redefine los tokens de la app (fondo, superficie, borde, texto...) dentro de
-   la portada, así bg-fondo o text-texto-tenue sirven igual ahí adentro. Suma
-   dos que la app no tiene: --texto-suave (el tercer nivel de texto) y
-   --titulo.
+   cartas blancas; oscuro, sobre la noche de siempre. Los títulos van en
+   tinta (claro) o casi blanco (oscuro), y el durazno queda para lo que
+   resalta: los botones, el canto de las cartas, la pregunta abierta y las
+   notas a mano. Todo en durazno se cargaba demasiado. En vez de inventar otro
+   juego de nombres, redefine los tokens de la app (fondo, superficie, borde,
+   texto...) dentro de la portada, así bg-fondo o text-texto-tenue sirven
+   igual ahí adentro. Suma tres que la app no tiene: --texto-suave (el tercer
+   nivel de texto), --titulo y --anotacion (el naranja que se lee como texto:
+   quemado en claro, durazno en oscuro).
 
    Se cuelgan del <body> que contiene la portada y no de la portada misma
    para que el rebote del scroll, arriba y abajo, muestre el mismo papel. Los
@@ -515,7 +563,8 @@ body:has(.portada) {
   --texto: #0f172a;
   --texto-tenue: #475569;
   --texto-suave: #5a687e;
-  --titulo: #c2410c;
+  --titulo: #1e293b;
+  --anotacion: #c2410c;
   --foco: #c2410c;
   --marcador: rgb(255 159 110 / 0.5);
   /* El pie va en el mismo azul en los dos temas. */
@@ -531,7 +580,8 @@ body:has(.portada) {
     --texto: #f8fafc;
     --texto-tenue: #cbd5e1;
     --texto-suave: #94a3b8;
-    --titulo: #ff9f6e;
+    --titulo: #fff4ee;
+    --anotacion: #ff9f6e;
     --foco: #ff9f6e;
     --marcador: rgb(255 159 110 / 0.34);
   }
@@ -545,7 +595,8 @@ body:has(.portada) {
   --texto: #f8fafc;
   --texto-tenue: #cbd5e1;
   --texto-suave: #94a3b8;
-  --titulo: #ff9f6e;
+  --titulo: #fff4ee;
+  --anotacion: #ff9f6e;
   --foco: #ff9f6e;
   --marcador: rgb(255 159 110 / 0.34);
 }
@@ -629,7 +680,7 @@ body:has(.portada) {
 }
 .portada-aviso-entra { animation: portada-aviso-entra 700ms cubic-bezier(0.16, 1, 0.3, 1) 600ms both; }
 
-/* La palabra clave del heroe («tu plata»): una etiqueta durazno con el mismo
+/* La palabra clave del heroe («tu dinero»): una etiqueta durazno con el mismo
    canto de los botones, levemente girada. Al cargar se asienta una vez. El
    giro va en `rotate` y la entrada en `rotate`/`scale`: transform es del
    parallax del titular. */
@@ -653,6 +704,30 @@ body:has(.portada) {
    (TrazoCirculo.tsx). El circulo se sale un poco de la palabra, como cuando se
    marca algo con plumon. */
 .palabra-circulada { position: relative; white-space: nowrap; }
+/* El subrayado a mano de la palabra clave de los titulos de la portada
+   («seis paneles», «preguntan»). Va
+   sobre el papel de la portada, asi que sigue al tema: --anotacion. El
+   viewBox (200 : 12) tiene casi la proporcion de la caja, asi que el trazo
+   casi no se deforma, y su grosor crece con la letra, como el del circulo. */
+.palabra-subrayada { position: relative; white-space: nowrap; }
+.trazo-subrayado {
+  position: absolute;
+  left: -3%;
+  top: 84%;
+  width: 106%;
+  height: 0.34em;
+  overflow: visible;
+}
+.trazo-subrayado path {
+  fill: none;
+  stroke: var(--anotacion);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.trazo-subrayado[data-fase="espera"] path { stroke-dashoffset: 1; }
+.trazo-subrayado[data-fase="dibuja"] path { animation: trazo-dibuja 700ms cubic-bezier(0.65, 0, 0.35, 1) 150ms both; }
 .trazo-circulo {
   position: absolute;
   left: -7%;
@@ -678,7 +753,9 @@ body:has(.portada) {
 }
 @media (prefers-reduced-motion: reduce) {
   .etiqueta-luka { animation: none; }
-  .trazo-circulo path { animation: none !important; stroke-dashoffset: 0 !important; }
+  .trazo-circulo path,
+  .trazo-subrayado path,
+  .lienzo .dibujo path { animation: none !important; stroke-dashoffset: 0 !important; }
 }
 
 /* El parallax de la portada (Paralaje.tsx escribe --paralaje en cada capa).

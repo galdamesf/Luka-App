@@ -243,16 +243,21 @@ export default async function ComoUsar() {
                 Preguntas frecuentes
               </h2>
             </div>
-            <div className="max-w-[70ch] divide-y divide-borde rounded-xl border border-borde bg-superficie">
+            {/* Cada pregunta en su tarjeta, como las del resto de la app. La
+                abierta se nota: borde de color y fondo tenido de acento. */}
+            <div className="max-w-[70ch] space-y-3">
               {PREGUNTAS.map((p) => (
-                <details key={p.pregunta} className="group px-4 py-3">
+                <details
+                  key={p.pregunta}
+                  className="tarjeta-pregunta group rounded-2xl border border-borde bg-superficie px-5 py-4 shadow-sm"
+                >
                   <summary className="flex cursor-pointer list-none items-start justify-between gap-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
                     {/* En un span: suelto, cada pedazo del texto seria un hijo
                         del flex y quedarian separados. */}
                     <span className="min-w-0">
                       <TextoGuia texto={p.pregunta} />
                     </span>
-                    <span className="mt-0.5 shrink-0 text-texto-tenue transition-transform duration-150 group-open:rotate-180">
+                    <span className="mt-0.5 shrink-0 text-texto-tenue transition-transform duration-150 group-open:rotate-180 group-open:text-texto">
                       <Icono nombre="chevron-down" tamano={15} />
                     </span>
                   </summary>

@@ -321,7 +321,7 @@ export default async function Home({ searchParams }: Props) {
             balance, que es el detalle de esas cifras. */}
         <SeccionPanel seccion="resumen">
           <KpisDelMes panel={panel} mes={mes} />
-          <BarraDelMes panel={panel} mes={mes} />
+          <BarraDelMes panel={panel} mes={mes} compartido={sueldos.aportes.length > 1} />
           <div className="grid items-start gap-4 lg:grid-cols-5">
             <div id="balance" className="scroll-mt-28 lg:col-span-3">
               <SecuenciaBalance

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * El circulo a mano alrededor de «claro», en el titular del cierre.
+ * Un trazo a mano sobre una palabra de un titular: el circulo alrededor de
+ * «claro», en el cierre, o el subrayado de «preguntan», en las preguntas.
  *
  * Se dibuja una sola vez, cuando el titular entra en pantalla. Sin JavaScript
  * o con movimiento reducido el circulo ya esta completo: solo se esconde para
@@ -13,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
  * preserveAspectRatio="none" casi no deforma el trazo, y el grosor crece y se
  * achica con la letra del titular.
  */
-export function TrazoCirculo() {
+export function TrazoCirculo({ forma = "circulo" }: { forma?: "circulo" | "subrayado" }) {
   const ref = useRef<SVGSVGElement>(null);
   const [fase, setFase] = useState<"quieto" | "espera" | "dibuja">("quieto");
 
@@ -42,8 +43,14 @@ export function TrazoCirculo() {
   }, []);
 
   return (
-    <svg ref={ref} data-fase={fase} viewBox="0 0 200 80" preserveAspectRatio="none" aria-hidden="true" className="trazo-circulo">
-      <path pathLength={1} d="M150 8 C 95 -2, 18 8, 8 38 C 0 66, 70 78, 128 72 C 182 66, 202 42, 186 22 C 176 10, 150 6, 122 9" />
-    </svg>
+    forma === "subrayado" ? (
+      <svg ref={ref} data-fase={fase} viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true" className="trazo-subrayado">
+        <path pathLength={1} d="M3 8 C 42 4, 96 3, 150 5 C 170 6, 186 7, 197 4" />
+      </svg>
+    ) : (
+      <svg ref={ref} data-fase={fase} viewBox="0 0 200 80" preserveAspectRatio="none" aria-hidden="true" className="trazo-circulo">
+        <path pathLength={1} d="M150 8 C 95 -2, 18 8, 8 38 C 0 66, 70 78, 128 72 C 182 66, 202 42, 186 22 C 176 10, 150 6, 122 9" />
+      </svg>
+    )
   );
 }

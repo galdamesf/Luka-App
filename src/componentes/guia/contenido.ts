@@ -202,7 +202,7 @@ export const GUIA: readonly SeccionGuia[] = [
       {
         titulo: "La barra «Tu sueldo de…»",
         texto: [
-          "Muestra tu sueldo como una barra que se va llenando. La parte sólida es lo que ya gastaste, la rayada es lo que falta pagar en cuentas y cuotas, y lo vacío es lo que te queda libre.",
+          "Muestra tu sueldo (o la suma de los sueldos, si comparten el hogar: ahí dice «Los sueldos de…») como una barra que se va llenando. La parte sólida es lo que ya gastaste, la rayada es lo que falta pagar en cuentas y cuotas, y lo vacío es lo que te queda libre.",
           "El color depende de qué parte del sueldo llevas: verde hasta el 50%, ámbar del 50% al 80% y rojo desde el 80%. Lo vacío muestra esos tramos tenues, y arriba están marcados el 50% y el 80%, para que veas cuánto te falta para el siguiente color.",
           "La raya vertical es el día de hoy. Si lo gastado termina antes que la raya, vas gastando más lento que el paso del mes: bien. Si la pasa, vas más rápido.",
         ],
@@ -241,7 +241,7 @@ export const GUIA: readonly SeccionGuia[] = [
       {
         titulo: "Por categoría",
         texto: [
-          "En qué se fue la plata este mes, de la categoría más grande a la más chica. Se ven las 5 mayores, cada una con su monto y qué parte del total es. El resto queda agrupado en «Otras N categorías», con su total: tócala para verlas todas.",
+          "En qué se fue el dinero este mes, de la categoría más grande a la más chica. Se ven las 5 mayores, cada una con su monto y qué parte del total es. El resto queda agrupado en «Otras N categorías», con su total: tócala para verlas todas.",
           "Si pasas el mouse por una categoría (o la tocas en el celular), aparece su detalle: cuántos gastos tiene, el promedio, en cuántos días gastaste, los gastos más grandes y si va más arriba o más abajo que el mes pasado.",
         ],
         imagen: {
@@ -259,22 +259,22 @@ export const GUIA: readonly SeccionGuia[] = [
     icono: "piggy-bank",
     enlace: "/#queda",
     paraQueSirve:
-      "Responde dos preguntas: cuánta plata tienes para el resto del mes después de pagar todo lo que debes, y cuánto puedes ahorrar. Se actualiza solo con cada gasto, pago o cuenta nueva.",
+      "Responde dos preguntas: cuánto dinero tienes para el resto del mes después de pagar todo lo que debes, y cuánto puedes ahorrar. Se actualiza solo con cada gasto, pago o cuenta nueva.",
     bloques: [
       {
-        titulo: "«Tu plata de…»: las tres cifras",
+        titulo: "«Tu dinero de…»: las tres cifras",
         texto: [
           "Se leen como una resta: lo libre para el mes, menos lo que tienes reservado para tus presupuestos, es lo que puedes ahorrar.",
         ],
         terminos: [
-          { termino: "Libre para el mes", definicion: "Tu sueldo menos lo que ya pagaste y lo que falta pagar en cuentas y cuotas. Es la plata que tienes para vivir el resto del mes." },
+          { termino: "Libre para el mes", definicion: "Tu sueldo menos lo que ya pagaste y lo que falta pagar en cuentas y cuotas. Es el dinero que tienes para vivir el resto del mes." },
           { termino: "Para tus presupuestos", definicion: "Lo que todavía falta gastar en las categorías con presupuesto (súper, bencina…). Ya tiene destino." },
           { termino: "Puedes ahorrar", definicion: "Lo que queda después de lo anterior. La barra de abajo lo compara con tu meta de ahorro (el 20% del sueldo): te dice si te alcanza para cumplirla, o cuánto te faltaría aunque ahorres todo." },
           { termino: "Margen por día", definicion: "Si no apartas nada, cuánto tienes por día para imprevistos en los días que quedan." },
         ],
         imagen: {
           archivo: "tu-plata",
-          alt: "El recuadro «Tu plata de noviembre» con Libre para el mes, Para tus presupuestos y Puedes ahorrar, y la barra de la meta de ahorro.",
+          alt: "El recuadro «Tu dinero de noviembre» con Libre para el mes, Para tus presupuestos y Puedes ahorrar, y la barra de la meta de ahorro.",
           pie: "Libre para el mes − presupuestos = lo que puedes ahorrar.",
         },
         consejo:
@@ -300,7 +300,7 @@ export const GUIA: readonly SeccionGuia[] = [
       {
         titulo: "Ahorros",
         texto: [
-          "Aquí anotas la plata que apartas. Cada ahorro se descuenta de lo que te queda en el mes y se suma a tu total ahorrado.",
+          "Aquí anotas el dinero que apartas. Cada ahorro se descuenta de lo que te queda en el mes y se suma a tu total ahorrado.",
           "Arriba ves cuánto llevas este mes y tu total acumulado; al medio, tu meta (el 20% del sueldo) y cuánto te falta; abajo, los aportes del mes y los últimos 6 meses.",
         ],
         pasos: [
