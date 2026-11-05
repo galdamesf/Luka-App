@@ -63,6 +63,11 @@ describe("lo que dice la politica es lo que hace Luka", () => {
     expect(texto).toMatch(/no se venden/);
     expect(texto).toMatch(/no se usan para publicidad/);
   });
+
+  test("avisa que los del hogar ven el sueldo de cada uno, y que pasa con el tuyo si sales", () => {
+    expect(texto).toMatch(/incluido el sueldo de cada uno/);
+    expect(texto).toMatch(/Tu sueldo sigue sumando, sin tu nombre, en los meses en que estuviste/);
+  });
 });
 
 describe("la pagina", async () => {

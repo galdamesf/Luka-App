@@ -88,7 +88,7 @@ export const PRIMEROS_PASOS: readonly { titulo: string; texto: string; destino: 
   },
   {
     titulo: "Define tu sueldo",
-    texto: "En la sección 01, dentro del balance, con «Definir mi sueldo». Sin sueldo no hay de dónde restar.",
+    texto: "En la sección 01, dentro del balance, con «Definir mi sueldo». Sin sueldo no hay de dónde restar. Si comparten el hogar, cada uno define el suyo y Luka los suma.",
     destino: "#resumen",
   },
   {
@@ -188,7 +188,7 @@ export const GUIA: readonly SeccionGuia[] = [
         titulo: "Las cuatro cifras de arriba",
         texto: ["Son el resumen del resumen. Las cuatro cuadran entre sí y con el balance de más abajo."],
         terminos: [
-          { termino: "Sueldo del mes", definicion: "Lo que entra este mes. Sale del sueldo que definiste en el balance." },
+          { termino: "Sueldo del mes", definicion: "Lo que entra este mes: tu sueldo o, si comparten el hogar, la suma del sueldo de cada uno. Se define en el balance." },
           { termino: "Total gastado", definicion: "Todo lo que ya salió este mes: tus gastos, las cuentas que marcaste pagadas y las cuotas pagadas. Abajo te compara con el mes anterior en la misma cantidad de días (en rojo si subió, en verde si bajó) y te dice qué parte de tu sueldo llevas." },
           { termino: "Disponible", definicion: "El sueldo menos lo gastado. Debajo, «Tras pagar lo pendiente», es lo que te quedaría si hoy pagaras todas las cuentas y cuotas que faltan." },
           { termino: "Por pagar", definicion: "Lo que falta pagar en cuentas y cuotas este mes. Te avisa cuántas están vencidas y cuántas vencen pronto. Cuando no queda nada, dice «Todo pagado este mes»." },
@@ -202,7 +202,7 @@ export const GUIA: readonly SeccionGuia[] = [
       {
         titulo: "La barra «Tu sueldo de…»",
         texto: [
-          "Muestra tu sueldo como una barra que se va llenando. La parte sólida es lo que ya gastaste, la rayada es lo que falta pagar en cuentas y cuotas, y lo vacío es lo que te queda libre.",
+          "Muestra tu sueldo (o la suma de los sueldos, si comparten el hogar: ahí dice «Los sueldos de…») como una barra que se va llenando. La parte sólida es lo que ya gastaste, la rayada es lo que falta pagar en cuentas y cuotas, y lo vacío es lo que te queda libre.",
           "El color depende de qué parte del sueldo llevas: verde hasta el 50%, ámbar del 50% al 80% y rojo desde el 80%. Lo vacío muestra esos tramos tenues, y arriba están marcados el 50% y el 80%, para que veas cuánto te falta para el siguiente color.",
           "La raya vertical es el día de hoy. Si lo gastado termina antes que la raya, vas gastando más lento que el paso del mes: bien. Si la pasa, vas más rápido.",
         ],
@@ -222,11 +222,12 @@ export const GUIA: readonly SeccionGuia[] = [
         texto: [
           "El balance es la cuenta del mes de arriba abajo: el sueldo, menos los gastos en lo esencial, menos las cuotas de deudas, menos los gastos en lo demás. Abajo queda «Te queda» (o «Te pasaste por», si es negativo).",
           "Aquí también defines tu sueldo. El sueldo rige desde un mes en adelante: si en marzo te suben el sueldo, defines el nuevo «desde marzo» y los meses anteriores conservan el que tenían.",
+          "Si en tu hogar hay más de una persona, la primera línea dice «Sueldos del hogar»: es la suma del sueldo de cada uno, y debajo aparece lo que gana cada persona. Cada uno define y cambia solo el suyo.",
         ],
         pasos: [
-          "En el balance, toca «Definir mi sueldo» (o «Cambiar el sueldo», si ya lo tienes).",
+          "En el balance, toca «Definir mi sueldo» (o «Cambiar mi sueldo», si ya lo tienes).",
           "En «Rige desde», elige el mes desde el que vale.",
-          "En «Monto mensual», escribe tu sueldo líquido, solo números (por ejemplo, 1500000).",
+          "En «Monto mensual» («Tu sueldo mensual», si comparten el hogar), escribe tu sueldo líquido, solo números (por ejemplo, 1500000).",
           "Guarda. Todas las cifras del panel se recalculan.",
         ],
         imagen: {
@@ -240,7 +241,7 @@ export const GUIA: readonly SeccionGuia[] = [
       {
         titulo: "Por categoría",
         texto: [
-          "En qué se fue la plata este mes, de la categoría más grande a la más chica. Se ven las 5 mayores, cada una con su monto y qué parte del total es. El resto queda agrupado en «Otras N categorías», con su total: tócala para verlas todas.",
+          "En qué se fue el dinero este mes, de la categoría más grande a la más chica. Se ven las 5 mayores, cada una con su monto y qué parte del total es. El resto queda agrupado en «Otras N categorías», con su total: tócala para verlas todas.",
           "Si pasas el mouse por una categoría (o la tocas en el celular), aparece su detalle: cuántos gastos tiene, el promedio, en cuántos días gastaste, los gastos más grandes y si va más arriba o más abajo que el mes pasado.",
         ],
         imagen: {
@@ -258,22 +259,22 @@ export const GUIA: readonly SeccionGuia[] = [
     icono: "piggy-bank",
     enlace: "/#queda",
     paraQueSirve:
-      "Responde dos preguntas: cuánta plata tienes para el resto del mes después de pagar todo lo que debes, y cuánto puedes ahorrar. Se actualiza solo con cada gasto, pago o cuenta nueva.",
+      "Responde dos preguntas: cuánto dinero tienes para el resto del mes después de pagar todo lo que debes, y cuánto puedes ahorrar. Se actualiza solo con cada gasto, pago o cuenta nueva.",
     bloques: [
       {
-        titulo: "«Tu plata de…»: las tres cifras",
+        titulo: "«Tu dinero de…»: las tres cifras",
         texto: [
           "Se leen como una resta: lo libre para el mes, menos lo que tienes reservado para tus presupuestos, es lo que puedes ahorrar.",
         ],
         terminos: [
-          { termino: "Libre para el mes", definicion: "Tu sueldo menos lo que ya pagaste y lo que falta pagar en cuentas y cuotas. Es la plata que tienes para vivir el resto del mes." },
+          { termino: "Libre para el mes", definicion: "Tu sueldo menos lo que ya pagaste y lo que falta pagar en cuentas y cuotas. Es el dinero que tienes para vivir el resto del mes." },
           { termino: "Para tus presupuestos", definicion: "Lo que todavía falta gastar en las categorías con presupuesto (súper, bencina…). Ya tiene destino." },
           { termino: "Puedes ahorrar", definicion: "Lo que queda después de lo anterior. La barra de abajo lo compara con tu meta de ahorro (el 20% del sueldo): te dice si te alcanza para cumplirla, o cuánto te faltaría aunque ahorres todo." },
           { termino: "Margen por día", definicion: "Si no apartas nada, cuánto tienes por día para imprevistos en los días que quedan." },
         ],
         imagen: {
           archivo: "tu-plata",
-          alt: "El recuadro «Tu plata de noviembre» con Libre para el mes, Para tus presupuestos y Puedes ahorrar, y la barra de la meta de ahorro.",
+          alt: "El recuadro «Tu dinero de noviembre» con Libre para el mes, Para tus presupuestos y Puedes ahorrar, y la barra de la meta de ahorro.",
           pie: "Libre para el mes − presupuestos = lo que puedes ahorrar.",
         },
         consejo:
@@ -299,7 +300,7 @@ export const GUIA: readonly SeccionGuia[] = [
       {
         titulo: "Ahorros",
         texto: [
-          "Aquí anotas la plata que apartas. Cada ahorro se descuenta de lo que te queda en el mes y se suma a tu total ahorrado.",
+          "Aquí anotas el dinero que apartas. Cada ahorro se descuenta de lo que te queda en el mes y se suma a tu total ahorrado.",
           "Arriba ves cuánto llevas este mes y tu total acumulado; al medio, tu meta (el 20% del sueldo) y cuánto te falta; abajo, los aportes del mes y los últimos 6 meses.",
         ],
         pasos: [
@@ -691,6 +692,11 @@ export const PREGUNTAS: readonly { pregunta: string; respuesta: string }[] = [
     pregunta: "¿Puedo usar Luka con alguien de mi casa?",
     respuesta:
       "Sí. El dueño del hogar invita su correo de Google en «Hogar». Cuando esa persona entra a Luka con ese correo, ve y anota lo mismo que tú.",
+  },
+  {
+    pregunta: "Si comparto el hogar, ¿cómo se cuenta el sueldo?",
+    respuesta:
+      "Cada uno define su propio sueldo en el balance, y Luka usa la suma para todas las cifras del mes. Todos ven el sueldo de cada uno, pero solo tú puedes cambiar el tuyo. Si alguien sale del hogar, su sueldo sigue contando en los meses en que estuvo y deja de sumar desde el mes siguiente.",
   },
   {
     pregunta: "Me quieren invitar a un hogar, pero ya tengo el mío. ¿Qué hago?",

@@ -244,7 +244,7 @@ export function TablaMedios({ medios }: { medios: readonly LineaMedioPago[] }) {
 export function MayoresGastos({ gastos }: { gastos: readonly GastoPlano[] }) {
   return (
     <section aria-labelledby="t-mayores" className={TARJETA}>
-      <h2 id="t-mayores" className={TITULO}>Dónde se fue la plata</h2>
+      <h2 id="t-mayores" className={TITULO}>Dónde se fue el dinero</h2>
 
       {gastos.length === 0 ? (
         <p className="py-6 text-center text-sm text-texto-tenue">Sin gastos este mes.</p>

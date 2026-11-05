@@ -7,8 +7,10 @@ import { nombreDelMes } from "./formato";
 
 type Props = {
   mes: string;
-  /** Sueldo que rige hoy en ese mes, para mostrarlo de referencia. */
+  /** Tu sueldo en ese mes, para mostrarlo de referencia. null si no lo anotaste. */
   sueldoActual: number | null;
+  /** Si en el hogar hay mas de una persona: cada uno anota el suyo. */
+  compartido?: boolean;
   accion: AccionFormulario;
 };
 
@@ -16,19 +18,21 @@ const ETIQUETA = "mb-1 block text-xs font-medium text-texto-tenue";
 const CAMPO =
   "w-full rounded-md border border-borde bg-superficie px-3 py-2 text-sm text-texto transition-colors duration-150 hover:border-texto-tenue";
 
-export function FormularioSueldo({ mes, sueldoActual, accion }: Props) {
+/** Tu sueldo: cada uno define solo el suyo, y el balance usa la suma de todos. */
+export function FormularioSueldo({ mes, sueldoActual, compartido = false, accion }: Props) {
   const [estado, enviar, pendiente] = useActionState(accion, ESTADO_INICIAL);
   const err = estado.errores;
 
   return (
     <details className="mt-4 border-t border-borde pt-3" open={sueldoActual === null}>
       <summary className="cursor-pointer list-none text-xs font-medium text-texto-tenue transition-colors duration-150 hover:text-texto">
-        {sueldoActual === null ? "Definir mi sueldo" : "Cambiar el sueldo"}
+        {sueldoActual === null ? "Definir mi sueldo" : "Cambiar mi sueldo"}
         <span className="ml-1 opacity-60" aria-hidden="true">▾</span>
       </summary>
 
       <form action={enviar} className="mt-3 space-y-3">
         <p className="text-xs text-texto-tenue">
+          {compartido && "Cada uno anota su propio sueldo, y el balance usa la suma de todos. "}
           El monto rige desde el mes que elijas en adelante, hasta que lo cambies.
           Los meses anteriores conservan el sueldo que tenían.
         </p>
@@ -51,7 +55,7 @@ export function FormularioSueldo({ mes, sueldoActual, accion }: Props) {
           </div>
 
           <div>
-            <label htmlFor="sueldo-monto" className={ETIQUETA}>Monto mensual</label>
+            <label htmlFor="sueldo-monto" className={ETIQUETA}>{compartido ? "Tu sueldo mensual" : "Monto mensual"}</label>
             <input
               id="sueldo-monto"
               name="monto"
@@ -75,7 +79,7 @@ export function FormularioSueldo({ mes, sueldoActual, accion }: Props) {
           disabled={pendiente}
           className="w-full cursor-pointer rounded-md bg-primario px-4 py-2 text-sm font-medium text-primario-texto transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pendiente ? "Guardando…" : "Guardar sueldo"}
+          {pendiente ? "Guardando…" : compartido ? "Guardar mi sueldo" : "Guardar sueldo"}
         </button>
 
         {estado.mensaje !== null && (
@@ -87,8 +91,18 @@ export function FormularioSueldo({ mes, sueldoActual, accion }: Props) {
 
       {sueldoActual !== null && (
         <p className="mt-2 text-xs text-texto-tenue">
-          Hoy rige <span className="cifra">{formatearCLP(sueldoActual)}</span> para{" "}
-          <span className="capitalize">{nombreDelMes(mes)}</span>.
+          {compartido ? "Tu sueldo para " : "Hoy rige "}
+          {compartido ? (
+            <>
+              <span className="capitalize">{nombreDelMes(mes)}</span>:{" "}
+              <span className="cifra">{formatearCLP(sueldoActual)}</span>.
+            </>
+          ) : (
+            <>
+              <span className="cifra">{formatearCLP(sueldoActual)}</span> para{" "}
+              <span className="capitalize">{nombreDelMes(mes)}</span>.
+            </>
+          )}
         </p>
       )}
     </details>

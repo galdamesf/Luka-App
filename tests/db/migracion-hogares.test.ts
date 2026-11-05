@@ -136,6 +136,12 @@ describe("despues, lo unico pasa a ser unico por hogar", () => {
     }
   });
 
+  test("el sueldo de antes queda igual, esperando al dueno de «Mi hogar»", async () => {
+    // Nadie ha entrado todavia: lo recibe su dueno la primera vez que entra.
+    const { rows } = await base.query("SELECT hogar_id, miembro_id, monto, vigente_hasta FROM sueldos");
+    expect(rows).toEqual([{ hogar_id: "hogar-inicial", miembro_id: null, monto: 1000000, vigente_hasta: null }]);
+  });
+
   test("los ajustes de antes quedan como los del hogar inicial, con su dia", async () => {
     const { rows } = await base.query("SELECT * FROM ajustes");
     expect(rows).toHaveLength(1);

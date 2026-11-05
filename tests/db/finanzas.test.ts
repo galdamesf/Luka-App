@@ -1,11 +1,12 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
-import { HOGAR_INICIAL, clienteDePrueba, limpiar } from "./base";
+import { HOGAR_INICIAL, clienteDePrueba, limpiar, miembroDePrueba } from "./base";
 import {
   definirSueldo,
   eliminarSueldo,
   listarSueldos,
   sueldoDelMes,
+  sueldosDelMes,
 } from "@/datos/sueldos";
 import {
   crearDeuda,
@@ -23,6 +24,8 @@ import { calcularBalance, cuotaEnMes, saldoDesde } from "@/dominio/balance";
 import type { DeudaValidada } from "@/dominio/esquemas";
 
 let prisma: PrismaClient;
+/** El dueno del hogar inicial: el que anota el sueldo en estos tests. */
+let yo: string;
 
 beforeAll(async () => {
   prisma = clienteDePrueba();
@@ -35,6 +38,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await limpiar(prisma);
+  yo = await miembroDePrueba(prisma, { nombre: "Fernando Vilches" });
 });
 
 function datosDeuda(cambios: Partial<DeudaValidada> = {}): DeudaValidada {
@@ -50,7 +54,7 @@ function datosDeuda(cambios: Partial<DeudaValidada> = {}): DeudaValidada {
 
 describe("sueldos", () => {
   test("se guarda y vuelve como mes, no como fecha suelta", async () => {
-    const s = await definirSueldo(HOGAR_INICIAL, "2026-10", 1250000, null, prisma);
+    const s = await definirSueldo(HOGAR_INICIAL, yo, "2026-10", 1250000, null, prisma);
     expect(s.monto).toBe(1250000);
     expect(s.vigenteDesde).toBe("2026-10");
   });
@@ -59,15 +63,15 @@ describe("sueldos", () => {
     // Enero es el caso que revienta: la medianoche UTC del 1 cae el 31 de
     // diciembre en Chile, y ahi el AÑO tambien cambia.
     for (const mes of ["2026-01", "2026-12", "2027-01"]) {
-      await definirSueldo(HOGAR_INICIAL, mes, 1000000, null, prisma);
+      await definirSueldo(HOGAR_INICIAL, yo, mes, 1000000, null, prisma);
       const guardados = await listarSueldos(HOGAR_INICIAL, prisma);
       expect(guardados.map((s) => s.vigenteDesde)).toContain(mes);
     }
   });
 
   test("definirlo dos veces para el mismo mes corrige, no duplica", async () => {
-    await definirSueldo(HOGAR_INICIAL, "2026-10", 1200000, null, prisma);
-    await definirSueldo(HOGAR_INICIAL, "2026-10", 1250000, "con el aumento", prisma);
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-10", 1200000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-10", 1250000, "con el aumento", prisma);
 
     const todos = await listarSueldos(HOGAR_INICIAL, prisma);
     expect(todos).toHaveLength(1);
@@ -76,18 +80,18 @@ describe("sueldos", () => {
   });
 
   test("rechaza un sueldo negativo", async () => {
-    await expect(definirSueldo(HOGAR_INICIAL, "2026-10", -1, null, prisma)).rejects.toThrow();
+    await expect(definirSueldo(HOGAR_INICIAL, yo, "2026-10", -1, null, prisma)).rejects.toThrow();
   });
 
   test("acepta cero: un mes sin ingresos es un dato real", async () => {
-    const s = await definirSueldo(HOGAR_INICIAL, "2026-10", 0, null, prisma);
+    const s = await definirSueldo(HOGAR_INICIAL, yo, "2026-10", 0, null, prisma);
     expect(s.monto).toBe(0);
   });
 
   test("sueldoDelMes toma el vigente, no el ultimo cargado", async () => {
-    await definirSueldo(HOGAR_INICIAL, "2026-01", 900000, null, prisma);
-    await definirSueldo(HOGAR_INICIAL, "2026-06", 1200000, null, prisma);
-    await definirSueldo(HOGAR_INICIAL, "2027-01", 1350000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-01", 900000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-06", 1200000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, yo, "2027-01", 1350000, null, prisma);
 
     expect(await sueldoDelMes(HOGAR_INICIAL, "2026-03", prisma)).toBe(900000);
     expect(await sueldoDelMes(HOGAR_INICIAL, "2026-06", prisma)).toBe(1200000);
@@ -96,13 +100,13 @@ describe("sueldos", () => {
   });
 
   test("un aumento no reescribe los meses anteriores", async () => {
-    await definirSueldo(HOGAR_INICIAL, "2026-01", 900000, null, prisma);
-    await definirSueldo(HOGAR_INICIAL, "2026-06", 1200000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-01", 900000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-06", 1200000, null, prisma);
     expect(await sueldoDelMes(HOGAR_INICIAL, "2026-02", prisma)).toBe(900000);
   });
 
   test("antes del primer sueldo cargado devuelve null", async () => {
-    await definirSueldo(HOGAR_INICIAL, "2026-06", 1200000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-06", 1200000, null, prisma);
     expect(await sueldoDelMes(HOGAR_INICIAL, "2026-01", prisma)).toBeNull();
   });
 
@@ -111,9 +115,57 @@ describe("sueldos", () => {
   });
 
   test("se puede borrar el de un mes", async () => {
-    await definirSueldo(HOGAR_INICIAL, "2026-10", 1200000, null, prisma);
-    await eliminarSueldo(HOGAR_INICIAL, "2026-10", prisma);
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-10", 1200000, null, prisma);
+    await eliminarSueldo(HOGAR_INICIAL, yo, "2026-10", prisma);
     expect(await listarSueldos(HOGAR_INICIAL, prisma)).toEqual([]);
+  });
+});
+
+describe("sueldos de cada miembro", () => {
+  let ella: string;
+  beforeEach(async () => {
+    ella = await miembroDePrueba(prisma, { nombre: "Angelina Ríos", rol: "MIEMBRO" });
+  });
+
+  test("lo que entra al hogar es la suma de los sueldos de todos", async () => {
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-01", 1_000_000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, ella, "2026-03", 800_000, null, prisma);
+
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-02", prisma)).toBe(1_000_000);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-03", prisma)).toBe(1_800_000);
+  });
+
+  test("dos personas pueden anotar su sueldo el mismo mes", async () => {
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-10", 1_000_000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, ella, "2026-10", 800_000, null, prisma);
+    expect(await listarSueldos(HOGAR_INICIAL, prisma)).toHaveLength(2);
+  });
+
+  test("el aumento de uno no cambia el sueldo del otro", async () => {
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-01", 1_000_000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, ella, "2026-01", 800_000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-06", 1_100_000, null, prisma);
+
+    const junio = await sueldosDelMes(HOGAR_INICIAL, "2026-06", yo, prisma);
+    expect(junio.porMiembro.get(yo)).toBe(1_100_000);
+    expect(junio.porMiembro.get(ella)).toBe(800_000);
+    expect(junio.total).toBe(1_900_000);
+  });
+
+  test("el balance trae una fila por cada uno, el dueno primero y marcando la tuya", async () => {
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-10", 1_000_000, null, prisma);
+
+    const { aportes } = await sueldosDelMes(HOGAR_INICIAL, "2026-10", ella, prisma);
+    expect(aportes).toEqual([
+      { miembroId: yo, nombre: "Fernando", monto: 1_000_000, esTuyo: false },
+      { miembroId: ella, nombre: "Angelina", monto: null, esTuyo: true },
+    ]);
+  });
+
+  test("una invitacion pendiente no aparece en el balance", async () => {
+    await miembroDePrueba(prisma, { correo: "pendiente@prueba.cl", rol: "MIEMBRO", entro: false });
+    const { aportes } = await sueldosDelMes(HOGAR_INICIAL, "2026-10", yo, prisma);
+    expect(aportes.map((a) => a.miembroId)).toEqual([yo, ella]);
   });
 });
 
@@ -190,7 +242,7 @@ describe("de la base al balance, de punta a punta", () => {
       data: { hogarId: HOGAR_INICIAL, nombre: "Restaurantes", color: "#ea580c", icono: "utensils", esencial: false },
     });
 
-    await definirSueldo(HOGAR_INICIAL, "2026-10", 1250000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-10", 1250000, null, prisma);
 
     await crearGasto(
       HOGAR_INICIAL,

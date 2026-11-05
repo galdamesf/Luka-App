@@ -17,7 +17,7 @@ export type ResumenBienvenida = {
   /** Dias que quedan contando hoy. */
   diasRestantes: number;
   sinSueldo: boolean;
-  /** Libre para el mes despues de pagar todo (lo de "Tu plata del mes"). */
+  /** Libre para el mes despues de pagar todo (lo de "Tu dinero del mes"). */
   libre: number;
   porPagar: number;
   cuentasVencidas: number;

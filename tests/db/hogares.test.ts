@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
-import { HOGAR_INICIAL, clienteDePrueba, limpiar } from "./base";
+import { HOGAR_INICIAL, clienteDePrueba, limpiar, miembroDePrueba } from "./base";
 import { fechaDesdeISO } from "@/lib/fecha";
 
 /**
@@ -136,11 +136,37 @@ describe("lo unico pasa a ser unico dentro de cada hogar", () => {
     await expect(crearCategoria(otro.id)).rejects.toThrow();
   });
 
-  test("cada hogar tiene su sueldo del mes", async () => {
+  test("cada persona tiene un sueldo por mes: dos en el mismo hogar, sí; dos de la misma, no", async () => {
     const otro = await prisma.hogar.create({ data: { nombre: "Casa de Ana" } });
-    await prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, monto: 1_000_000, vigenteDesde: MES } });
-    await prisma.sueldo.create({ data: { hogarId: otro.id, monto: 800_000, vigenteDesde: MES } });
-    await expect(prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, monto: 5, vigenteDesde: MES } })).rejects.toThrow();
+    const yo = await miembroDePrueba(prisma);
+    const ella = await miembroDePrueba(prisma, { rol: "MIEMBRO" });
+    const ana = await miembroDePrueba(prisma, { hogarId: otro.id });
+    await prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, miembroId: yo, monto: 1_000_000, vigenteDesde: MES } });
+    await prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, miembroId: ella, monto: 700_000, vigenteDesde: MES } });
+    await prisma.sueldo.create({ data: { hogarId: otro.id, miembroId: ana, monto: 800_000, vigenteDesde: MES } });
+    await expect(
+      prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, miembroId: yo, monto: 5, vigenteDesde: MES } }),
+    ).rejects.toThrow();
+  });
+
+  test("un sueldo cerrado no puede seguir siendo de alguien", async () => {
+    const yo = await miembroDePrueba(prisma);
+    await expect(
+      prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, miembroId: yo, monto: 1, vigenteDesde: MES, vigenteHasta: MES } }),
+    ).rejects.toThrow(/sueldos_cerrado_sin_miembro/);
+    await prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, monto: 1, vigenteDesde: MES, vigenteHasta: MES } });
+  });
+
+  test("el ultimo mes de un sueldo cerrado es el dia 1 y no queda antes del primero", async () => {
+    const hasta = (iso: string) => ({ hogarId: HOGAR_INICIAL, monto: 1, vigenteDesde: MES, vigenteHasta: new Date(iso) });
+    await expect(prisma.sueldo.create({ data: hasta("2026-12-15T00:00:00Z") })).rejects.toThrow(/sueldos_vigente_hasta_dia_uno/);
+    await expect(prisma.sueldo.create({ data: hasta("2026-10-01T00:00:00Z") })).rejects.toThrow(/sueldos_hasta_no_antes_de_desde/);
+  });
+
+  test("no se puede borrar a alguien con su sueldo abierto: primero se cierra", async () => {
+    const ella = await miembroDePrueba(prisma, { rol: "MIEMBRO" });
+    await prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, miembroId: ella, monto: 1, vigenteDesde: MES } });
+    await expect(prisma.miembro.delete({ where: { id: ella } })).rejects.toThrow();
   });
 
   test("la misma cuenta del mismo mes puede estar en dos hogares, no dos veces en uno", async () => {

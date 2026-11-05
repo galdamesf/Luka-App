@@ -35,8 +35,8 @@ function Operador({ signo }: { signo: "−" | "=" }) {
 }
 
 /**
- * Las tres cifras que responden lo que uno viene a preguntar: cuanta plata
- * hay para el mes despues de pagar todo, cuanta ya tiene destino en los
+ * Las tres cifras que responden lo que uno viene a preguntar: cuanto dinero
+ * hay para el mes despues de pagar todo, cuanto ya tiene destino en los
  * presupuestos y cuanto se puede ahorrar. Se leen como una resta:
  * libre − presupuestos = puedes ahorrar.
  *
@@ -81,7 +81,7 @@ export function CifrasQueda({ queda, mes, estado, diasRestantes, metaPct }: Prop
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <h3 id="titulo-cifras-queda" className="text-lg font-bold sm:text-xl">
-            {cerrado ? `Así cerró tu plata de ${nombreMes}` : `Tu plata de ${nombreMes}`}
+            {cerrado ? `Así cerró tu dinero de ${nombreMes}` : `Tu dinero de ${nombreMes}`}
           </h3>
           <p className="text-[13px] text-texto-tenue">
             Sueldo de <span className="cifra font-semibold text-texto">{formatearCLP(queda.sueldo)}</span>

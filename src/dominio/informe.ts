@@ -182,7 +182,7 @@ export function porSemana(gastos: readonly GastoPlano[], mes: string | Periodo):
   return semanas;
 }
 
-/** Los gastos mas grandes del mes, para la seccion "donde se fue la plata". */
+/** Los gastos mas grandes del mes, para la seccion "donde se fue el dinero". */
 export function mayoresGastos(
   gastos: readonly GastoPlano[],
   mes: string | Periodo,

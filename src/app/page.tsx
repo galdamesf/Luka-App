@@ -1,6 +1,7 @@
 import { listarGastosDelMes } from "@/datos/gastos";
 import { listarCategoriasActivas } from "@/datos/categorias";
-import { sueldoDelMes } from "@/datos/sueldos";
+import { sueldoDelMes, sueldosDelMes } from "@/datos/sueldos";
+import { mostrarAportes } from "@/dominio/sueldos";
 import { listarDeudas } from "@/datos/deudas";
 import { listarCuentasDelMes, regenerarMensuales } from "@/datos/cuentas";
 import { resumirMes } from "@/dominio/resumen";
@@ -20,7 +21,6 @@ import { esquemaMes } from "@/dominio/esquemas";
 import { hoyISO } from "@/lib/fecha";
 import { enPeriodo, periodoDe, periodoDeFecha, periodoVecino } from "@/lib/periodo";
 import { leerAjustes } from "@/datos/ajustes";
-import { miembrosQueEntraron } from "@/datos/hogares";
 import { sinAutor } from "@/dominio/resumen";
 import { hogarActual } from "@/lib/hogar-actual";
 import { accionCrearGasto, accionEliminarGasto } from "./acciones/gastos";
@@ -87,7 +87,7 @@ export default async function Home({ searchParams }: Props) {
   // Cada visita revisa contra la base que la persona siga en el hogar con
   // que entro (si no, la sesion se cierra aqui mismo), y de ese hogar, y de
   // ningun otro, se lee todo lo que sigue.
-  const { hogarId, rol } = await hogarActual();
+  const { hogarId, miembroId, rol } = await hogarActual();
   const parametros = await searchParams;
 
   // El mes de gastos empieza el dia que eligio la persona (el de su pago).
@@ -109,7 +109,7 @@ export default async function Home({ searchParams }: Props) {
   const mesAnterior = periodoAnterior.mes;
 
   const [
-    gastos, gastosAnterior, pagos, presupuestos, categorias, sueldo, deudas, cuentas,
+    gastos, gastosAnterior, pagos, presupuestos, categorias, sueldos, deudas, cuentas,
     sueldoAnterior, pagosAnterior, cuentasAnterior, presupuestosAnterior, ahorros,
   ] = await Promise.all([
     listarGastosDelMes(hogarId, periodo),
@@ -119,7 +119,8 @@ export default async function Home({ searchParams }: Props) {
     listarPagosDelMes(hogarId, mes),
     listarPresupuestosDelMes(hogarId, mes),
     listarCategoriasActivas(hogarId),
-    sueldoDelMes(hogarId, mes),
+    // El de cada miembro y la suma: el hogar vive con lo de todos.
+    sueldosDelMes(hogarId, mes, miembroId),
     listarDeudas(hogarId),
     listarCuentasDelMes(hogarId, mes),
     // Lo del mes anterior, solo para comparar el Health Score.
@@ -132,8 +133,11 @@ export default async function Home({ searchParams }: Props) {
   ]);
 
   // Quien anoto cada gasto se muestra solo si en el hogar hay mas de una
-  // persona: con una sola, cada fila diria lo mismo.
-  const gastosConAutor = (await miembrosQueEntraron(hogarId)) > 1 ? gastos : sinAutor(gastos);
+  // persona: con una sola, cada fila diria lo mismo. Los sueldos ya traen
+  // una fila por cada uno que entro.
+  const gastosConAutor = sueldos.aportes.length > 1 ? gastos : sinAutor(gastos);
+  const sueldo = sueldos.total;
+  const miSueldo = sueldos.porMiembro.get(miembroId) ?? null;
 
   const resumen = resumirMes(gastos, periodo);
   const detalles = detallesPorCategoria(gastos, gastosAnterior);
@@ -317,11 +321,22 @@ export default async function Home({ searchParams }: Props) {
             balance, que es el detalle de esas cifras. */}
         <SeccionPanel seccion="resumen">
           <KpisDelMes panel={panel} mes={mes} />
-          <BarraDelMes panel={panel} mes={mes} />
+          <BarraDelMes panel={panel} mes={mes} compartido={sueldos.aportes.length > 1} />
           <div className="grid items-start gap-4 lg:grid-cols-5">
             <div id="balance" className="scroll-mt-28 lg:col-span-3">
-              <SecuenciaBalance balance={balance} gastos={gastos} periodo={periodo}>
-                <FormularioSueldo mes={mes} sueldoActual={sueldo} accion={accionDefinirSueldo} />
+              <SecuenciaBalance
+                balance={balance}
+                gastos={gastos}
+                periodo={periodo}
+                aportes={mostrarAportes(sueldos.aportes, sueldos.deQuienesSalieron) ? sueldos.aportes : undefined}
+                deQuienesSalieron={sueldos.deQuienesSalieron}
+              >
+                <FormularioSueldo
+                  mes={mes}
+                  sueldoActual={miSueldo}
+                  compartido={sueldos.aportes.length > 1}
+                  accion={accionDefinirSueldo}
+                />
               </SecuenciaBalance>
             </div>
             <div className="lg:col-span-2">

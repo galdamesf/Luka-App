@@ -1,9 +1,14 @@
 import { HORAS_MAXIMAS, MINUTOS_SIN_USO } from "@/lib/sesion";
+import { RESPONSABLE } from "@/dominio/legal";
 import { ANCLA_PREGUNTAS } from "./enlaces";
+import { CabeceraDeSeccion } from "./CabeceraDeSeccion";
 import { Onda } from "./Onda";
+import { TrazoCirculo } from "./TrazoCirculo";
 
 /**
- * Las preguntas, en cajas. Cada respuesta esta revisada contra la app
+ * Las preguntas, en tarjetas como las de mas arriba (esquinas redondeadas y
+ * el canto de color abajo). La que esta abierta se nota: borde de color y un
+ * fondo tenido de acento. Cada respuesta esta revisada contra la app
  * (auth.ts, lib/autorizados.ts, dominio/hogar.ts, lib/sesion.ts,
  * acciones/cuentas.ts, acciones/finanzas.ts y lib/periodo.ts).
  *
@@ -56,33 +61,44 @@ export function Preguntas() {
         aria-labelledby="portada-preguntas"
         className="mx-auto max-w-3xl scroll-mt-24 px-5 pb-12 @3xl:pb-16"
       >
-        <h2
+        {/* La misma cabecera de los paneles: el titular con su palabra en
+            durazno, subrayada a mano, y a quien escribir si la duda no esta. */}
+        <CabeceraDeSeccion
           id="portada-preguntas"
-          data-paralaje="0.2"
-          data-paralaje-min="-60"
-          data-paralaje-max="60"
-          className="text-center text-[clamp(1.9rem,4.4cqi,2.4rem)] font-black tracking-[-0.02em] text-texto"
+          debajo={
+            <p className="mx-auto max-w-[46ch] leading-relaxed text-texto-tenue">
+              Respuestas cortas sobre cómo funciona Luka. ¿Te quedó otra duda? Escríbenos a{" "}
+              <a href={`mailto:${RESPONSABLE.correo}`} className="font-semibold [overflow-wrap:anywhere] enlace-luka">
+                {RESPONSABLE.correo}
+              </a>
+              .
+            </p>
+          }
         >
-          Preguntas
-        </h2>
-        <div data-paralaje="0.08" data-paralaje-min="-50" data-paralaje-max="50" className="mt-8 flex flex-col gap-4">
+          Lo que más nos{" "}
+          <span className="palabra-subrayada text-anotacion">
+            preguntan
+            <TrazoCirculo forma="subrayado" />
+          </span>
+        </CabeceraDeSeccion>
+        <div data-paralaje="0.08" data-paralaje-min="-50" data-paralaje-max="50" className="mt-8 flex flex-col gap-5">
           {PREGUNTAS.map(({ p, r }, i) => (
             <details
               key={p}
               name="preguntas-portada"
               open={i === 0}
-              className="pregunta group overflow-hidden rounded-[6px] border border-borde bg-superficie"
+              className="pregunta tarjeta-pregunta group overflow-hidden rounded-3xl border border-borde bg-superficie shadow-[0_3px_0_var(--acento-canto)]"
             >
-              <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left text-[1.05rem] font-bold text-titulo">
+              <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 text-left text-[1.05rem] font-bold text-titulo @3xl:px-8">
                 {p}
                 <span
                   aria-hidden="true"
-                  className="grid size-7 shrink-0 place-items-center text-2xl leading-none font-normal transition-transform duration-200 group-open:rotate-45"
+                  className="grid size-8 shrink-0 place-items-center rounded-full text-2xl leading-none font-normal transition-[transform,background-color] duration-200 group-open:rotate-45 group-open:bg-acento group-open:text-acento-tinta"
                 >
                   +
                 </span>
               </summary>
-              <p className="px-5 pb-5 leading-relaxed text-texto-tenue">{r}</p>
+              <p className="px-6 pb-6 leading-relaxed text-texto-tenue @3xl:px-8">{r}</p>
             </details>
           ))}
         </div>

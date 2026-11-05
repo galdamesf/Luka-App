@@ -201,7 +201,7 @@ function NotaAMano() {
   return (
     <span
       aria-hidden="true"
-      className="font-mano ml-1 hidden -rotate-[4deg] items-center gap-1 text-[1.4rem] leading-none font-bold whitespace-nowrap text-titulo @3xl:inline-flex"
+      className="font-mano ml-1 hidden -rotate-[4deg] items-center gap-1 text-[1.4rem] leading-none font-bold whitespace-nowrap text-anotacion @3xl:inline-flex"
     >
       cámbialo
       <svg viewBox="0 0 46 22" className="h-[18px] w-10" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">

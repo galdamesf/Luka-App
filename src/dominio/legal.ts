@@ -61,7 +61,7 @@ export const PRIVACIDAD: DocumentoLegal = {
       bloques: [
         lista(
           "De tu cuenta de Google: tu correo y tu nombre. Google también entrega tu foto de perfil y si tu correo está verificado; Luka usa lo segundo para dejarte entrar y no guarda la foto.",
-          "Lo que anotas: tus gastos (fecha, monto, descripción, categoría y medio de pago), tus cuentas, deudas y cuotas, presupuestos, ahorros, tu sueldo, el día en que empieza tu mes y el nombre de tu hogar.",
+          "Lo que anotas: tus gastos (fecha, monto, descripción, categoría y medio de pago), tus cuentas, deudas y cuotas, presupuestos, ahorros, tu sueldo (cada persona del hogar anota el suyo), el día en que empieza tu mes y el nombre de tu hogar.",
           `Las boletas que subes: fotos o PDF de hasta ${mb(TAMANO_MAXIMO_BOLETA)}. Una foto de más de ${mb(ACHICAR_DESDE)} se achica en tu navegador antes de subir, y al hacerlo pierde sus datos ocultos, como la ubicación donde se sacó.`,
           "Tu hogar: quiénes están, quién es el dueño, a qué correos se invitó y quién anotó cada gasto.",
           "Para borrar un hogar: un código temporal que se manda al correo del dueño. Luka guarda solo una huella cifrada del código, nunca el código, y la borra al usarlo o con el hogar.",
@@ -87,7 +87,7 @@ export const PRIVACIDAD: DocumentoLegal = {
       titulo: "Quién los ve",
       bloques: [
         lista(
-          "Las personas de tu hogar, con su sesión iniciada. Todos los del hogar ven y anotan lo mismo, así que invita solo a quien confíes.",
+          "Las personas de tu hogar, con su sesión iniciada. Todos los del hogar ven y anotan lo mismo, incluido el sueldo de cada uno, así que invita solo a quien confíes.",
           "Nadie de otro hogar: cada hogar está separado, y en cada visita Luka revisa que sigas en el tuyo.",
           "Los servicios donde funciona Luka (los de la sección siguiente), que guardan los datos por encargo y no los usan para nada más.",
           "Yo, como responsable, puedo acceder a la base de datos solo para mantener Luka, para responder algo que tú me pidas o si una ley me obliga.",
@@ -131,7 +131,7 @@ export const PRIVACIDAD: DocumentoLegal = {
       bloques: [
         lista(
           "Mientras tu hogar exista.",
-          "Si sales de un hogar, o el dueño te saca, se borra tu lugar en él, con tu verificación en dos pasos. Lo que anotaste se queda en el hogar, sin tu nombre.",
+          "Si sales de un hogar, o el dueño te saca, se borra tu lugar en él, con tu verificación en dos pasos. Lo que anotaste se queda en el hogar, sin tu nombre. Tu sueldo sigue sumando, sin tu nombre, en los meses en que estuviste, y deja de sumar desde el mes siguiente.",
           "Si el dueño borra el hogar, se borra todo lo que tiene, incluidas las boletas. Los respaldos automáticos de los servicios de la sección anterior pueden conservar una copia por un tiempo corto, hasta que se borran solos.",
           "Los datos técnicos de las visitas, el tiempo que los conserve el servicio donde corre Luka.",
         ),
@@ -211,7 +211,7 @@ export const TERMINOS: DocumentoLegal = {
       titulo: "Tu hogar",
       bloques: [
         lista(
-          "Todos los del hogar ven y anotan lo mismo. Invita solo a personas en quienes confíes.",
+          "Todos los del hogar ven y anotan lo mismo, incluido el sueldo de cada uno. Cada persona cambia solo el suyo. Invita solo a personas en quienes confíes.",
           "El dueño invita y saca miembros, le cambia el nombre al hogar, elige el día en que empieza el mes y puede pasarle el hogar a otro miembro.",
           "El dueño puede borrar el hogar solo si nadie más ha entrado, y con un código que le llega al correo. Borrarlo no se puede deshacer.",
         ),

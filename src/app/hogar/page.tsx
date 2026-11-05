@@ -62,7 +62,8 @@ export default async function PaginaHogar() {
         <p className="cifra text-xs uppercase tracking-[0.08em] text-texto-tenue">Tu hogar</p>
         <NombreDelHogar nombre={hogar.nombre} puedeCambiar={soyDueno} accion={accionRenombrarHogar} />
         <p className="max-w-[60ch] text-base leading-relaxed text-texto-tenue">
-          Todos los del hogar ven y anotan lo mismo: los gastos, las cuentas, el sueldo y los presupuestos.
+          Todos los del hogar ven y anotan lo mismo: los gastos, las cuentas, los sueldos y los presupuestos. Cada
+          uno anota su propio sueldo, y el balance usa la suma.
           {entraron > 1 && " Cada gasto dice quién lo anotó."}
         </p>
       </header>
