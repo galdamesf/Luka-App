@@ -19,6 +19,8 @@ import {
   salirDelHogar,
 } from "@/datos/hogares";
 import { fechaDesdeISO } from "@/lib/fecha";
+import { definirSueldo, listarSueldos, sueldoDelMes } from "@/datos/sueldos";
+import { definirDiaInicioMes } from "@/datos/ajustes";
 import type { Correo } from "@/lib/correo";
 import { almacenEnDisco } from "@/lib/almacen-boletas";
 
@@ -135,6 +137,44 @@ describe("sacar", () => {
     expect((await prisma.gasto.findUniqueOrThrow({ where: { id: gasto.id } })).anotadoPorId).toBeNull();
   });
 
+  test("al sacarla, su sueldo suma hasta el mes en curso y desde el siguiente ya no", async () => {
+    await definirSueldo(HOGAR_INICIAL, dueno, "2026-01", 1_000_000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, miembro, "2026-01", 600_000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, miembro, "2026-07", 700_000, null, prisma);
+
+    await quitarMiembro(HOGAR_INICIAL, dueno, miembro, prisma, "2026-11-15");
+
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-03", prisma)).toBe(1_600_000);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-11", prisma)).toBe(1_700_000);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-12", prisma)).toBe(1_000_000);
+    const cerrados = (await listarSueldos(HOGAR_INICIAL, prisma)).filter((s) => s.miembroId === null);
+    expect(cerrados.map((s) => [s.vigenteDesde, s.vigenteHasta]).sort()).toEqual([
+      ["2026-01", "2026-06"],
+      ["2026-07", "2026-11"],
+    ]);
+  });
+
+  test("lo que habia anotado para meses que no alcanzo a estar se borra", async () => {
+    await definirSueldo(HOGAR_INICIAL, miembro, "2026-10", 600_000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, miembro, "2027-01", 650_000, null, prisma);
+
+    await quitarMiembro(HOGAR_INICIAL, dueno, miembro, prisma, "2026-11-15");
+
+    expect((await listarSueldos(HOGAR_INICIAL, prisma)).map((s) => s.vigenteDesde)).toEqual(["2026-10"]);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2027-01", prisma)).toBeNull();
+  });
+
+  test("el mes en curso sale del dia de inicio del hogar", async () => {
+    // Con el mes partiendo el 27, el 28 de noviembre ya es diciembre.
+    await definirDiaInicioMes(HOGAR_INICIAL, 27, prisma);
+    await definirSueldo(HOGAR_INICIAL, miembro, "2026-10", 600_000, null, prisma);
+
+    await quitarMiembro(HOGAR_INICIAL, dueno, miembro, prisma, "2026-11-28");
+
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-12", prisma)).toBe(600_000);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2027-01", prisma)).toBeNull();
+  });
+
   test("sacar una invitacion pendiente la cancela", async () => {
     const invitado = await invitarMiembro(HOGAR_INICIAL, dueno, "abuela@gmail.com", prisma);
     await quitarMiembro(HOGAR_INICIAL, dueno, invitado.id, prisma);
@@ -179,6 +219,33 @@ describe("salir", () => {
   test("un miembro sale del hogar", async () => {
     await salirDelHogar(HOGAR_INICIAL, miembro, prisma);
     expect(await prisma.miembro.count({ where: { id: miembro } })).toBe(0);
+  });
+
+  test("al salir, su sueldo suma hasta el mes en curso, y el de los demas sigue igual", async () => {
+    await definirSueldo(HOGAR_INICIAL, dueno, "2026-01", 1_000_000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, miembro, "2026-01", 600_000, null, prisma);
+
+    await salirDelHogar(HOGAR_INICIAL, miembro, prisma, "2026-11-15");
+
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-11", prisma)).toBe(1_600_000);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-12", prisma)).toBe(1_000_000);
+  });
+
+  test("dos que salen en meses distintos: cada uno suma solo mientras estuvo", async () => {
+    const prima = (
+      await prisma.miembro.create({
+        data: { hogarId: HOGAR_INICIAL, correo: "prima@gmail.com", rol: "MIEMBRO", entroEn: new Date() },
+      })
+    ).id;
+    await definirSueldo(HOGAR_INICIAL, miembro, "2026-01", 600_000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, prima, "2026-01", 300_000, null, prisma);
+
+    await salirDelHogar(HOGAR_INICIAL, prima, prisma, "2026-03-10");
+    await salirDelHogar(HOGAR_INICIAL, miembro, prisma, "2026-06-10");
+
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-02", prisma)).toBe(900_000);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-05", prisma)).toBe(600_000);
+    expect(await sueldoDelMes(HOGAR_INICIAL, "2026-07", prisma)).toBeNull();
   });
 
   test("el dueno no sale sin antes pasar el hogar", async () => {
@@ -254,7 +321,12 @@ describe("borrar el hogar, con el codigo del correo", () => {
     await prisma.cuenta.create({ data: { hogarId, nombre: "Luz", monto: 20_000, mes, categoriaId: cat.id } });
     await prisma.presupuesto.create({ data: { hogarId, categoriaId: cat.id, mes, monto: 50_000 } });
     await prisma.ahorro.create({ data: { hogarId, mes, monto: 30_000 } });
-    await prisma.sueldo.create({ data: { hogarId, monto: 900_000, vigenteDesde: mes } });
+    const alguien = await prisma.miembro.findFirst({ where: { hogarId }, select: { id: true } });
+    if (alguien !== null) {
+      await prisma.sueldo.create({ data: { hogarId, miembroId: alguien.id, monto: 900_000, vigenteDesde: mes } });
+    }
+    // Y el sueldo cerrado de alguien que ya salio: tambien se va con el hogar.
+    await prisma.sueldo.create({ data: { hogarId, monto: 400_000, vigenteDesde: mes, vigenteHasta: mes } });
     await prisma.ajustes.create({ data: { hogarId, diaInicioMes: 27 } });
     await mkdir(join(raiz, hogarId), { recursive: true });
     await writeFile(join(raiz, hogarId, `${"a".repeat(32)}.jpg`), "boleta");

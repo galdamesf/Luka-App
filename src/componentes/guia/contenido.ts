@@ -88,7 +88,7 @@ export const PRIMEROS_PASOS: readonly { titulo: string; texto: string; destino: 
   },
   {
     titulo: "Define tu sueldo",
-    texto: "En la sección 01, dentro del balance, con «Definir mi sueldo». Sin sueldo no hay de dónde restar.",
+    texto: "En la sección 01, dentro del balance, con «Definir mi sueldo». Sin sueldo no hay de dónde restar. Si comparten el hogar, cada uno define el suyo y Luka los suma.",
     destino: "#resumen",
   },
   {
@@ -188,7 +188,7 @@ export const GUIA: readonly SeccionGuia[] = [
         titulo: "Las cuatro cifras de arriba",
         texto: ["Son el resumen del resumen. Las cuatro cuadran entre sí y con el balance de más abajo."],
         terminos: [
-          { termino: "Sueldo del mes", definicion: "Lo que entra este mes. Sale del sueldo que definiste en el balance." },
+          { termino: "Sueldo del mes", definicion: "Lo que entra este mes: tu sueldo o, si comparten el hogar, la suma del sueldo de cada uno. Se define en el balance." },
           { termino: "Total gastado", definicion: "Todo lo que ya salió este mes: tus gastos, las cuentas que marcaste pagadas y las cuotas pagadas. Abajo te compara con el mes anterior en la misma cantidad de días (en rojo si subió, en verde si bajó) y te dice qué parte de tu sueldo llevas." },
           { termino: "Disponible", definicion: "El sueldo menos lo gastado. Debajo, «Tras pagar lo pendiente», es lo que te quedaría si hoy pagaras todas las cuentas y cuotas que faltan." },
           { termino: "Por pagar", definicion: "Lo que falta pagar en cuentas y cuotas este mes. Te avisa cuántas están vencidas y cuántas vencen pronto. Cuando no queda nada, dice «Todo pagado este mes»." },
@@ -222,11 +222,12 @@ export const GUIA: readonly SeccionGuia[] = [
         texto: [
           "El balance es la cuenta del mes de arriba abajo: el sueldo, menos los gastos en lo esencial, menos las cuotas de deudas, menos los gastos en lo demás. Abajo queda «Te queda» (o «Te pasaste por», si es negativo).",
           "Aquí también defines tu sueldo. El sueldo rige desde un mes en adelante: si en marzo te suben el sueldo, defines el nuevo «desde marzo» y los meses anteriores conservan el que tenían.",
+          "Si en tu hogar hay más de una persona, la primera línea dice «Sueldos del hogar»: es la suma del sueldo de cada uno, y debajo aparece lo que gana cada persona. Cada uno define y cambia solo el suyo.",
         ],
         pasos: [
-          "En el balance, toca «Definir mi sueldo» (o «Cambiar el sueldo», si ya lo tienes).",
+          "En el balance, toca «Definir mi sueldo» (o «Cambiar mi sueldo», si ya lo tienes).",
           "En «Rige desde», elige el mes desde el que vale.",
-          "En «Monto mensual», escribe tu sueldo líquido, solo números (por ejemplo, 1500000).",
+          "En «Monto mensual» («Tu sueldo mensual», si comparten el hogar), escribe tu sueldo líquido, solo números (por ejemplo, 1500000).",
           "Guarda. Todas las cifras del panel se recalculan.",
         ],
         imagen: {
@@ -691,6 +692,11 @@ export const PREGUNTAS: readonly { pregunta: string; respuesta: string }[] = [
     pregunta: "¿Puedo usar Luka con alguien de mi casa?",
     respuesta:
       "Sí. El dueño del hogar invita su correo de Google en «Hogar». Cuando esa persona entra a Luka con ese correo, ve y anota lo mismo que tú.",
+  },
+  {
+    pregunta: "Si comparto el hogar, ¿cómo se cuenta el sueldo?",
+    respuesta:
+      "Cada uno define su propio sueldo en el balance, y Luka usa la suma para todas las cifras del mes. Todos ven el sueldo de cada uno, pero solo tú puedes cambiar el tuyo. Si alguien sale del hogar, su sueldo sigue contando en los meses en que estuvo y deja de sumar desde el mes siguiente.",
   },
   {
     pregunta: "Me quieren invitar a un hogar, pero ya tengo el mío. ¿Qué hago?",

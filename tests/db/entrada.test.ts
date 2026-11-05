@@ -43,6 +43,22 @@ describe("registrarEntrada con la puerta cerrada", () => {
     expect(miembro.id).toBe(hogar?.miembroId);
   });
 
+  test("el dueno que llega a «Mi hogar» recibe el sueldo de antes de los hogares", async () => {
+    // Asi queda tras la migracion si nadie habia entrado: el sueldo, sin miembro.
+    const vigenteDesde = new Date("2026-10-01T00:00:00Z");
+    await prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, monto: 1_000_000, vigenteDesde } });
+    // El sueldo cerrado de alguien que salio no se toca.
+    await prisma.sueldo.create({ data: { hogarId: HOGAR_INICIAL, monto: 5, vigenteDesde, vigenteHasta: vigenteDesde } });
+
+    const hogar = await entrar("fernando@gmail.com", "Fernando");
+
+    const sueldos = await prisma.sueldo.findMany({ orderBy: { monto: "asc" }, select: { monto: true, miembroId: true } });
+    expect(sueldos).toEqual([
+      { monto: 5, miembroId: null },
+      { monto: 1_000_000, miembroId: hogar!.miembroId },
+    ]);
+  });
+
   test("los demas de la lista no entran solos: se les invita", async () => {
     await entrar("fernando@gmail.com");
     expect(await entrar("ana@gmail.com", "Ana")).toBeNull();

@@ -84,7 +84,12 @@ model Miembro {
   dosPasos          DosPasos?
   codigosDeRespaldo CodigoDeRespaldo[]
   sesionesVerificadas SesionVerificada[]
+  /// Su sueldo, con su historial. Antes de que salga del hogar se cierra
+  /// (src/datos/sueldos.ts): mientras tenga uno abierto, no se puede borrar.
+  sueldos             Sueldo[]
 
+  /// Para que el sueldo apunte al miembro y a su hogar a la vez.
+  @@unique([id, hogarId])
   @@index([hogarId])
   @@map("miembros")
 }
@@ -233,25 +238,40 @@ model Gasto {
   @@map("gastos")
 }
 
-/// Sueldo mensual, con vigencia.
+/// El sueldo de cada persona del hogar, con vigencia. Lo que entra al hogar
+/// en un mes es la suma de los de todos (src/dominio/sueldos.ts).
 ///
 /// No se guarda un solo monto editable sino uno por cada vez que cambia, con
 /// el mes desde el que rige. Asi un aumento en marzo no reescribe lo que
 /// ganabas en febrero, y el historial de meses viejos sigue siendo cierto.
+///
+/// Cuando alguien sale del hogar, su sueldo se cierra: cada fila queda con el
+/// ultimo mes en que rige (`vigenteHasta`) y sin miembro. Los meses en que
+/// estuvo siguen sumando lo que ganaba; los siguientes, ya no.
 model Sueldo {
-  id            String   @id @default(cuid())
-  hogarId       String   @map("hogar_id")
+  id            String    @id @default(cuid())
+  hogarId       String    @map("hogar_id")
+  /// Quien lo gana. Vacio en el sueldo cerrado de alguien que ya salio, y en
+  /// el de antes de los hogares mientras «Mi hogar» espera a su dueno.
+  miembroId     String?   @map("miembro_id")
   /// Pesos chilenos enteros. Cero es valido: un mes sin ingresos.
   monto         Int
-  /// Primer dia del mes desde el que rige este monto. Uno por mes en cada hogar.
-  vigenteDesde  DateTime @map("vigente_desde") @db.Date
-  nota          String?  @db.VarChar(200)
-  creadoEn      DateTime @default(now()) @map("creado_en")
-  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+  /// Primer dia del mes desde el que rige este monto. Uno por mes por persona.
+  vigenteDesde  DateTime  @map("vigente_desde") @db.Date
+  /// Primer dia del ultimo mes en que rige. Solo en un sueldo cerrado; en
+  /// los demas rige hasta que su dueno anote otro.
+  vigenteHasta  DateTime? @map("vigente_hasta") @db.Date
+  nota          String?   @db.VarChar(200)
+  creadoEn      DateTime  @default(now()) @map("creado_en")
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en")
 
-  hogar Hogar @relation(fields: [hogarId], references: [id], onDelete: Restrict)
+  hogar   Hogar    @relation(fields: [hogarId], references: [id], onDelete: Restrict)
+  /// La llave va por el miembro y el hogar: la base rechaza el sueldo de
+  /// alguien de otro hogar.
+  miembro Miembro? @relation(fields: [miembroId, hogarId], references: [id, hogarId], onDelete: Restrict)
 
-  @@unique([hogarId, vigenteDesde])
+  @@unique([miembroId, vigenteDesde])
+  @@index([hogarId])
   @@map("sueldos")
 }
 

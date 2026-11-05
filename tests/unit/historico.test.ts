@@ -17,9 +17,11 @@ const dia = (fecha: string, monto: number): GastoPorDia => ({
   monto,
 });
 
-const sueldo = (mes: string, monto: number): SueldoVigencia => ({
+const sueldo = (mes: string, monto: number, miembroId: string | null = "yo", hasta: string | null = null): SueldoVigencia => ({
+  miembroId,
   monto,
   vigenteDesde: new Date(`${mes}-01T00:00:00.000Z`),
+  vigenteHasta: hasta === null ? null : new Date(`${hasta}-01T00:00:00.000Z`),
 });
 
 const serie = (
@@ -107,6 +109,16 @@ describe("armarSerie", () => {
     expect(
       serie("2026-10", 3, [], [sueldo("2026-09", 1_000_000)]).map((p) => p.ingresos),
     ).toEqual([0, 1_000_000, 1_000_000]);
+  });
+
+  test("los ingresos suman el sueldo de cada uno, y el cerrado solo en sus meses", () => {
+    const ingresos = serie("2026-10", 4, [], [
+      sueldo("2026-07", 1_000_000),
+      sueldo("2026-08", 600_000, "ella"),
+      // Alguien que ya salio: su sueldo rigio de julio a agosto.
+      sueldo("2026-07", 300_000, null, "2026-08"),
+    ]).map((p) => p.ingresos);
+    expect(ingresos).toEqual([1_300_000, 1_900_000, 1_600_000, 1_600_000]);
   });
 
   test("un sueldo que arranca el dia 1 rige ese mismo mes", () => {

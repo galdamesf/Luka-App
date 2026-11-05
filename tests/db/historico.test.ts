@@ -1,11 +1,14 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
-import { HOGAR_INICIAL, clienteDePrueba, limpiar } from "./base";
+import { HOGAR_INICIAL, clienteDePrueba, limpiar, miembroDePrueba } from "./base";
 import { serieHistorica } from "@/datos/historico";
+import { definirSueldo } from "@/datos/sueldos";
+import { salirDelHogar } from "@/datos/hogares";
 import { fechaDesdeISO } from "@/lib/fecha";
 
 let prisma: PrismaClient;
 let categoria: string;
+let yo: string;
 
 beforeAll(async () => {
   prisma = clienteDePrueba();
@@ -22,6 +25,7 @@ beforeEach(async () => {
     data: { hogarId: HOGAR_INICIAL, nombre: "Supermercado", color: "#c38409", icono: "shopping-cart" },
   });
   categoria = c.id;
+  yo = await miembroDePrueba(prisma);
 });
 
 async function gasto(fechaISO: string, monto: number) {
@@ -36,9 +40,9 @@ async function gasto(fechaISO: string, monto: number) {
   });
 }
 
-async function sueldo(mes: string, monto: number) {
+async function sueldo(mes: string, monto: number, miembroId = yo) {
   await prisma.sueldo.create({
-    data: { hogarId: HOGAR_INICIAL, monto, vigenteDesde: fechaDesdeISO(`${mes}-01`) },
+    data: { hogarId: HOGAR_INICIAL, miembroId, monto, vigenteDesde: fechaDesdeISO(`${mes}-01`) },
   });
 }
 
@@ -81,6 +85,33 @@ describe("serieHistorica", () => {
       ["2026-08", 1_000_000],
       ["2026-09", 1_000_000], // sigue rigiendo el de agosto
       ["2026-10", 1_200_000],
+    ]);
+  });
+
+  test("los ingresos de cada mes suman el sueldo de todos los del hogar", async () => {
+    const ella = await miembroDePrueba(prisma, { rol: "MIEMBRO" });
+    await sueldo("2026-08", 1_000_000);
+    await sueldo("2026-09", 700_000, ella);
+
+    const serie = await serieHistorica(HOGAR_INICIAL, "2026-10", 3, prisma);
+    expect(serie.map((p) => [p.mes, p.ingresos])).toEqual([
+      ["2026-08", 1_000_000],
+      ["2026-09", 1_700_000],
+      ["2026-10", 1_700_000],
+    ]);
+  });
+
+  test("quien sale del hogar sigue sumando en los meses en que estuvo, y despues ya no", async () => {
+    const ella = await miembroDePrueba(prisma, { rol: "MIEMBRO" });
+    await definirSueldo(HOGAR_INICIAL, yo, "2026-08", 1_000_000, null, prisma);
+    await definirSueldo(HOGAR_INICIAL, ella, "2026-08", 700_000, null, prisma);
+    await salirDelHogar(HOGAR_INICIAL, ella, prisma, "2026-09-15");
+
+    const serie = await serieHistorica(HOGAR_INICIAL, "2026-10", 3, prisma);
+    expect(serie.map((p) => [p.mes, p.ingresos])).toEqual([
+      ["2026-08", 1_700_000],
+      ["2026-09", 1_700_000], // el mes en que salio todavia suma
+      ["2026-10", 1_000_000],
     ]);
   });
 

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { periodoDe, rangoDelPeriodo } from "@/lib/periodo";
-import { armarSerie, ventanaDeMeses } from "@/dominio/historico";
+import { armarSerie, ventanaDeMeses, type SueldoVigencia } from "@/dominio/historico";
 import type { PuntoMes } from "@/dominio/estadisticas";
 import type { ClienteDb } from "./gastos";
 
@@ -10,8 +10,9 @@ import type { ClienteDb } from "./gastos";
  * Aqui solo se consulta; el armado (limites de mes, meses vacios, sueldo
  * vigente) esta en @/dominio/historico, que se testea sin base de datos.
  *
- * Los ingresos no se suman de una tabla de movimientos: salen del sueldo
- * vigente en cada mes, que es como esta modelado el sueldo (fijo, ajustable).
+ * Los ingresos no se suman de una tabla de movimientos: salen de los sueldos
+ * vigentes en cada mes (el de cada miembro, sumados), que es como esta
+ * modelado el sueldo (fijo, ajustable).
  *
  * Gastos y sueldos, solo los del hogar de quien mira.
  */
@@ -40,7 +41,7 @@ export async function serieHistorica(
     }),
     db.sueldo.findMany({
       where: { hogarId, vigenteDesde: { lt: hasta } },
-      select: { monto: true, vigenteDesde: true },
+      select: { miembroId: true, monto: true, vigenteDesde: true, vigenteHasta: true },
     }),
   ]);
 
@@ -51,7 +52,7 @@ export async function serieHistorica(
       fecha: f.fecha,
       monto: f._sum.monto ?? 0,
     })),
-    sueldos as { monto: number; vigenteDesde: Date }[],
+    sueldos as SueldoVigencia[],
     diaInicio,
   );
 }

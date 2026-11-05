@@ -3,6 +3,8 @@ import { almacenDelEntorno, type AlmacenDeBoletas } from "@/lib/almacen-boletas"
 import { codigoAlAzar, huellaDelCodigo, mismaHuella, secretoDeCodigos } from "@/lib/codigos";
 import { enviarCorreoDelEntorno, type EnviarCorreo } from "@/lib/correo";
 import { prisma } from "@/lib/prisma";
+import { hoyISO } from "@/lib/fecha";
+import { periodoDeFecha } from "@/lib/periodo";
 import { correoDeCodigoDeBorrado } from "@/dominio/correos";
 import { CATEGORIAS_CON_COLOR } from "@/dominio/categorias-base";
 import {
@@ -31,6 +33,8 @@ import {
   type Quien,
 } from "@/dominio/hogar";
 import type { HogarDeSesion } from "@/lib/sesion";
+import { AJUSTES_POR_OMISION } from "./ajustes";
+import { adoptarSueldoSinDueno, cerrarSueldosDe } from "./sueldos";
 
 /** El hogar donde quedaron los datos de antes de los hogares (migracion 20261103150000_hogares). */
 export const HOGAR_INICIAL = "hogar-inicial";
@@ -103,6 +107,8 @@ export async function registrarEntrada(
             data: { hogarId: HOGAR_INICIAL, correo, nombre, rol: "DUENO", entroEn: new Date() },
             select: CAMPOS_DE_SESION,
           });
+          // El sueldo de antes de los hogares, si esperaba a su dueno, es suyo.
+          await adoptarSueldoSinDueno(HOGAR_INICIAL, fila.id, tx);
           return aSesion(fila);
         }
 
@@ -211,6 +217,22 @@ function exigir(motivo: string | null): void {
   if (motivo !== null) throw new ErrorDeHogar(motivo);
 }
 
+/**
+ * Antes de que alguien deje el hogar: su sueldo suma hasta el mes en curso
+ * del hogar (segun su dia de inicio) y desde el siguiente ya no. Ver
+ * cierreDeSueldos en src/dominio/sueldos.ts.
+ */
+async function cerrarSueldoAlSalir(
+  tx: Pick<PrismaClient, "sueldo" | "ajustes">,
+  hogarId: string,
+  miembroId: string,
+  hoy: string,
+): Promise<void> {
+  const ajustes = await tx.ajustes.findUnique({ where: { hogarId }, select: { diaInicioMes: true } });
+  const mes = periodoDeFecha(hoy, (ajustes ?? AJUSTES_POR_OMISION).diaInicioMes).mes;
+  await cerrarSueldosDe(hogarId, miembroId, mes, tx);
+}
+
 export async function renombrarHogar(
   hogarId: string,
   quienId: string,
@@ -256,17 +278,23 @@ export async function invitarMiembro(
   }
 }
 
-/** Saca a alguien del hogar, o cancela su invitacion: es lo mismo. Sus gastos se quedan. */
+/**
+ * Saca a alguien del hogar, o cancela su invitacion: es lo mismo. Sus gastos
+ * se quedan, y su sueldo suma hasta el mes en curso.
+ */
 export async function quitarMiembro(
   hogarId: string,
   quienId: string,
   miembroId: string,
   db: PrismaClient = prisma,
+  /** Hoy, "YYYY-MM-DD": decide hasta que mes suma su sueldo. */
+  hoy: string = hoyISO(),
 ): Promise<void> {
   await db.$transaction(async (tx) => {
     const quien = await quienEs(tx, hogarId, quienId);
     const objetivo = await miembroDelHogar(tx, hogarId, miembroId);
     exigir(puedeQuitar(quien, objetivo));
+    await cerrarSueldoAlSalir(tx, hogarId, objetivo.id, hoy);
     await tx.miembro.delete({ where: { id: objetivo.id } });
   });
 }
@@ -287,11 +315,21 @@ export async function hacerDueno(
   });
 }
 
-/** Un miembro se va del hogar. Sus gastos se quedan, sin autor. */
-export async function salirDelHogar(hogarId: string, quienId: string, db: PrismaClient = prisma): Promise<void> {
+/**
+ * Un miembro se va del hogar. Sus gastos se quedan, sin autor, y su sueldo
+ * suma hasta el mes en curso.
+ */
+export async function salirDelHogar(
+  hogarId: string,
+  quienId: string,
+  db: PrismaClient = prisma,
+  /** Hoy, "YYYY-MM-DD": decide hasta que mes suma su sueldo. */
+  hoy: string = hoyISO(),
+): Promise<void> {
   await db.$transaction(async (tx) => {
     const quien = await quienEs(tx, hogarId, quienId);
     exigir(puedeSalir(quien));
+    await cerrarSueldoAlSalir(tx, hogarId, quien.miembroId, hoy);
     await tx.miembro.delete({ where: { id: quien.miembroId } });
   });
 }

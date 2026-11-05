@@ -1,13 +1,13 @@
 import { isoDesdeFecha, mesDesdeFecha, sumarMeses } from "@/lib/fecha";
 import { periodoDeFecha } from "@/lib/periodo";
-import { sueldoVigente } from "./balance";
+import { ingresosDelMes } from "./sueldos";
 import type { PuntoMes } from "./estadisticas";
 
 /**
  * Armado de la serie historica a partir de filas crudas.
  *
  * Vive en dominio y no en datos a proposito: es la parte con riesgo real
- * (limites de mes, meses vacios, sueldo vigente) y asi se puede testear sin
+ * (limites de mes, meses vacios, sueldos vigentes) y asi se puede testear sin
  * base de datos ni cliente de Prisma.
  *
  * `src/datos/historico.ts` solo consulta y delega aqui.
@@ -20,8 +20,12 @@ export type GastoPorDia = {
 };
 
 export type SueldoVigencia = {
+  /** De quien es. null en el sueldo cerrado de alguien que ya salio del hogar. */
+  miembroId: string | null;
   monto: number;
   vigenteDesde: Date;
+  /** El ultimo mes en que rige: solo en un sueldo cerrado. */
+  vigenteHasta: Date | null;
 };
 
 /** La ventana de meses que cubre la serie, del mas antiguo al mas nuevo. */
@@ -51,13 +55,16 @@ export function armarSerie(
   }
 
   const vigencias = sueldos.map((s) => ({
+    miembroId: s.miembroId,
     monto: s.monto,
     vigenteDesde: mesDesdeFecha(s.vigenteDesde),
+    vigenteHasta: s.vigenteHasta === null ? null : mesDesdeFecha(s.vigenteHasta),
   }));
 
+  // Los ingresos de cada mes son la suma de los sueldos de todos los del hogar.
   return ventanaDeMeses(mesFinal, cantidadMeses).map((mes) => ({
     mes,
-    ingresos: sueldoVigente(vigencias, mes) ?? 0,
+    ingresos: ingresosDelMes(vigencias, mes).total ?? 0,
     gastos: gastoPorMes.get(mes) ?? 0,
   }));
 }

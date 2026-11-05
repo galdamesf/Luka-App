@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
-import { HOGAR_INICIAL, clienteDePrueba, limpiar } from "./base";
+import { HOGAR_INICIAL, clienteDePrueba, limpiar, miembroDePrueba } from "./base";
 import {
   actualizarGasto,
   crearGasto,
@@ -347,14 +347,29 @@ describe("deudas y cuotas", () => {
 
 describe("sueldos", () => {
   test("cada hogar tiene su sueldo, y borrar el de uno no toca el del otro", async () => {
-    await definirSueldo(A, "2026-11", 1_000_000, null, prisma);
-    await definirSueldo(B, "2026-11", 800_000, null, prisma);
+    const deA = await miembroDePrueba(prisma, { hogarId: A });
+    const deB = await miembroDePrueba(prisma, { hogarId: B });
+    await definirSueldo(A, deA, "2026-11", 1_000_000, null, prisma);
+    await definirSueldo(B, deB, "2026-11", 800_000, null, prisma);
     expect(await sueldoDelMes(A, "2026-11", prisma)).toBe(1_000_000);
     expect(await sueldoDelMes(B, "2026-11", prisma)).toBe(800_000);
     expect((await listarSueldos(A, prisma)).map((s) => s.monto)).toEqual([1_000_000]);
 
-    await eliminarSueldo(A, "2026-11", prisma);
+    await eliminarSueldo(A, deA, "2026-11", prisma);
     expect(await sueldoDelMes(A, "2026-11", prisma)).toBeNull();
+    expect(await sueldoDelMes(B, "2026-11", prisma)).toBe(800_000);
+  });
+
+  test("la base rechaza anotar en un hogar el sueldo de alguien de otro", async () => {
+    const deB = await miembroDePrueba(prisma, { hogarId: B });
+    await expect(definirSueldo(A, deB, "2026-11", 1_000_000, null, prisma)).rejects.toThrow();
+    expect(await prisma.sueldo.count()).toBe(0);
+  });
+
+  test("borrar el sueldo de alguien de otro hogar no hace nada", async () => {
+    const deB = await miembroDePrueba(prisma, { hogarId: B });
+    await definirSueldo(B, deB, "2026-11", 800_000, null, prisma);
+    await eliminarSueldo(A, deB, "2026-11", prisma);
     expect(await sueldoDelMes(B, "2026-11", prisma)).toBe(800_000);
   });
 });
@@ -385,8 +400,8 @@ describe("el historico de Informes", () => {
   test("suma solo los gastos y el sueldo del hogar", async () => {
     await gasto(A, (await categoria(A)).id, "2026-10-10");
     await gasto(B, (await categoria(B)).id, "2026-10-11");
-    await definirSueldo(A, "2026-10", 1_000_000, null, prisma);
-    await definirSueldo(B, "2026-10", 5_000_000, null, prisma);
+    await definirSueldo(A, await miembroDePrueba(prisma, { hogarId: A }), "2026-10", 1_000_000, null, prisma);
+    await definirSueldo(B, await miembroDePrueba(prisma, { hogarId: B }), "2026-10", 5_000_000, null, prisma);
 
     const [octubre] = (await serieHistorica(A, "2026-10", 1, prisma)).slice(-1);
     expect(octubre).toEqual({ mes: "2026-10", gastos: 12_000, ingresos: 1_000_000 });

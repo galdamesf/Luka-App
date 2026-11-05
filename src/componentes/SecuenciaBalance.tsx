@@ -1,5 +1,6 @@
 import type { Balance } from "@/dominio/balance";
 import { repartirGastos, type GastoPlano } from "@/dominio/resumen";
+import type { Aporte } from "@/dominio/sueldos";
 import type { Periodo } from "@/lib/periodo";
 import { LineaGastosDesplegable } from "./LineaGastosDesplegable";
 import { formatearCLP, nombreDelMes, porcentajeLegible } from "./formato";
@@ -10,9 +11,43 @@ type Props = {
   gastos: readonly GastoPlano[];
   /** El periodo del balance. Sin el, el mes calendario de `balance.mes`. */
   periodo?: Periodo;
+  /**
+   * El sueldo de cada miembro, para mostrarlo bajo el total. Solo cuando hay
+   * mas de una persona: con una, el detalle diria lo mismo que el total.
+   */
+  aportes?: readonly Aporte[];
+  /** Lo que suman ese mes quienes ya salieron del hogar. */
+  deQuienesSalieron?: number;
   /** El formulario de sueldo, que es componente de cliente. */
   children?: React.ReactNode;
 };
+
+/** Debajo del total, lo que gana cada uno. */
+function DetalleDeSueldos({ aportes, deQuienesSalieron }: { aportes: readonly Aporte[]; deQuienesSalieron: number }) {
+  const fila = "flex items-baseline justify-between gap-3 py-0.5 text-xs text-texto-tenue";
+  return (
+    <ul aria-label="El sueldo de cada uno" className="mb-1 ml-1 border-l-2 border-borde pl-3">
+      {aportes.map((a) => (
+        <li key={a.miembroId} className={fila}>
+          <span className="min-w-0 truncate">
+            {a.esTuyo ? `${a.nombre} (tú)` : a.nombre}
+          </span>
+          {a.monto === null ? (
+            <span className="shrink-0 italic">Sin anotar</span>
+          ) : (
+            <span className="cifra shrink-0 whitespace-nowrap tabular-nums">{formatearCLP(a.monto)}</span>
+          )}
+        </li>
+      ))}
+      {deQuienesSalieron > 0 && (
+        <li className={fila}>
+          <span className="min-w-0">Quienes ya salieron del hogar</span>
+          <span className="cifra shrink-0 whitespace-nowrap tabular-nums">{formatearCLP(deQuienesSalieron)}</span>
+        </li>
+      )}
+    </ul>
+  );
+}
 
 function Linea({
   etiqueta,
@@ -50,7 +85,7 @@ function Linea({
   );
 }
 
-export function SecuenciaBalance({ balance, gastos, periodo, children }: Props) {
+export function SecuenciaBalance({ balance, gastos, periodo, aportes, deQuienesSalieron = 0, children }: Props) {
   const { esenciales, resto } = repartirGastos(gastos, periodo ?? balance.mes);
   const {
     sueldo, gastosBasicos, cuotas, gastosDiscrecionales,
@@ -86,7 +121,14 @@ export function SecuenciaBalance({ balance, gastos, periodo, children }: Props) 
               de verdad es el de abajo. Dos numeros grandes compitiendo en la
               misma tarjeta hacian dudar de cual era cual. */}
           <div className="mt-3">
-            <Linea etiqueta="Sueldo" monto={sueldo} />
+            {aportes === undefined ? (
+              <Linea etiqueta="Sueldo" monto={sueldo} />
+            ) : (
+              <>
+                <Linea etiqueta="Sueldos del hogar" monto={sueldo} />
+                <DetalleDeSueldos aportes={aportes} deQuienesSalieron={deQuienesSalieron} />
+              </>
+            )}
             <LineaGastosDesplegable
               etiqueta="Gastos en lo esencial"
               detalle="super, bencina, cuentas, salud…"

@@ -29,3 +29,33 @@ export async function limpiar(prisma: PrismaClient): Promise<void> {
   );
   await prisma.hogar.create({ data: { id: HOGAR_INICIAL, nombre: "Mi hogar" } });
 }
+
+let correlativo = 0;
+
+/**
+ * Un miembro de un hogar, para los tests que lo necesitan (por ejemplo, para
+ * anotar su sueldo). Por omision, el dueno del hogar inicial, que ya entro.
+ */
+export async function miembroDePrueba(
+  prisma: PrismaClient,
+  {
+    hogarId = HOGAR_INICIAL,
+    correo,
+    nombre = null,
+    rol = "DUENO",
+    entro = true,
+  }: { hogarId?: string; correo?: string; nombre?: string | null; rol?: "DUENO" | "MIEMBRO"; entro?: boolean } = {},
+): Promise<string> {
+  correlativo += 1;
+  const fila = await prisma.miembro.create({
+    data: {
+      hogarId,
+      correo: correo ?? `persona-${correlativo}@prueba.cl`,
+      nombre,
+      rol,
+      entroEn: entro ? new Date("2026-11-01T12:00:00Z") : null,
+    },
+    select: { id: true },
+  });
+  return fila.id;
+}

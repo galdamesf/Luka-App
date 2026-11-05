@@ -88,7 +88,9 @@ async function llenarMac() {
   });
 
   await mac.presupuesto.create({ data: { hogarId: HOGAR_INICIAL, categoriaId: super_.id, mes: MES, monto: 400_000 } });
-  await mac.sueldo.create({ data: { hogarId: HOGAR_INICIAL, monto: 1_000_000, vigenteDesde: MES } });
+  await mac.sueldo.create({ data: { hogarId: HOGAR_INICIAL, miembroId: dueno.id, monto: 1_000_000, vigenteDesde: MES } });
+  // El sueldo cerrado de alguien que ya salio del hogar: sin miembro, con su ultimo mes.
+  await mac.sueldo.create({ data: { hogarId: HOGAR_INICIAL, monto: 300_000, vigenteDesde: fechaDesdeISO("2026-09-01"), vigenteHasta: fechaDesdeISO("2026-10-01") } });
   await mac.ahorro.create({ data: { hogarId: HOGAR_INICIAL, mes: MES, monto: 100_000, nota: "Vacaciones" } });
 
   // Otro hogar, con su dueno y una categoria.

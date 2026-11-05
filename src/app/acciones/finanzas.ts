@@ -43,11 +43,12 @@ function traducirError(error: unknown): string {
   return "No se pudo guardar. Intenta de nuevo.";
 }
 
+/** Cada uno define solo su propio sueldo: el miembro sale de la sesion, no del formulario. */
 export async function accionDefinirSueldo(
   _previo: EstadoFormulario,
   datos: FormData,
 ): Promise<EstadoFormulario> {
-  const { hogarId } = await hogarActual();
+  const { hogarId, miembroId } = await hogarActual();
   const resultado = esquemaSueldoFormulario.safeParse(desdeFormData(datos));
 
   if (!resultado.success) {
@@ -59,7 +60,7 @@ export async function accionDefinirSueldo(
   }
 
   try {
-    await definirSueldo(hogarId, resultado.data.mes, resultado.data.monto, resultado.data.nota);
+    await definirSueldo(hogarId, miembroId, resultado.data.mes, resultado.data.monto, resultado.data.nota);
   } catch (error) {
     return { ok: false, mensaje: traducirError(error), errores: {} };
   }
