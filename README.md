@@ -5,7 +5,7 @@ Tailwind 4, con los datos en PostgreSQL.
 
 ## Lo que necesitas
 
-- Node 20 o superior (probado con 22)
+- Node 24 (el proyecto lo fija en `.nvmrc` y en `package.json`)
 - Docker, para levantar Postgres
 
 ## Para echarlo a andar
@@ -14,14 +14,15 @@ Tailwind 4, con los datos en PostgreSQL.
 npm install
 
 cp .env.example .env        # ya viene apuntando al Postgres de docker
-npm run db:up               # levanta Postgres en el puerto 5433
+npm run db:up               # levanta Postgres en el puerto 5434
 npm run db:migrate          # crea las tablas
 npm run db:seed             # carga las 13 categorias base
 npm run dev                 # http://localhost:3000
 ```
 
-El puerto es **5433**, no 5432, para no chocar con un Postgres que ya tengas
-instalado en la maquina.
+El puerto es **5434**, no 5432, para no chocar con un Postgres que ya tengas
+instalado en la maquina ni con el de otro proyecto en el 5433. Solo escucha en
+tu Mac: nadie mas de tu red puede conectarse.
 
 **Docker Desktop tiene que estar corriendo** antes de `npm run db:up`. Si la
 migracion falla con `P1001: Can't reach database server`, es eso: no hay Postgres

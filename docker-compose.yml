@@ -1,5 +1,7 @@
 # Postgres local para control-gastos.
-# Puerto 5433 en la maquina para no chocar con un Postgres que ya tengas en 5432.
+# Puerto 5434 en la maquina: el 5432 suele ser de un Postgres instalado y el
+# 5433 lo usa otro proyecto (SIO). Solo escucha en tu Mac (127.0.0.1): nadie
+# mas de tu red wifi puede conectarse a la base.
 services:
   db:
     image: postgres:16-alpine
@@ -12,7 +14,7 @@ services:
       # Fuerza es_CL para ordenamiento y mensajes coherentes.
       LANG: es_CL.utf8
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - gastos_data:/var/lib/postgresql/data
     healthcheck:
