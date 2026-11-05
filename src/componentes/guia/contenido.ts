@@ -610,13 +610,16 @@ export const GUIA: readonly SeccionGuia[] = [
       {
         titulo: "Entrar con el código de tu celular",
         texto: [
-          "Entrar a Luka son dos pasos, para todos los del hogar: Google y un código de 6 dígitos de una app de tu celular, como Google Authenticator. Así, aunque alguien entre a tu cuenta de Google, no ve tu hogar sin tu celular.",
-          "La primera vez, Luka te muestra un código QR para escanearlo con la app y te da 10 códigos de respaldo. Cada uno te deja entrar una vez si no tienes el celular a mano.",
+          "La verificación en dos pasos es opcional: cada persona elige si la activa. Con ella, entrar a Luka son dos pasos: Google y un código de 6 dígitos de una app de tu celular, como Google Authenticator. Así, aunque alguien entre a tu cuenta de Google, no ve tu hogar sin tu celular.",
+          "La primera vez que entras, Luka te pregunta si quieres activarla. Si eliges «Ahora no», entras solo con Google; puedes activarla o desactivarla cuando quieras en «Verificación en dos pasos», en «Hogar».",
+          "Al activarla, Luka te muestra un código QR para escanearlo con la app y te da 10 códigos de respaldo. Cada uno te deja entrar una vez si no tienes el celular a mano.",
         ],
         terminos: [
+          { termino: "«Activar»", definicion: "Te muestra el código QR para configurar la app. Desde ahí, Luka te pide el código cada vez que entras." },
+          { termino: "«Desactivar»", definicion: "Desde ahí entras solo con Google. Para confirmarlo, Luka te pide un código de la app o uno de respaldo." },
           { termino: "«Generar códigos nuevos»", definicion: "Te da 10 códigos de respaldo nuevos; los que tenías dejan de servir." },
-          { termino: "«Pasar la app a otro celular»", definicion: "La app de ahora deja de servir para Luka y te muestra un código QR nuevo para el otro celular." },
-          { termino: "«Reiniciar su app»", definicion: "Solo el dueño, para alguien que perdió el celular y sus códigos: la próxima vez que entre, configura una app nueva." },
+          { termino: "«Pasar la app a otro celular»", definicion: "Con un código de la app o uno de respaldo, la app de ahora deja de servir para Luka y te muestra un código QR nuevo para el otro celular." },
+          { termino: "«Reiniciar su app»", definicion: "Solo el dueño, para alguien que perdió el celular y sus códigos: su app deja de servir y, en su próximo clic, Luka le pregunta si quiere activarla de nuevo." },
         ],
         consejo:
           "Guarda los códigos de respaldo lejos del celular: en tu gestor de contraseñas, impresos o en otro computador. Si te equivocas 5 veces seguidas con el código, Luka espera 15 minutos antes de dejarte probar de nuevo.",
@@ -671,7 +674,7 @@ export const PREGUNTAS: readonly { pregunta: string; respuesta: string }[] = [
   {
     pregunta: "Perdí mi celular, ¿cómo entro?",
     respuesta:
-      "Entra con Google y, donde te pide el código, toca «No tengo mi celular: usar un código de respaldo». Ya adentro, en «Hogar», usa «Pasar la app a otro celular». Si también perdiste los códigos, pídele al dueño del hogar que use «Reiniciar su app».",
+      "Si tienes activada la verificación en dos pasos: entra con Google y, donde te pide el código, toca «No tengo mi celular: usar un código de respaldo». Ya adentro, en «Hogar», usa «Pasar la app a otro celular». Si también perdiste los códigos, pídele al dueño del hogar que use «Reiniciar su app». Si no la tienes activada, entras solo con Google, como siempre.",
   },
   {
     pregunta: "¿Tengo que anotar las cuentas cada mes?",

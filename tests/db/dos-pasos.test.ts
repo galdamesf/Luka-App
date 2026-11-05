@@ -8,6 +8,7 @@ import {
   appsDelHogar,
   claveParaConfigurar,
   confirmarConfiguracion,
+  elegirSinDosPasos,
   estadoDeLaApp,
   olvidarSesion,
   quitarMiApp,
@@ -19,9 +20,9 @@ import { DOS_PASOS } from "@/dominio/dos-pasos";
 import { codigoDeApp, deBase32, pasoDe } from "@/lib/dos-pasos";
 
 /**
- * La verificacion en dos pasos contra Postgres de verdad: configurar la app,
- * entrar con el codigo o con uno de respaldo, los bloqueos y lo que se hace
- * desde «Tu hogar».
+ * La verificacion en dos pasos contra Postgres de verdad: elegir si se usa,
+ * configurar la app, entrar con el codigo o con uno de respaldo, los bloqueos
+ * y lo que se hace desde «Tu hogar» (desactivarla, pasarla a otro celular).
  */
 
 let prisma: PrismaClient;
@@ -95,12 +96,14 @@ describe("configurar la app", () => {
       expect(resultado.codigos.map((c) => c.replace("-", ""))).not.toContain(g.huella);
     }
 
-    // Esta sesion queda verificada; la app, configurada.
+    // Esta sesion queda verificada; la app, configurada, y la persona ya eligio.
     expect(await accesoDeSesion("yo@gmail.com", sid, op())).toEqual({
       hogar: { hogarId: HOGAR_INICIAL, miembroId: "m-yo", rol: "DUENO" },
       appConfigurada: true,
       sesionVerificada: true,
+      decidio: true,
     });
+    expect((await prisma.miembro.findUniqueOrThrow({ where: { id: "m-yo" } })).decidioDosPasosEn).toEqual(T0);
     // Y ya no se puede volver a configurar por aqui.
     await expect(claveParaConfigurar("m-yo", op())).rejects.toThrow(ErrorDeDosPasos);
     expect(await confirmarConfiguracion("m-yo", sesion(), codigo(clave, T0), op())).toEqual({
@@ -133,12 +136,34 @@ describe("configurar la app", () => {
   });
 });
 
+describe("elegir al entrar", () => {
+  test("«Ahora no»: queda como que eligio, sin app, y no se le vuelve a preguntar", async () => {
+    await elegirSinDosPasos("m-yo", op());
+    expect(await accesoDeSesion("yo@gmail.com", sesion(), op())).toMatchObject({ appConfigurada: false, decidio: true });
+    // Elegir de nuevo no cambia la fecha.
+    await elegirSinDosPasos("m-yo", op(despues(60)));
+    expect((await prisma.miembro.findUniqueOrThrow({ where: { id: "m-yo" } })).decidioDosPasosEn).toEqual(T0);
+    // Solo a esa persona.
+    expect((await accesoDeSesion("pareja@gmail.com", sesion(), op())).decidio).toBe(false);
+  });
+
+  test("quien eligio «Ahora no» puede activarla despues: desde ahi se le pide el codigo", async () => {
+    await elegirSinDosPasos("m-yo", op());
+    const { sid } = await configurar("m-yo", sesion(), despues(60));
+    expect(await accesoDeSesion("yo@gmail.com", sid, op(despues(60)))).toMatchObject({ appConfigurada: true, sesionVerificada: true });
+    expect((await accesoDeSesion("yo@gmail.com", sesion(), op(despues(60)))).sesionVerificada).toBe(false);
+    // Sigue con la fecha en que eligio la primera vez.
+    expect((await prisma.miembro.findUniqueOrThrow({ where: { id: "m-yo" } })).decidioDosPasosEn).toEqual(T0);
+  });
+});
+
 describe("accesoDeSesion", () => {
-  test("recien entrado con Google: es miembro, sin app ni sesion verificada", async () => {
+  test("recien entrado con Google: es miembro, sin app ni sesion verificada, y todavia no elige", async () => {
     expect(await accesoDeSesion("YO@gmail.com", sesion(), op())).toEqual({
       hogar: { hogarId: HOGAR_INICIAL, miembroId: "m-yo", rol: "DUENO" },
       appConfigurada: false,
       sesionVerificada: false,
+      decidio: false,
     });
   });
 
@@ -161,6 +186,7 @@ describe("accesoDeSesion", () => {
       hogar: null,
       appConfigurada: false,
       sesionVerificada: false,
+      decidio: false,
     });
     expect((await accesoDeSesion(null, sesion(), op())).hogar).toBeNull();
   });
@@ -270,29 +296,56 @@ describe("entrar con un codigo de respaldo", () => {
 });
 
 describe("desde «Tu hogar»", () => {
-  test("pasar la app a otro celular: se quita la actual y la sesion queda pidiendo configurar", async () => {
+  test("desactivarla o pasar la app a otro celular: se quita la app, y la otra sesion deja de estar verificada", async () => {
     const { sid, clave } = await configurar("m-yo");
     // Otra sesion de la misma persona, ya verificada (otro computador).
     const otra = sesion();
     expect((await verificarCodigo("m-yo", otra, codigo(clave, despues(30)), op(despues(30)))).ok).toBe(true);
 
-    await quitarMiApp("m-yo", sid, prisma);
-    const acceso = await accesoDeSesion("yo@gmail.com", sid, op());
-    expect(acceso.appConfigurada).toBe(false);
-    // La otra sesion deja de estar verificada; esta, no (sigue para configurar la nueva).
+    expect(await quitarMiApp("m-yo", sid, codigo(clave, despues(60)), op(despues(60)))).toEqual({ ok: true });
+    const acceso = await accesoDeSesion("yo@gmail.com", sid, op(despues(60)));
+    // Sin app y con la eleccion hecha: entra solo con Google, sin que se le pregunte de nuevo.
+    expect(acceso).toMatchObject({ appConfigurada: false, decidio: true });
+    // La otra sesion deja de estar verificada; esta, no.
     expect(await prisma.sesionVerificada.findMany({ where: { miembroId: "m-yo" }, select: { id: true } })).toEqual([{ id: sid }]);
     expect(await prisma.codigoDeRespaldo.count({ where: { miembroId: "m-yo" } })).toBe(0);
-    // Y se puede configurar una nueva.
+    // Y se puede configurar una nueva: la otra sesion tiene que poner el codigo.
     const nueva = await claveParaConfigurar("m-yo", op());
-    expect((await confirmarConfiguracion("m-yo", sid, codigo(nueva, despues(60)), op(despues(60)))).ok).toBe(true);
-    expect((await accesoDeSesion("yo@gmail.com", otra, op(despues(60)))).sesionVerificada).toBe(false);
+    expect((await confirmarConfiguracion("m-yo", sid, codigo(nueva, despues(90)), op(despues(90)))).ok).toBe(true);
+    expect((await accesoDeSesion("yo@gmail.com", otra, op(despues(90)))).sesionVerificada).toBe(false);
   });
 
-  test("el dueno le reinicia la app a otro miembro: se le quita y se le cierran las sesiones", async () => {
+  test("quitar la app pide un codigo bueno, que cuenta como intento si no lo es", async () => {
+    const { sid } = await configurar("m-yo");
+    expect(await quitarMiApp("m-yo", sid, "000000", op(despues(60)))).toEqual({
+      ok: false,
+      mensaje: `Ese código no es. Te quedan ${DOS_PASOS.intentos - 1} intentos.`,
+    });
+    expect(await quitarMiApp("m-yo", sid, "", op(despues(60)))).toMatchObject({ ok: false });
+    expect((await estadoDeLaApp("m-yo", prisma)).configuradaEn).toEqual(T0);
+    // Quien no tiene app no tiene nada que quitar.
+    expect(await quitarMiApp("m-pareja", sesion(), "123456", op())).toEqual({
+      ok: false,
+      mensaje: "Primero tienes que configurar la app.",
+    });
+  });
+
+  test("sin el celular, sirve un codigo de respaldo para quitar la app", async () => {
+    const { sid, codigos } = await configurar("m-yo");
+    expect(await quitarMiApp("m-yo", sid, codigos[3]!.toLowerCase(), op(despues(60)))).toEqual({ ok: true });
+    expect((await estadoDeLaApp("m-yo", prisma)).configuradaEn).toBeNull();
+  });
+
+  test("el dueno le reinicia la app a otro miembro: se le quita, sus sesiones dejan de estar verificadas y Luka le pregunta de nuevo", async () => {
     const { sid } = await configurar("m-pareja");
     expect(await appsDelHogar(HOGAR_INICIAL, prisma)).toEqual(new Set(["m-pareja"]));
     await reiniciarAppDe(HOGAR_INICIAL, "m-yo", "m-pareja", prisma);
-    expect(await accesoDeSesion("pareja@gmail.com", sid, op())).toMatchObject({ appConfigurada: false, sesionVerificada: false });
+    expect(await accesoDeSesion("pareja@gmail.com", sid, op())).toEqual({
+      hogar: { hogarId: HOGAR_INICIAL, miembroId: "m-pareja", rol: "MIEMBRO" },
+      appConfigurada: false,
+      sesionVerificada: false,
+      decidio: false,
+    });
     expect(await appsDelHogar(HOGAR_INICIAL, prisma)).toEqual(new Set());
   });
 

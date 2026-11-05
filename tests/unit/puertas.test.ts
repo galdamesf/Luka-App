@@ -51,7 +51,11 @@ describe("el middleware decide solo con la cookie", () => {
 describe("cada pagina revisa el hogar en cada visita", () => {
   const PUBLICAS = ["app/bienvenida/page.tsx", "app/ingresar/page.tsx", "app/privacidad/page.tsx", "app/terminos/page.tsx"];
   // El segundo paso: son la puerta, asi que no pueden pedir hogarActual().
-  const SEGUNDO_PASO = ["app/verificacion/configurar/page.tsx", "app/verificacion/page.tsx"];
+  const SEGUNDO_PASO = [
+    "app/verificacion/configurar/page.tsx",
+    "app/verificacion/elegir/page.tsx",
+    "app/verificacion/page.tsx",
+  ];
   const paginas = archivos(join(RAIZ, "app"), "page.tsx").filter((p) => !PUBLICAS.includes(p) && !SEGUNDO_PASO.includes(p));
 
   test("hay paginas que revisar", () => {
@@ -74,9 +78,9 @@ describe("cada pagina revisa el hogar en cada visita", () => {
 });
 
 describe("el segundo paso esta en la puerta de todo", () => {
-  test("hogarActual() solo deja pasar a quien hizo los dos pasos", () => {
+  test("hogarActual() solo deja pasar a quien ya eligio y, si tiene la app, puso el codigo", () => {
     const codigo = leer("lib/hogar-actual.ts");
-    expect(codigo).toMatch(/redirect\(RUTA_CONFIGURAR\)/);
+    expect(codigo).toMatch(/redirect\(RUTA_ELEGIR\)/);
     expect(codigo).toMatch(/redirect\(RUTA_VERIFICAR\)/);
     expect(codigo).toMatch(/acceso\.estado !== "listo"/);
   });
@@ -150,8 +154,9 @@ describe("las acciones del segundo paso revisan en que paso va la persona", () =
     .filter((trozo) => trozo.startsWith("export async function "))
     .map((trozo) => [/export async function (\w+)/.exec(trozo)![1]!, trozo] as const);
 
-  test("son las tres: confirmar la app, verificar el codigo y salir", () => {
+  test("son cuatro: «Ahora no», confirmar la app, verificar el codigo y salir", () => {
     expect(funciones.map(([nombre]) => nombre).sort()).toEqual([
+      "accionAhoraNo",
       "accionConfirmarApp",
       "accionSalirSinVerificar",
       "accionVerificarCodigo",

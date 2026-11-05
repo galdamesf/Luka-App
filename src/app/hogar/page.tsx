@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { leerHogar } from "@/datos/hogares";
 import { appsDelHogar, estadoDeLaApp } from "@/datos/dos-pasos";
+import { RUTA_CONFIGURAR } from "@/dominio/dos-pasos";
 import { puedeBorrarHogar } from "@/dominio/hogar";
 import { configuracionDeCorreo } from "@/lib/correo";
 import { hogarActual } from "@/lib/hogar-actual";
@@ -15,6 +17,7 @@ import { RenovarRespaldos } from "@/componentes/hogar/RenovarRespaldos";
 import {
   accionBorrarHogar,
   accionCambiarDeCelular,
+  accionDesactivarDosPasos,
   accionHacerDueno,
   accionInvitar,
   accionPedirCodigoDeBorrado,
@@ -30,6 +33,8 @@ export const metadata: Metadata = {
 };
 
 const TARJETA = "rounded-2xl border border-borde bg-superficie p-5 shadow-sm sm:p-6";
+const BOTON_SECUNDARIO =
+  "inline-flex min-h-10 cursor-pointer items-center rounded-lg border border-borde px-4 text-sm font-semibold transition-colors hover:bg-superficie-tenue";
 
 /**
  * El hogar: quienes lo comparten, y lo que el dueno puede hacer con eso
@@ -106,28 +111,55 @@ export default async function PaginaHogar() {
         <h2 id="titulo-dos-pasos" className="text-lg font-bold tracking-tight">
           Verificación en dos pasos
         </h2>
-        <p className="mt-1 max-w-[60ch] text-sm leading-relaxed text-texto-tenue">
-          Para entrar, Luka te pide Google y un código de la app de tu celular
-          {miApp.configuradaEn ? ` (activa desde el ${fechaLarga(hoyISO("America/Santiago", miApp.configuradaEn))})` : ""}.
-        </p>
-        <p className={`mt-3 text-sm ${miApp.respaldosQueQuedan <= 3 ? "font-semibold text-peligro" : "text-texto-tenue"}`}>
-          {miApp.respaldosQueQuedan === 0
-            ? "No te quedan códigos de respaldo: genera nuevos por si pierdes el celular."
-            : `Te ${miApp.respaldosQueQuedan === 1 ? "queda 1 código" : `quedan ${miApp.respaldosQueQuedan} códigos`} de respaldo sin usar${miApp.respaldosQueQuedan <= 3 ? ": conviene generar nuevos." : "."}`}
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <RenovarRespaldos accion={accionRenovarRespaldos} correo={miCorreo} />
-          <ConfirmarAccion
-            etiqueta="Pasar la app a otro celular"
-            pregunta="¿Pasar la app a otro celular?"
-            confirmar="Sí, configurar otra"
-            accion={accionCambiarDeCelular}
-            claseBoton="inline-flex min-h-10 cursor-pointer items-center rounded-lg border border-borde px-4 text-sm font-semibold transition-colors hover:bg-superficie-tenue"
-          >
-            <p>La app de ahora deja de servir para Luka, y también tus códigos de respaldo.</p>
-            <p>Enseguida te mostramos un código QR nuevo para escanearlo con el otro celular.</p>
-          </ConfirmarAccion>
-        </div>
+        {miApp.configuradaEn ? (
+          <>
+            <p className="mt-1 max-w-[60ch] text-sm leading-relaxed text-texto-tenue">
+              Está activada: para entrar, Luka te pide Google y un código de la app de tu celular (desde el{" "}
+              {fechaLarga(hoyISO("America/Santiago", miApp.configuradaEn))}).
+            </p>
+            <p className={`mt-3 text-sm ${miApp.respaldosQueQuedan <= 3 ? "font-semibold text-peligro" : "text-texto-tenue"}`}>
+              {miApp.respaldosQueQuedan === 0
+                ? "No te quedan códigos de respaldo: genera nuevos por si pierdes el celular."
+                : `Te ${miApp.respaldosQueQuedan === 1 ? "queda 1 código" : `quedan ${miApp.respaldosQueQuedan} códigos`} de respaldo sin usar${miApp.respaldosQueQuedan <= 3 ? ": conviene generar nuevos." : "."}`}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <RenovarRespaldos accion={accionRenovarRespaldos} correo={miCorreo} />
+              <ConfirmarAccion
+                etiqueta="Pasar la app a otro celular"
+                pregunta="¿Pasar la app a otro celular?"
+                confirmar="Sí, configurar otra"
+                accion={accionCambiarDeCelular}
+                conCodigo
+                claseBoton={BOTON_SECUNDARIO}
+              >
+                <p>La app de ahora deja de servir para Luka, y también tus códigos de respaldo.</p>
+                <p>Enseguida te mostramos un código QR nuevo para escanearlo con el otro celular.</p>
+              </ConfirmarAccion>
+              <ConfirmarAccion
+                etiqueta="Desactivar"
+                pregunta="¿Desactivar la verificación en dos pasos?"
+                confirmar="Sí, desactivarla"
+                accion={accionDesactivarDosPasos}
+                conCodigo
+                claseBoton={BOTON_SECUNDARIO}
+              >
+                <p>Desde ahora entras solo con Google. Tu app y tus códigos de respaldo dejan de servir para Luka.</p>
+                <p>Puedes activarla de nuevo cuando quieras.</p>
+              </ConfirmarAccion>
+            </div>
+          </>
+        ) : (
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+            <p className="max-w-[48ch] text-sm leading-relaxed text-texto-tenue">
+              Está desactivada: entras solo con Google. Si la activas, Luka además te pide un código de la app de tu
+              celular, como Google Authenticator. Así, aunque alguien entre a tu cuenta de Google, no ve tu hogar sin tu
+              celular.
+            </p>
+            <Link href={RUTA_CONFIGURAR} className="boton-luka">
+              Activar
+            </Link>
+          </div>
+        )}
       </section>
 
       <section aria-labelledby="titulo-salir" className={`mt-6 ${TARJETA}`}>

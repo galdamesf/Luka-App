@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { DOS_PASOS, RUTA_CONFIGURAR, nombreEnLaApp } from "@/dominio/dos-pasos";
+import { DOS_PASOS, RUTA_ELEGIR, nombreEnLaApp } from "@/dominio/dos-pasos";
 import { RUTA_SESION_TERMINADA, leerAcceso } from "@/lib/hogar-actual";
 import { MarcoVerificacion } from "@/componentes/verificacion/MarcoVerificacion";
 import { FormularioEntrar } from "@/componentes/verificacion/FormularioEntrar";
@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 export default async function Verificacion() {
   const acceso = await leerAcceso();
   if (acceso.estado === "sin-sesion") redirect(RUTA_SESION_TERMINADA);
-  if (acceso.estado === "configurar") redirect(RUTA_CONFIGURAR);
+  if (acceso.estado === "elegir") redirect(RUTA_ELEGIR);
   if (acceso.estado === "listo") redirect("/");
 
   return (

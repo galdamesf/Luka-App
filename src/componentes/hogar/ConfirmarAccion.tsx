@@ -19,6 +19,11 @@ type Props = {
   tono?: "normal" | "peligro";
   /** Clases del boton que abre: discreto en una fila, o mas visible. */
   claseBoton?: string;
+  /**
+   * Pide un codigo de la app o uno de respaldo antes de confirmar: para
+   * desactivar la verificacion en dos pasos o pasar la app a otro celular.
+   */
+  conCodigo?: boolean;
 };
 
 const BOTON_FILA =
@@ -33,10 +38,11 @@ const BOTON_FILA =
  * el cuadro se cierra y la pagina ya viene actualizada.
  */
 export function ConfirmarAccion({
-  etiqueta, pregunta, children, confirmar, accion, id, tono = "normal", claseBoton = BOTON_FILA,
+  etiqueta, pregunta, children, confirmar, accion, id, tono = "normal", claseBoton = BOTON_FILA, conCodigo = false,
 }: Props) {
   const dialogo = useRef<HTMLDialogElement>(null);
   const idTitulo = useId();
+  const idCodigo = useId();
   const [estado, enviar, pendiente] = useActionState(accion, ESTADO_INICIAL);
 
   useEffect(() => {
@@ -63,6 +69,25 @@ export function ConfirmarAccion({
           </h2>
           <div className="space-y-2 text-sm leading-relaxed text-texto-tenue">{children}</div>
           {id !== undefined && <input type="hidden" name="id" value={id} />}
+          {conCodigo && (
+            <div>
+              <label htmlFor={idCodigo} className="mb-1.5 block text-sm font-semibold">
+                Código de la app, o uno de respaldo
+              </label>
+              <input
+                id={idCodigo}
+                name="codigo"
+                type="text"
+                autoComplete="one-time-code"
+                autoCapitalize="characters"
+                spellCheck={false}
+                maxLength={13}
+                placeholder="123 456"
+                required
+                className="cifra w-full rounded-xl border border-borde bg-superficie px-3 py-2.5 text-center text-lg tracking-[0.2em] text-texto transition-colors placeholder:text-texto-tenue/50 hover:border-texto-tenue"
+              />
+            </div>
+          )}
           {estado.mensaje !== null && !estado.ok && (
             <p role="alert" className="rounded-lg border border-peligro/40 bg-peligro/10 px-3 py-2 text-sm">
               {estado.mensaje}

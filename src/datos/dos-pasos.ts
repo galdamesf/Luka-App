@@ -55,19 +55,21 @@ export type AccesoEnLaBase = {
   hogar: HogarDeSesion | null;
   appConfigurada: boolean;
   sesionVerificada: boolean;
+  /** Si ya eligio si usar la verificacion: si no, Luka se lo pregunta. */
+  decidio: boolean;
 };
 
 /**
  * Lo que dice la base de una sesion, en una sola consulta: si la persona
- * sigue siendo miembro, si tiene la app configurada y si esta sesion ya puso
- * el codigo (y no vencio).
+ * sigue siendo miembro, si ya eligio si usar la verificacion, si tiene la app
+ * configurada y si esta sesion ya puso el codigo (y no vencio).
  */
 export async function accesoDeSesion(
   correo: string | null | undefined,
   sesionId: string | null | undefined,
   { db = prisma, ahora = new Date() }: Pick<OpcionesDeDosPasos, "db" | "ahora"> = {},
 ): Promise<AccesoEnLaBase> {
-  const nadie = { hogar: null, appConfigurada: false, sesionVerificada: false };
+  const nadie = { hogar: null, appConfigurada: false, sesionVerificada: false, decidio: false };
   const normalizado = normalizarCorreo(correo);
   if (normalizado === null) return nadie;
 
@@ -79,6 +81,7 @@ export async function accesoDeSesion(
       hogarId: true,
       rol: true,
       entroEn: true,
+      decidioDosPasosEn: true,
       dosPasos: { select: { confirmadoEn: true } },
       sesionesVerificadas: {
         // Sin id valido no se busca nada: "" no calza con ninguna fila.
@@ -93,6 +96,7 @@ export async function accesoDeSesion(
     hogar: { hogarId: fila.hogarId, miembroId: fila.id, rol: fila.rol },
     appConfigurada: fila.dosPasos?.confirmadoEn != null,
     sesionVerificada: sesion !== null && fila.sesionesVerificadas.length > 0,
+    decidio: fila.decidioDosPasosEn !== null,
   };
 }
 
@@ -115,6 +119,21 @@ export async function olvidarSesion(sesionId: string | null | undefined, db: Bas
 }
 
 /* ---------------------------------------------------------------------------
+   Elegir al entrar
+   --------------------------------------------------------------------------- */
+
+/**
+ * «Ahora no»: entra solo con Google y Luka no se lo vuelve a preguntar. Puede
+ * activarla despues en «Tu hogar».
+ */
+export async function elegirSinDosPasos(
+  miembroId: string,
+  { db = prisma, ahora = new Date() }: Pick<OpcionesDeDosPasos, "db" | "ahora"> = {},
+): Promise<void> {
+  await db.miembro.updateMany({ where: { id: miembroId, decidioDosPasosEn: null }, data: { decidioDosPasosEn: ahora } });
+}
+
+/* ---------------------------------------------------------------------------
    Configurar la app
    --------------------------------------------------------------------------- */
 
@@ -122,7 +141,7 @@ export async function olvidarSesion(sesionId: string | null | undefined, db: Bas
  * La clave para configurar la app (en base32, para el QR y para escribirla a
  * mano). Si ya habia una configuracion a medias, la misma: recargar la
  * pagina no invalida lo que ya se escaneo. Si la app ya esta configurada,
- * no: cambiarla es pasar por «Tu hogar».
+ * no: cambiarla es pasar por «Tu hogar», con un codigo.
  */
 export async function claveParaConfigurar(
   miembroId: string,
@@ -174,7 +193,8 @@ export type ResultadoDeConfiguracion = { ok: true; codigos: string[] } | { ok: f
 /**
  * El primer codigo de la app recien escaneada. Si es correcto, la app queda
  * configurada, se crean los codigos de respaldo (se devuelven para
- * mostrarlos una sola vez) y esta sesion queda verificada.
+ * mostrarlos una sola vez), esta sesion queda verificada y la persona queda
+ * como que ya eligio.
  */
 export async function confirmarConfiguracion(
   miembroId: string,
@@ -200,6 +220,7 @@ export async function confirmarConfiguracion(
       data: { confirmadoEn: ahora, ultimoPaso: revision.paso, intentos: 0, bloqueadoHasta: null },
     });
     if (count === 0) return { ok: false, mensaje: "Ya tienes la app configurada." } as const;
+    await tx.miembro.updateMany({ where: { id: miembroId, decidioDosPasosEn: null }, data: { decidioDosPasosEn: ahora } });
     const codigos = await crearCodigosDeRespaldo(tx, miembroId, maestra);
     await verificarLaSesion(tx, miembroId, sesionId, ahora);
     return { ok: true, codigos } as const;
@@ -215,16 +236,18 @@ export type ResultadoDeVerificacion =
   | { ok: false; mensaje: string };
 
 /**
- * El segundo paso al entrar. Sirve el codigo de 6 digitos de la app o, si se
- * perdio el celular, uno de los codigos de respaldo (una vez cada uno).
- * Si es correcto, esta sesion queda verificada.
+ * Revisa el codigo de la app o uno de respaldo (una vez cada uno), con los
+ * intentos y el bloqueo. No verifica ninguna sesion: eso lo hace quien la
+ * llama. La usan entrar, desactivar la verificacion y pasar la app a otro
+ * celular.
  */
-export async function verificarCodigo(
+async function revisarCodigo(
+  db: Pick<Base, "dosPasos" | "codigoDeRespaldo">,
   miembroId: string,
-  sesionId: string,
   texto: string,
-  { db = prisma, maestra = claveMaestra(), ahora = new Date() }: OpcionesDeDosPasos = {},
-): Promise<ResultadoDeVerificacion> {
+  maestra: Buffer,
+  ahora: Date,
+): Promise<{ ok: true; conRespaldo: boolean } | { ok: false; mensaje: string }> {
   const fila = await db.dosPasos.findUnique({ where: { miembroId } });
   if (fila === null || fila.confirmadoEn === null) {
     return { ok: false, mensaje: "Primero tienes que configurar la app." };
@@ -254,10 +277,7 @@ export async function verificarCodigo(
         where: { miembroId, OR: [{ ultimoPaso: null }, { ultimoPaso: { lt: revision.paso } }] },
         data: { ultimoPaso: revision.paso, intentos: 0, bloqueadoHasta: null },
       });
-      if (count === 1) {
-        await verificarLaSesion(db, miembroId, sesionId, ahora);
-        return { ok: true, conRespaldo: false, respaldosQueQuedan: await respaldosQueQuedan(miembroId, db) };
-      }
+      if (count === 1) return { ok: true, conRespaldo: false };
     }
     return { ok: false, mensaje: await registrarFallo(db, miembroId, ahora) };
   }
@@ -269,8 +289,24 @@ export async function verificarCodigo(
   });
   if (count === 0) return { ok: false, mensaje: await registrarFallo(db, miembroId, ahora) };
   await db.dosPasos.update({ where: { miembroId }, data: { intentos: 0, bloqueadoHasta: null } });
+  return { ok: true, conRespaldo: true };
+}
+
+/**
+ * El segundo paso al entrar. Sirve el codigo de 6 digitos de la app o, si se
+ * perdio el celular, uno de los codigos de respaldo (una vez cada uno).
+ * Si es correcto, esta sesion queda verificada.
+ */
+export async function verificarCodigo(
+  miembroId: string,
+  sesionId: string,
+  texto: string,
+  { db = prisma, maestra = claveMaestra(), ahora = new Date() }: OpcionesDeDosPasos = {},
+): Promise<ResultadoDeVerificacion> {
+  const revision = await revisarCodigo(db, miembroId, texto, maestra, ahora);
+  if (!revision.ok) return revision;
   await verificarLaSesion(db, miembroId, sesionId, ahora);
-  return { ok: true, conRespaldo: true, respaldosQueQuedan: await respaldosQueQuedan(miembroId, db) };
+  return { ok: true, conRespaldo: revision.conRespaldo, respaldosQueQuedan: await respaldosQueQuedan(miembroId, db) };
 }
 
 /* ---------------------------------------------------------------------------
@@ -304,26 +340,35 @@ export async function renovarCodigosDeRespaldo(
 }
 
 /**
- * Pasar la app a otro celular: se quita la actual y sus codigos de
- * respaldo. Esta sesion sigue abierta y la siguiente pagina pide configurar
- * la nueva: sin app no se puede seguir usando Luka.
+ * Desactivar la verificacion, o pasar la app a otro celular: se quita la
+ * app y sus codigos de respaldo. Pide un codigo de la app o uno de respaldo:
+ * quien encuentre la sesion abierta en otro computador no puede quitarla.
  *
- * Las demas sesiones de la persona (otro computador, otro navegador) dejan
- * de estar verificadas: si la app se cambia porque se perdio el celular,
+ * Esta sesion sigue abierta. Las demas de la persona (otro computador, otro
+ * navegador) dejan de estar verificadas: si la vuelve a activar, ahi tienen
+ * que poner el codigo, y si la app se cambia porque se perdio el celular,
  * quien lo tenga no sigue adentro con una sesion vieja.
  */
-export async function quitarMiApp(miembroId: string, sesionActual: string, db: Base = prisma): Promise<void> {
+export async function quitarMiApp(
+  miembroId: string,
+  sesionActual: string,
+  texto: string,
+  { db = prisma, maestra = claveMaestra(), ahora = new Date() }: OpcionesDeDosPasos = {},
+): Promise<ResultadoDeCodigo> {
+  const revision = await revisarCodigo(db, miembroId, texto, maestra, ahora);
+  if (!revision.ok) return revision;
   await db.$transaction([
     db.sesionVerificada.deleteMany({ where: { miembroId, id: { not: sesionActual } } }),
     db.codigoDeRespaldo.deleteMany({ where: { miembroId } }),
     db.dosPasos.deleteMany({ where: { miembroId } }),
   ]);
+  return { ok: true };
 }
 
 /**
  * El dueno le reinicia la app a otro miembro que perdio el celular y sus
- * codigos de respaldo: se le quita la app y se le cierran las sesiones. Al
- * entrar de nuevo con Google, configura una app nueva.
+ * codigos de respaldo: se le quita la app y sus sesiones dejan de estar
+ * verificadas. En su proximo clic, Luka le pregunta de nuevo si la activa.
  *
  * Solo el dueno, solo a alguien de su hogar, y no a si mismo (para eso
  * estan los codigos de respaldo): si no, cualquiera con la sesion de Google
@@ -348,6 +393,7 @@ export async function reiniciarAppDe(
     await tx.sesionVerificada.deleteMany({ where: { miembroId } });
     await tx.codigoDeRespaldo.deleteMany({ where: { miembroId } });
     await tx.dosPasos.deleteMany({ where: { miembroId } });
+    await tx.miembro.update({ where: { id: miembroId }, data: { decidioDosPasosEn: null } });
   });
 }
 

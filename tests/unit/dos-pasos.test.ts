@@ -200,15 +200,25 @@ describe("los codigos de respaldo", () => {
 });
 
 describe("estadoDeAcceso", () => {
-  test("sin hogar no hay nada; sin app, configurar; con app, verificar hasta poner el codigo", () => {
-    expect(estadoDeAcceso({ conHogar: false, appConfigurada: true, sesionVerificada: true })).toBe("sin-sesion");
-    expect(estadoDeAcceso({ conHogar: true, appConfigurada: false, sesionVerificada: false })).toBe("configurar");
-    expect(estadoDeAcceso({ conHogar: true, appConfigurada: true, sesionVerificada: false })).toBe("verificar");
-    expect(estadoDeAcceso({ conHogar: true, appConfigurada: true, sesionVerificada: true })).toBe("listo");
+  const estado = (p: Partial<Parameters<typeof estadoDeAcceso>[0]>) =>
+    estadoDeAcceso({ conHogar: true, appConfigurada: false, sesionVerificada: false, decidio: false, ...p });
+
+  test("sin hogar no hay nada", () => {
+    expect(estado({ conHogar: false, appConfigurada: true, sesionVerificada: true, decidio: true })).toBe("sin-sesion");
   });
 
-  test("si se quito la app (otro celular), hay que configurarla aunque la sesion estuviera verificada", () => {
-    expect(estadoDeAcceso({ conHogar: true, appConfigurada: false, sesionVerificada: true })).toBe("configurar");
+  test("con la app activa, se pide el codigo hasta ponerlo", () => {
+    expect(estado({ appConfigurada: true, decidio: true })).toBe("verificar");
+    expect(estado({ appConfigurada: true, sesionVerificada: true, decidio: true })).toBe("listo");
+  });
+
+  test("sin la app: la primera vez, Luka pregunta; si ya eligio, entra solo con Google", () => {
+    expect(estado({})).toBe("elegir");
+    expect(estado({ decidio: true })).toBe("listo");
+  });
+
+  test("con la app activa, el codigo se pide aunque no hubiera elegido antes (cuentas de antes del cambio)", () => {
+    expect(estado({ appConfigurada: true })).toBe("verificar");
   });
 });
 

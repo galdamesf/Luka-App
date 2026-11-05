@@ -7,12 +7,15 @@ import type { EstadoFormulario } from "./formulario";
  * cifrado, huellas) esta en src/lib/dos-pasos.ts y lo que toca la base en
  * src/datos/dos-pasos.ts.
  *
- * Entrar a Luka son dos pasos, para todos los miembros:
+ * La verificacion es opcional: cada persona elige si la activa. La primera
+ * vez que entra, Luka le pregunta; despues la activa o la desactiva en «Tu
+ * hogar». Con ella, entrar a Luka son dos pasos:
  *  1. Google: dice quien eres.
  *  2. Un codigo de 6 digitos de la app de autenticacion de tu celular (Google
  *     Authenticator u otra): prueba que tienes tu celular. Si lo perdiste,
  *     sirve uno de los codigos de respaldo, una vez cada uno.
- * Sin el paso 2 no se ve nada: ni paginas, ni boletas, ni el PDF semanal.
+ * Quien la tiene activa no ve nada sin el paso 2: ni paginas, ni boletas, ni
+ * el PDF semanal.
  */
 
 export const DOS_PASOS = {
@@ -38,29 +41,32 @@ export const DOS_PASOS = {
 /**
  * En que punto esta quien abre Luka:
  * - "sin-sesion": no entro con Google, o ya no es parte del hogar.
- * - "configurar": entro con Google pero todavia no tiene la app configurada.
+ * - "elegir": entro con Google y todavia no elige si activa la verificacion.
  * - "verificar": tiene la app, y en esta sesion todavia no puso el codigo.
- * - "listo": hizo los dos pasos. Recien aqui se ve el hogar.
+ * - "listo": puede ver el hogar: puso el codigo, o eligio entrar solo con Google.
  */
-export type EstadoDeAcceso = "sin-sesion" | "configurar" | "verificar" | "listo";
+export type EstadoDeAcceso = "sin-sesion" | "elegir" | "verificar" | "listo";
 
 export function estadoDeAcceso({
   conHogar,
   appConfigurada,
   sesionVerificada,
+  decidio,
 }: {
   conHogar: boolean;
   appConfigurada: boolean;
   sesionVerificada: boolean;
+  /** Si ya eligio si usar la verificacion (al activarla o con «Ahora no»). */
+  decidio: boolean;
 }): EstadoDeAcceso {
   if (!conHogar) return "sin-sesion";
-  // Sin app no hay nada que verificar: primero se configura, aunque la sesion
-  // ya estuviera verificada (por ejemplo, al pasar la app a otro celular).
-  if (!appConfigurada) return "configurar";
-  return sesionVerificada ? "listo" : "verificar";
+  // Con la app activa, siempre se pide el codigo.
+  if (appConfigurada) return sesionVerificada ? "listo" : "verificar";
+  return decidio ? "listo" : "elegir";
 }
 
-/** Adonde va cada estado que no es "listo". */
+/** La pregunta al entrar, el codigo y configurar la app. */
+export const RUTA_ELEGIR = "/verificacion/elegir";
 export const RUTA_VERIFICAR = "/verificacion";
 export const RUTA_CONFIGURAR = "/verificacion/configurar";
 
