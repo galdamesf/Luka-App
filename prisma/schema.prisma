@@ -75,6 +75,9 @@ model Miembro {
   invitadoEn DateTime   @default(now()) @map("invitado_en")
   /// La primera vez que entro. Vacio = invitacion pendiente.
   entroEn    DateTime?  @map("entro_en")
+  /// Cuando eligio si usar la verificacion en dos pasos, que es opcional: al
+  /// activarla o con «Ahora no». Vacio = Luka se lo pregunta al entrar.
+  decidioDosPasosEn DateTime? @map("decidio_dos_pasos_en")
 
   /// Si el hogar se borra, sus miembros se van con el.
   hogar            Hogar             @relation(fields: [hogarId], references: [id], onDelete: Cascade)

@@ -20,7 +20,7 @@ export const RESPONSABLE = {
 } as const;
 
 /** La fecha de la ultima version de los dos documentos. */
-export const ACTUALIZADO = "4 de noviembre de 2026";
+export const ACTUALIZADO = "5 de noviembre de 2026";
 
 export type BloqueLegal =
   | { tipo: "parrafo"; texto: string }
@@ -65,7 +65,7 @@ export const PRIVACIDAD: DocumentoLegal = {
           `Las boletas que subes: fotos o PDF de hasta ${mb(TAMANO_MAXIMO_BOLETA)}. Una foto de más de ${mb(ACHICAR_DESDE)} se achica en tu navegador antes de subir, y al hacerlo pierde sus datos ocultos, como la ubicación donde se sacó.`,
           "Tu hogar: quiénes están, quién es el dueño, a qué correos se invitó y quién anotó cada gasto.",
           "Para borrar un hogar: un código temporal que se manda al correo del dueño. Luka guarda solo una huella cifrada del código, nunca el código, y la borra al usarlo o con el hogar.",
-          "Para la verificación en dos pasos: la clave de la app de autenticación de tu celular, guardada cifrada; una huella de cada código de respaldo, nunca el código; cuándo la configuraste, los intentos fallidos y qué sesiones ya pusieron el código. Luka no pide ni guarda tu número de teléfono.",
+          "Para la verificación en dos pasos: si elegiste activarla y cuándo. Si la activas, además la clave de la app de autenticación de tu celular, guardada cifrada; una huella de cada código de respaldo, nunca el código; cuándo la configuraste, los intentos fallidos y qué sesiones ya pusieron el código. Luka no pide ni guarda tu número de teléfono.",
           "Datos técnicos de cada visita (dirección IP, navegador, hora), que registra el servicio donde funciona Luka para operar y protegerlo.",
         ),
       ],
@@ -144,7 +144,7 @@ export const PRIVACIDAD: DocumentoLegal = {
         lista(
           "Todo viaja cifrado (HTTPS).",
           "Cada hogar está separado, y en cada visita se revisa que sigas siendo parte del tuyo.",
-          `Entrar son dos pasos para todos: Google y un código de ${DOS_PASOS.digitos} dígitos de la app de autenticación de tu celular. Tras ${DOS_PASOS.intentos} códigos equivocados seguidos, se bloquea por ${DOS_PASOS.minutosDeBloqueo} minutos.`,
+          `La verificación en dos pasos es opcional: cada persona elige si la activa. Con ella, entrar son dos pasos: Google y un código de ${DOS_PASOS.digitos} dígitos de la app de autenticación de tu celular. Tras ${DOS_PASOS.intentos} códigos equivocados seguidos, se bloquea por ${DOS_PASOS.minutosDeBloqueo} minutos.`,
           `La sesión se cierra sola tras ${MINUTOS_SIN_USO} minutos sin uso, a las ${HORAS_MAXIMAS} horas como máximo y cada vez que Luka se actualiza.`,
           "Las boletas se guardan en un almacenamiento privado y solo se muestran a quien está en ese hogar.",
           `Borrar un hogar exige un código que llega al correo del dueño y que vence en ${CODIGO_DE_BORRADO.minutosDeVigencia} minutos.`,

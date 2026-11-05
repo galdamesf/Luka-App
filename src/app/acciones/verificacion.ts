@@ -5,9 +5,10 @@ import { signOut } from "@/auth";
 import {
   ErrorDeDosPasos,
   confirmarConfiguracion,
+  elegirSinDosPasos,
   verificarCodigo,
 } from "@/datos/dos-pasos";
-import { RUTA_CONFIGURAR, RUTA_VERIFICAR, type EstadoConCodigos } from "@/dominio/dos-pasos";
+import { RUTA_ELEGIR, RUTA_VERIFICAR, type EstadoConCodigos } from "@/dominio/dos-pasos";
 import type { EstadoFormulario } from "@/dominio/formulario";
 import { FaltaClaveDosPasos } from "@/lib/dos-pasos";
 import { RUTA_SESION_TERMINADA, leerAcceso } from "@/lib/hogar-actual";
@@ -20,6 +21,18 @@ import { RUTA_SESION_TERMINADA, leerAcceso } from "@/lib/hogar-actual";
 /** Adonde se llega despues del segundo paso: el panel, con el saludo. */
 const AL_ENTRAR = "/?bienvenida=1";
 
+/**
+ * «Ahora no», al entrar: entra solo con Google y Luka no se lo vuelve a
+ * preguntar. La verificacion se puede activar despues en «Tu hogar».
+ */
+export async function accionAhoraNo(): Promise<void> {
+  const acceso = await leerAcceso();
+  if (acceso.estado === "sin-sesion" || acceso.hogar === null) redirect(RUTA_SESION_TERMINADA);
+  if (acceso.estado === "verificar") redirect(RUTA_VERIFICAR);
+  if (acceso.estado === "elegir") await elegirSinDosPasos(acceso.hogar.miembroId);
+  redirect(AL_ENTRAR);
+}
+
 function fallo(error: unknown): string {
   if (error instanceof ErrorDeDosPasos) return error.message;
   if (error instanceof FaltaClaveDosPasos) {
@@ -29,12 +42,16 @@ function fallo(error: unknown): string {
   return "No se pudo revisar el código. Intenta de nuevo.";
 }
 
-/** El primer codigo de la app recien escaneada: la deja configurada y entrega los codigos de respaldo. */
+/**
+ * El primer codigo de la app recien escaneada: la deja configurada y entrega
+ * los codigos de respaldo. Sirve al entrar (si eligio activarla) y desde «Tu
+ * hogar», para quien entra solo con Google.
+ */
 export async function accionConfirmarApp(_previo: EstadoConCodigos, datos: FormData): Promise<EstadoConCodigos> {
   const acceso = await leerAcceso();
   if (acceso.estado === "sin-sesion" || acceso.hogar === null || acceso.sesionId === null) redirect(RUTA_SESION_TERMINADA);
   if (acceso.estado === "verificar") redirect(RUTA_VERIFICAR);
-  if (acceso.estado === "listo") redirect("/");
+  if (acceso.appConfigurada) redirect("/");
 
   try {
     const resultado = await confirmarConfiguracion(acceso.hogar.miembroId, acceso.sesionId, String(datos.get("codigo") ?? ""));
@@ -49,7 +66,7 @@ export async function accionConfirmarApp(_previo: EstadoConCodigos, datos: FormD
 export async function accionVerificarCodigo(_previo: EstadoFormulario, datos: FormData): Promise<EstadoFormulario> {
   const acceso = await leerAcceso();
   if (acceso.estado === "sin-sesion" || acceso.hogar === null || acceso.sesionId === null) redirect(RUTA_SESION_TERMINADA);
-  if (acceso.estado === "configurar") redirect(RUTA_CONFIGURAR);
+  if (acceso.estado === "elegir") redirect(RUTA_ELEGIR);
   if (acceso.estado === "listo") redirect("/");
 
   let entro = false;

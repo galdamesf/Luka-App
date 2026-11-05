@@ -9,7 +9,7 @@ type Props = {
   yo: { miembroId: string; rol: Rol };
   accionQuitar: AccionFormulario;
   accionHacerDueno: AccionFormulario;
-  /** Quienes ya configuraron la app de autenticacion. */
+  /** Quienes tienen la verificacion en dos pasos activa (la app configurada). */
   conApp: ReadonlySet<string>;
   /** El dueno le reinicia la app a quien perdio el celular. */
   accionReiniciarApp: AccionFormulario;
@@ -58,7 +58,7 @@ export function ListaMiembros({ miembros, yo, accionQuitar, accionHacerDueno, co
                   <span className={`${PILDORA} border border-borde text-texto-tenue`}>Invitación pendiente</span>
                 )}
                 {!pendiente && !conApp.has(m.id) && (
-                  <span className={`${PILDORA} border border-borde text-texto-tenue`}>Sin app todavía</span>
+                  <span className={`${PILDORA} border border-borde text-texto-tenue`}>Sin dos pasos</span>
                 )}
               </p>
               <p className="truncate text-xs text-texto-tenue">
@@ -94,9 +94,9 @@ export function ListaMiembros({ miembros, yo, accionQuitar, accionHacerDueno, co
                   >
                     <p>
                       Hazlo solo si {primerNombre(m)} perdió el celular y sus códigos de respaldo: su app deja de servir
-                      para Luka y su sesión se cierra.
+                      para Luka.
                     </p>
-                    <p>La próxima vez que entre con Google, configura una app nueva.</p>
+                    <p>En su próximo clic, Luka le pregunta si quiere activar la verificación de nuevo.</p>
                   </ConfirmarAccion>
                 )}
                 <ConfirmarAccion

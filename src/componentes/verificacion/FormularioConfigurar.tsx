@@ -14,6 +14,8 @@ type Props = {
   /** La clave agrupada de a 4, para escribirla a mano. */
   claveAgrupada: string;
   correo: string;
+  /** Adonde lleva el boton despues de guardar los codigos: el panel al entrar, o «Tu hogar». */
+  alTerminar: { href: string; etiqueta: string };
 };
 
 const PASO = "flex size-6 shrink-0 items-center justify-center rounded-full bg-acento text-xs font-bold text-acento-tinta";
@@ -23,7 +25,7 @@ const PASO = "flex size-6 shrink-0 items-center justify-center rounded-full bg-a
  * primer codigo y guardar los codigos de respaldo. Al confirmar, el QR
  * desaparece y quedan los codigos, que se ven esta sola vez.
  */
-export function FormularioConfigurar({ accion, qrSvg, enlace, claveAgrupada, correo }: Props) {
+export function FormularioConfigurar({ accion, qrSvg, enlace, claveAgrupada, correo, alTerminar }: Props) {
   const [estado, enviar, enviando] = useActionState(accion, ESTADO_CON_CODIGOS);
   const idCampo = useId();
   const idError = useId();
@@ -41,8 +43,8 @@ export function FormularioConfigurar({ accion, qrSvg, enlace, claveAgrupada, cor
           </p>
         </div>
         <CodigosDeRespaldo codigos={estado.codigos} correo={correo} />
-        <Link href="/?bienvenida=1" className="boton-luka w-full">
-          Ya los guardé: entrar a Luka
+        <Link href={alTerminar.href} className="boton-luka w-full">
+          {alTerminar.etiqueta}
         </Link>
       </div>
     );

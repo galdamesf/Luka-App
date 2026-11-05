@@ -165,21 +165,40 @@ export async function accionRenovarRespaldos(
 }
 
 /**
- * Pasar la app a otro celular: se quita la actual y Luka pide configurar la
- * nueva de inmediato, en esta misma sesion.
+ * Pasar la app a otro celular: con un codigo de la app o de respaldo, se
+ * quita la actual y Luka muestra de inmediato el QR para la nueva, en esta
+ * misma sesion.
  */
 export async function accionCambiarDeCelular(
   _previo: EstadoFormulario,
-  _datos: FormData,
+  datos: FormData,
 ): Promise<EstadoFormulario> {
   const { miembroId } = await hogarActual();
   const { sesionId } = await leerAcceso();
   try {
-    await quitarMiApp(miembroId, sesionId ?? "");
+    const resultado = await quitarMiApp(miembroId, sesionId ?? "", String(datos.get("codigo") ?? ""));
+    if (!resultado.ok) return { ok: false, mensaje: resultado.mensaje, errores: {} };
   } catch (error) {
     return fallo(error);
   }
   redirect(RUTA_CONFIGURAR);
+}
+
+/** Desactivar la verificacion en dos pasos, con un codigo de la app o de respaldo: desde ahora entra solo con Google. */
+export async function accionDesactivarDosPasos(
+  _previo: EstadoFormulario,
+  datos: FormData,
+): Promise<EstadoFormulario> {
+  const { miembroId } = await hogarActual();
+  const { sesionId } = await leerAcceso();
+  try {
+    const resultado = await quitarMiApp(miembroId, sesionId ?? "", String(datos.get("codigo") ?? ""));
+    if (!resultado.ok) return { ok: false, mensaje: resultado.mensaje, errores: {} };
+  } catch (error) {
+    return fallo(error);
+  }
+  revalidatePath("/hogar");
+  return LISTO("Listo: desde ahora entras solo con Google.");
 }
 
 /** El dueno le reinicia la app a un miembro que perdio el celular y sus codigos de respaldo. */
@@ -196,5 +215,5 @@ export async function accionReiniciarApp(
     return fallo(error);
   }
   revalidatePath("/hogar");
-  return LISTO("Listo: la próxima vez que entre, configura su app de nuevo.");
+  return LISTO("Listo: en su próximo clic, Luka le pregunta si quiere activarla de nuevo.");
 }
