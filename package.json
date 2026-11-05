@@ -2,6 +2,9 @@
   "name": "control-gastos",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "predev": "prisma migrate deploy && prisma generate && prisma db seed && tsx prisma/ordenar-boletas.ts",
@@ -39,7 +42,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
-    "@types/node": "^22.10.5",
+    "@types/node": "^24.19.2",
     "@types/nodemailer": "8.0.2",
     "@types/pg": "^8.11.10",
     "@types/react": "^19.0.2",
