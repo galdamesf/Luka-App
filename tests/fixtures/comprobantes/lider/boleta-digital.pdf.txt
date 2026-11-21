@@ -1,0 +1,46 @@
+ AV.EJEMPLO 1000,SANTIAGO
+                76000000-0
+        SUC: AV.LAS CONDES 12345
+                  SANTIAGO
+Bol. Electronica: 002600000123 Caja: 0002
+Fecha: 15/11/2026      Hora: 18:22:10
+
+
+  CANT   PRECIO UNITARIO                TOTAL
+CODIGO        DESC. ARTICULO            NETO
+---------------------------------------------
+00000000000001LECHE ENTERA 1L       $ 1.190
+2 X $ 2.490
+00000000000002PAN MOLDE GRANDE      $ 4.980
+1000214       DESPACHO A DOMICIL    $ 2.990
+DESCUENTO DESPACHO    -2.990
+
+        TOTAL NETO $                5.185
+   TOTAL IVA (19%) $                  985
+  TARJETA DE CREDITO $              6.170
+
+TOTAL NUMERO DE ARTIC VEND = 3
+NRO DE ORDEN 20000000123
+  COMPROBANTE DE VENTA TARJETA DE CREDITO
+597000000000 - Local 199
+15/11/2026
+************4821 CR
+TOTAL                6.170
+COD AUTORIZACION: 001234
+NUMERO UNICO    : 0199000000000151120261822
+
+
+
+============================================
+                 ** MI CLUB **
+============================================
+BIENVENIDO A       MI CLUB LIDER
+Rut Mi Club: ****1111
+
+
+
+
+Timbre Electronico SII Res. 85 de 2011;
+  Verifique Documento: www.sii.cl
+ ############# L I D E R #############
+##### PRECIOS BAJOS TODOS LOS DIAS #####

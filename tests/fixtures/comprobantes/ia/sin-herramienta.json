@@ -1,0 +1,10 @@
+{
+  "id": "msg_01EjemploSinHerramienta",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [{ "type": "text", "text": "No puedo leer este correo." }],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": { "input_tokens": 1187, "output_tokens": 12 }
+}

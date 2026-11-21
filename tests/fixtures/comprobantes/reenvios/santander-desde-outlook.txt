@@ -1,0 +1,37 @@
+De: Camila Rojas <camila@ejemplo.cl>
+Reenviado-por: camila@ejemplo.cl
+Asunto: RV: Comprobante Transferencia de fondos
+Recibido: 2026-11-19T11:20:00Z
+
+<html><body>
+<div style="font-family:Calibri,Arial">Para el arriendo.</div>
+<hr style="display:inline-block;width:98%" tabindex="-1">
+<div id="divRplyFwdMsg" dir="ltr"><font face="Calibri, sans-serif" style="font-size:11pt"><b>De:</b> Santander &lt;mensajeria@santander.cl&gt;<br>
+<b>Enviado:</b> martes, 18 de noviembre de 2026 20:41<br>
+<b>Para:</b> Camila Rojas &lt;camila@ejemplo.cl&gt;<br>
+<b>Asunto:</b> Comprobante Transferencia de fondos</font>
+<div>&nbsp;</div>
+</div>
+<div>
+<table width="600" cellpadding="0" cellspacing="0" align="center">
+<tr><td><b>Comprobante</b><br>Transferencia de fondos</td></tr>
+<tr><td>Estimado(a) CAMILA ANDREA ROJAS SOTO:</td></tr>
+<tr><td>Te enviamos el detalle de la transferencia realizada el 18/11/2026.</td></tr>
+<tr><td>Monto transferido</td></tr>
+<tr><td><strong>$&nbsp;245.000</strong></td></tr>
+<tr><td><b>Datos de origen</b></td></tr>
+<tr><td>Tipo de cuenta</td></tr><tr><td>Cuenta Corriente</td></tr>
+<tr><td>N&ordm; de cuenta</td></tr><tr><td>0-000-12-34567-8</td></tr>
+<tr><td>RUT</td></tr><tr><td>11.111.111-1</td></tr>
+<tr><td>Nombre</td><td>CAMILA ANDREA ROJAS SOTO</td></tr>
+<tr><td>Comentario</td><td>Arriendo noviembre</td></tr>
+<tr><td><b>Datos de destino</b></td></tr>
+<tr><td>Nombre</td></tr><tr><td>Pedro Mu&ntilde;oz Lagos</td></tr>
+<tr><td>RUT</td></tr><tr><td>22.222.222-2</td></tr>
+<tr><td>Banco</td></tr><tr><td>Banco de Chile</td></tr>
+<tr><td>Tipo de cuenta</td><td>Cuenta Vista</td></tr>
+<tr><td>N&ordm; de cuenta</td><td>00-123-45678-90</td></tr>
+<tr><td>E-mail</td><td></td></tr>
+</table>
+</div>
+</body></html>

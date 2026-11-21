@@ -156,6 +156,19 @@ no junto a las acciones: exportar una constante desde ahi rompe el build.
 los del mes completo: dividir $300.000 por 31 un dia 5 daria una cifra sin
 sentido. El resumen expone `diasConsiderados` para poder explicarlo en pantalla.
 
+**Los comprobantes por correo se leen primero con plantillas y despues con
+IA.** Es la seccion A de "Gastos que llegan solos": el lector, todavia sin buzon
+ni base. Una plantilla (`src/dominio/plantillas/`) dice como leer un tipo de
+correo de un remitente: rapido, gratis y siempre igual. Lo que ninguna sabe
+leer, y trae un monto, lo lee Claude Haiku (`src/lib/leer-con-ia.ts`), pero
+antes se borran RUT, numeros de cuenta (quedan los ultimos 4), correos,
+telefonos, enlaces, direcciones y nombres. Si la IA da un monto que no aparece
+en el correo, no se acepta. Sin `ANTHROPIC_API_KEY` el lector funciona igual,
+solo con plantillas. Para agregar un banco o una tienda: un archivo como
+`santander.ts`, sus ejemplos en `tests/fixtures/comprobantes/` (siempre con
+datos inventados) y su caso en `tests/unit/plantillas.test.ts`. Se prueba con
+`npm run test:unit -- comprobantes plantillas`.
+
 ## Sobre las dependencias
 
 `npm audit` deja **3 avisos altos** que no se pueden cerrar hoy, y es a
@@ -206,6 +219,9 @@ src/
     informe.ts       Comparacion entre meses, medios de pago y reparto semanal
     categorias-base.ts  Las 13 categorias y su paleta
     formulario.ts    Tipos del estado de los formularios
+    comprobantes/    El lector de comprobantes por correo: tipos, normalizar,
+                     limpiar datos personales y el lector (plantillas y luego IA)
+    plantillas/      Como leer cada banco y tienda sin IA
   datos/             Acceso a Prisma. Recibe el cliente por parametro
     gastos.ts
     categorias.ts
@@ -217,9 +233,12 @@ src/
     url-db.ts        Deriva la URL de la base de pruebas
     contraste.ts     Calculo de contraste WCAG, usado por los tests del tema
     boletas.ts       Guardado seguro de las fotos de boletas
+    leer-con-ia.ts   Lectura de comprobantes con Claude Haiku (opcional)
 tests/
   unit/              Logica pura
   db/                Integracion contra Postgres
+  fixtures/
+    comprobantes/    Correos de ejemplo por banco y tienda, con datos inventados
 ```
 
 ## Estado
@@ -234,3 +253,6 @@ tests/
 - [ ] Seccion 8: despliegue (y mover las boletas a object storage)
 - [ ] Seccion 9: resumen diario por correo
 - [ ] Mas adelante: presupuestos por categoria
+- [x] Gastos que llegan solos, seccion A: lector de comprobantes (plantillas + IA)
+- [ ] Gastos que llegan solos, secciones B a F: bandeja, buzon, cartola, bancos y
+      cuentas, y Luka en Claude

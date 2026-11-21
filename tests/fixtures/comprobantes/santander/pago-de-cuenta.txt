@@ -1,0 +1,29 @@
+De: Boton de Pago <bdp@santander.cl>
+Reenviado-por: camila@ejemplo.cl
+Asunto: Comprobante de Pago
+Recibido: 2026-11-05T12:12:47Z
+
+<html><body>
+<table width="600" align="center">
+<tr><td><img src="cid:logo.png" alt=""></td></tr>
+<tr><td><b>Comprobante de Pago</b></td></tr>
+<tr><td>El pago se ha realizado con &eacute;xito</td></tr>
+<tr><td>Estimado (a): CAMILA ANDREA ROJAS SOTO</td></tr>
+<tr><td>Con fecha 05-11-2026 hemos procedido a realizar el pago de tu cuenta por un total de:</td></tr>
+<tr><td style="font-size:26px"><b>$48.350</b></td></tr>
+<tr><td>Cuenta Nro.:</td></tr>
+<tr><td>0-000-12-34567-8</td></tr>
+<tr><td>Servicio:</td></tr>
+<tr><td>ENEL DISTRIBUCION</td></tr>
+<tr><td>Hora Transacci&oacute;n:</td></tr>
+<tr><td>09:12 Hrs</td></tr>
+<tr><td>NOR:</td></tr>
+<tr><td>000000000412345678</td></tr>
+<tr><td>Identificador del pago:</td></tr>
+<tr><td>Servicio</td><td>ENEL DISTRIBUCION</td></tr>
+<tr><td>Producto</td><td>1120261105012345</td></tr>
+<tr><td>Cliente</td><td>1234567-8</td></tr>
+</table>
+<p>Nota: Este mail es generado de manera autom&aacute;tica, por favor no responda a este mensaje.</p>
+<img src="cid:ticket.png" alt="">
+</body></html>

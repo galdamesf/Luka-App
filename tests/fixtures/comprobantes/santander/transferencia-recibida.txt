@@ -1,0 +1,28 @@
+De: Santander <mensajeria@santander.cl>
+Reenviado-por: camila@ejemplo.cl
+Asunto: Aviso de Transferencia de Fondos
+Recibido: 2026-11-14T20:04:49Z
+
+<html><body>
+<table width="600" align="center">
+<tr><td><h1>Aviso de Transferencia de Fondos</h1></td></tr>
+<tr><td>ROJAS SOTO CAMILA ANDREA, ha recibido una transferencia</td></tr>
+</table>
+<table width="600" align="center">
+<tr><td><h3>Estimado: ROJAS SOTO CAMILA ANDREA</h3></td></tr>
+<tr><td>De acuerdo con lo instruido por nuestro cliente SERVICIOS DIGITALES ANDES SPA, le informamos que con Fecha: 14-11-2026 se ha realizado una transferencia de fondos hacia su cuenta del banco BANCO SANTANDER (CHILE) nro. 0-000-1234567-8.</td></tr>
+<tr><td><h3>Detalle de la operaci&oacute;n</h3></td></tr>
+</table>
+<table width="600" align="center">
+<tr><td>Rut cuenta origen</td><td>Titular cuenta origen</td></tr>
+<tr><td>77.777.777-7</td><td>SERVICIOS DIGITALES ANDES SPA</td></tr>
+<tr><td>Banco de Origen</td><td>Numero de la operacion</td></tr>
+<tr><td>BANCO DE CREDITO E INVERSIONES</td><td>26111420040412345678</td></tr>
+<tr><td>Comentario para el destinatario</td></tr>
+<tr><td>Boleta de honorarios octubre</td></tr>
+</table>
+<table width="600" align="center">
+<tr><td>Monto transferido 14-11-2026</td><td>$ 850.000</td></tr>
+</table>
+<p>Nota: Este e-mail es generado de manera automatica, por favor no responda a este mensaje. Asimismo, se han omitido acentos para evitar problemas de compatibilidad.</p>
+</body></html>

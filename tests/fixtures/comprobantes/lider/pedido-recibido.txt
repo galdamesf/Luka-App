@@ -1,0 +1,32 @@
+De: Lider.cl <contacto@info.lider.cl>
+Reenviado-por: camila@ejemplo.cl
+Asunto: Solicitud de compra recibida
+Recibido: 2026-11-15T04:25:13Z
+
+Solicitud de compra recibida
+Hola, Camila
+
+¡Gracias por preferirnos y comprar en Lider!
+
+Empezaremos a preparar tu pedido. Puedes revisar el estado y el detalle de tu compra en la sección Mis Pedidos.
+
+Tu número de orden es 5000000000123
+
+Importante: La boleta de tu compra será enviada cuando tu pedido esté preparado y listo para entrega.
+
+Despacho a Domicilio
+
+DESPACHO A DOMICILIO
+
+Av. Ejemplo 1234, Departamento 56
+
+Santiago, Región Metropolitana
+
+Información de tu compra
+
+Fecha de compra15/11/2026
+Medio de pagoCreditWebpay
+Subtotal$6.170
+Despacho a domicilio$0
+
+Total pagado$6.170
