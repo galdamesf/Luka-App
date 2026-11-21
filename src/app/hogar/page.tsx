@@ -3,7 +3,7 @@ import Link from "next/link";
 import { leerHogar } from "@/datos/hogares";
 import { appsDelHogar, estadoDeLaApp } from "@/datos/dos-pasos";
 import { RUTA_CONFIGURAR } from "@/dominio/dos-pasos";
-import { puedeBorrarHogar } from "@/dominio/hogar";
+import { primerNombre, puedeBorrarHogar } from "@/dominio/hogar";
 import { configuracionDeCorreo } from "@/lib/correo";
 import { hogarActual } from "@/lib/hogar-actual";
 import { hoyISO } from "@/lib/fecha";
@@ -14,6 +14,13 @@ import { InvitarMiembro } from "@/componentes/hogar/InvitarMiembro";
 import { ConfirmarAccion } from "@/componentes/hogar/ConfirmarAccion";
 import { BorrarHogar } from "@/componentes/hogar/BorrarHogar";
 import { RenovarRespaldos } from "@/componentes/hogar/RenovarRespaldos";
+import { TusBancos } from "@/componentes/hogar/TusBancos";
+import { TusCorreos } from "@/componentes/hogar/TusCorreos";
+import { leerLosBancosDelHogar } from "@/datos/bancos";
+import { leerMisCorreos } from "@/datos/correos-registrados";
+import { leerMiBuzon } from "@/datos/buzon";
+import { BANCOS, remitentesConocidos } from "@/dominio/bancos";
+import { configuracionDelBuzon } from "@/lib/buzon";
 import {
   accionBorrarHogar,
   accionCambiarDeCelular,
@@ -27,6 +34,16 @@ import {
   accionRenovarRespaldos,
   accionSalirDelHogar,
 } from "../acciones/hogar";
+import { accionAgregarBanco, accionEditarCuentaBancaria, accionQuitarCuentaBancaria } from "../acciones/bancos";
+import {
+  accionAgregarCorreo,
+  accionCambiarMiDireccion,
+  accionConfirmarCorreo,
+  accionOlvidarCodigoDeGmail,
+  accionPedirCodigoDeCorreo,
+  accionQuitarCorreo,
+  accionRevisarBuzon,
+} from "../acciones/correos";
 
 export const metadata: Metadata = {
   title: "Hogar · Luka",
@@ -48,12 +65,24 @@ export default async function PaginaHogar() {
   // que entro (si no, la sesion se cierra aqui mismo), y de ese hogar, y de
   // ningun otro, se lee todo lo que sigue.
   const { hogarId, miembroId, rol } = await hogarActual();
-  const [hogar, miApp, conApp] = await Promise.all([leerHogar(hogarId), estadoDeLaApp(miembroId), appsDelHogar(hogarId)]);
+  const configDelBuzon = configuracionDelBuzon();
+  const [hogar, miApp, conApp, losBancos, misCorreos, miBuzon] = await Promise.all([
+    leerHogar(hogarId),
+    estadoDeLaApp(miembroId),
+    appsDelHogar(hogarId),
+    leerLosBancosDelHogar(hogarId, { hoy: hoyISO() }),
+    leerMisCorreos(hogarId, miembroId),
+    configDelBuzon === null ? null : leerMiBuzon(hogarId, miembroId, { base: configDelBuzon.direccion }),
+  ]);
   const soyDueno = rol === "DUENO";
   const entraron = hogar.miembros.filter((m) => m.entroEn !== null).length;
   const puedeBorrar = puedeBorrarHogar({ miembroId, rol }, hogar.miembros) === null;
   const miCorreo = hogar.miembros.find((m) => m.id === miembroId)?.correo ?? "";
   const hayCorreo = configuracionDeCorreo() !== null;
+  // De quien es cada cuenta, solo si en el hogar hay mas de una persona.
+  const nombres: Record<string, string> =
+    entraron > 1 ? Object.fromEntries(hogar.miembros.map((m) => [m.id, m.id === miembroId ? "tuya" : `de ${primerNombre(m)}`])) : {};
+  const remitentesDelCatalogo = Object.fromEntries(BANCOS.map((banco) => [banco.id, remitentesConocidos(banco.id)]));
 
   return (
     <main
@@ -106,6 +135,47 @@ export default async function PaginaHogar() {
           <InvitarMiembro accion={accionInvitar} />
         </section>
       )}
+
+      <section id="bancos" aria-labelledby="titulo-bancos" className={`mt-6 scroll-mt-24 ${TARJETA}`}>
+        <h2 id="titulo-bancos" className="text-lg font-bold tracking-tight">
+          Tus bancos y tarjetas
+        </h2>
+        <p className="mt-1 mb-4 max-w-[60ch] text-sm leading-relaxed text-texto-tenue">
+          De cada cuenta Luka guarda solo el banco y los últimos 4 dígitos: así sabe de cuál es cada comprobante y
+          reconoce los traspasos entre las cuentas del hogar. Todos los del hogar las ven.
+        </p>
+        <TusBancos
+          bancos={losBancos.bancos}
+          nombres={nombres}
+          remitentesDelCatalogo={remitentesDelCatalogo}
+          accionAgregar={accionAgregarBanco}
+          accionEditar={accionEditarCuentaBancaria}
+          accionQuitar={accionQuitarCuentaBancaria}
+        />
+      </section>
+
+      <section id="correos" aria-labelledby="titulo-correos" className={`mt-6 scroll-mt-24 ${TARJETA}`}>
+        <h2 id="titulo-correos" className="text-lg font-bold tracking-tight">
+          Tus correos y tu buzón
+        </h2>
+        <p className="mt-1 mb-4 max-w-[60ch] text-sm leading-relaxed text-texto-tenue">
+          Tus bancos y tiendas te mandan los comprobantes por correo. Con una regla en tu correo se los reenvías a tu
+          dirección de Luka, y Luka los deja en «Por revisar», en el panel. Nada cuenta hasta que lo confirmas.
+        </p>
+        <TusCorreos
+          correos={misCorreos}
+          buzon={miBuzon}
+          remitentes={losBancos.remitentes}
+          puedeMandarCodigos={hayCorreo}
+          accionAgregar={accionAgregarCorreo}
+          accionPedirCodigo={accionPedirCodigoDeCorreo}
+          accionConfirmar={accionConfirmarCorreo}
+          accionQuitar={accionQuitarCorreo}
+          accionRevisar={accionRevisarBuzon}
+          accionCambiarDireccion={accionCambiarMiDireccion}
+          accionOlvidarCodigoDeGmail={accionOlvidarCodigoDeGmail}
+        />
+      </section>
 
       <section aria-labelledby="titulo-dos-pasos" className={`mt-6 ${TARJETA}`}>
         <h2 id="titulo-dos-pasos" className="text-lg font-bold tracking-tight">

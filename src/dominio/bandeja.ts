@@ -30,6 +30,8 @@ export type ItemPorRevisar = {
   confianza: number | null;
   /** Las fuentes de lo que se junto con este: "Aviso de cargo de Consorcio". */
   juntados: string[];
+  /** La cuenta o tarjeta del hogar de la que es, si se sabe: "Cuenta sueldo · •••• 1234". */
+  cuenta?: string | null;
   revision: Revision;
 };
 

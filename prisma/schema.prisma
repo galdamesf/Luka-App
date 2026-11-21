@@ -69,33 +69,42 @@ model Hogar {
 /// El correo es unico: cada persona esta en un solo hogar. Mientras no entra
 /// por primera vez (`entroEn` vacio) es una invitacion pendiente.
 model Miembro {
-  id         String     @id @default(cuid())
-  hogarId    String     @map("hogar_id")
+  id                String     @id @default(cuid())
+  hogarId           String     @map("hogar_id")
   /// En minusculas, como lo compara la entrada.
-  correo     String     @unique @db.VarChar(254)
+  correo            String     @unique @db.VarChar(254)
   /// El nombre que entrega Google. Vacio mientras es una invitacion.
-  nombre     String?    @db.VarChar(120)
-  rol        RolMiembro @default(MIEMBRO)
-  invitadoEn DateTime   @default(now()) @map("invitado_en")
+  nombre            String?    @db.VarChar(120)
+  rol               RolMiembro @default(MIEMBRO)
+  invitadoEn        DateTime   @default(now()) @map("invitado_en")
   /// La primera vez que entro. Vacio = invitacion pendiente.
-  entroEn    DateTime?  @map("entro_en")
+  entroEn           DateTime?  @map("entro_en")
   /// Cuando eligio si usar la verificacion en dos pasos, que es opcional: al
   /// activarla o con «Ahora no». Vacio = Luka se lo pregunta al entrar.
-  decidioDosPasosEn DateTime? @map("decidio_dos_pasos_en")
+  decidioDosPasosEn DateTime?  @map("decidio_dos_pasos_en")
 
   /// Si el hogar se borra, sus miembros se van con el.
-  hogar            Hogar             @relation(fields: [hogarId], references: [id], onDelete: Cascade)
-  gastosAnotados   Gasto[]
-  codigosDeBorrado CodigoDeBorrado[]
+  hogar                 Hogar              @relation(fields: [hogarId], references: [id], onDelete: Cascade)
+  gastosAnotados        Gasto[]
+  codigosDeBorrado      CodigoDeBorrado[]
   /// La app de autenticacion de su celular (verificacion en dos pasos).
-  dosPasos          DosPasos?
-  codigosDeRespaldo CodigoDeRespaldo[]
-  sesionesVerificadas SesionVerificada[]
+  dosPasos              DosPasos?
+  codigosDeRespaldo     CodigoDeRespaldo[]
+  sesionesVerificadas   SesionVerificada[]
   /// Su sueldo, con su historial. Antes de que salga del hogar se cierra
   /// (src/datos/sueldos.ts): mientras tenga uno abierto, no se puede borrar.
-  sueldos             Sueldo[]
+  sueldos               Sueldo[]
   /// Sus cuentas y tarjetas, por sus ultimos 4 digitos.
-  cuentasBancarias    CuentaBancaria[]
+  cuentasBancarias      CuentaBancaria[]
+  /// Los correos donde le llegan comprobantes, ademas del de Google con que
+  /// entra (que ya cuenta como suyo).
+  correosRegistrados    CorreoRegistrado[]
+  /// Su direccion de Luka: a donde reenvia sus comprobantes.
+  buzon                 Buzon?
+  /// Lo que fue llegando a su buzon, para que vea que paso con cada correo.
+  llegadasAlBuzon       LlegadaAlBuzon[]
+  /// Los movimientos que llegaron reenviados por esta persona.
+  movimientosReenviados Movimiento[]
 
   /// Para que el sueldo apunte al miembro y a su hogar a la vez.
   @@unique([id, hogarId])
@@ -525,10 +534,13 @@ enum DestinoMovimiento {
 
 enum TipoCuentaBancaria {
   CUENTA_CORRIENTE
+  /// Tambien la CuentaRUT.
   CUENTA_VISTA
   CUENTA_AHORRO
   TARJETA_CREDITO
   TARJETA_DEBITO
+  /// Tenpo, MACH, Mercado Pago y las demas que se cargan antes de usarlas.
+  TARJETA_PREPAGO
 }
 
 /// Lo que llego de un comprobante.
@@ -578,6 +590,18 @@ model Movimiento {
   reenviadoAMano      Boolean            @default(false) @map("reenviado_a_mano")
   /// Cuando llego el correo.
   recibidoEn          DateTime           @map("recibido_en")
+  /// Quien lo reenvio, mientras siga en el hogar. Vacio en lo que no llego
+  /// por el buzon (los ejemplos, npm run correos:probar).
+  miembroId           String?            @map("miembro_id")
+  /// El correo desde el que lo reenvio: uno confirmado de esa persona.
+  reenviadoPor        String?            @map("reenviado_por") @db.VarChar(254)
+  /// Quien lo mando de verdad: el banco o la tienda. Con esto Luka aprende
+  /// los remitentes de cada banco para la regla de reenvio.
+  remitente           String?            @db.VarChar(254)
+  /// La cuenta o tarjeta del hogar de donde salio la plata (o a la que
+  /// entro), por el banco y los ultimos 4 digitos. Vacia si no se sabe con
+  /// seguridad: es mejor no decir que decir la equivocada.
+  cuentaBancariaId    String?            @map("cuenta_bancaria_id")
   /// Como se confirmo. Solo en CONFIRMADO.
   destino             DestinoMovimiento?
   /// El gasto que se creo o con el que se enlazo. Si se borra ese gasto,
@@ -590,12 +614,17 @@ model Movimiento {
   creadoEn            DateTime           @default(now()) @map("creado_en")
   actualizadoEn       DateTime           @updatedAt @map("actualizado_en")
 
-  hogar      Hogar        @relation(fields: [hogarId], references: [id], onDelete: Restrict)
-  gasto      Gasto?       @relation(fields: [gastoId], references: [id], onDelete: SetNull)
-  deuda      Deuda?       @relation(fields: [deudaId], references: [id], onDelete: SetNull)
+  hogar          Hogar            @relation(fields: [hogarId], references: [id], onDelete: Restrict)
+  gasto          Gasto?           @relation(fields: [gastoId], references: [id], onDelete: SetNull)
+  deuda          Deuda?           @relation(fields: [deudaId], references: [id], onDelete: SetNull)
   /// Si el principal se fuera, el juntado se va con el: era su eco.
-  juntadoCon Movimiento?  @relation("Juntados", fields: [juntadoConId], references: [id], onDelete: Cascade)
-  juntados   Movimiento[] @relation("Juntados")
+  juntadoCon     Movimiento?      @relation("Juntados", fields: [juntadoConId], references: [id], onDelete: Cascade)
+  juntados       Movimiento[]     @relation("Juntados")
+  /// Si esa persona sale del hogar, el movimiento se queda, sin ella.
+  miembro        Miembro?         @relation(fields: [miembroId], references: [id], onDelete: SetNull)
+  /// Si se borra la cuenta, el movimiento se queda, sin cuenta.
+  cuentaBancaria CuentaBancaria?  @relation(fields: [cuentaBancariaId], references: [id], onDelete: SetNull)
+  llegadas       LlegadaAlBuzon[]
 
   @@unique([hogarId, huella])
   @@index([hogarId, estado])
@@ -603,6 +632,8 @@ model Movimiento {
   @@index([gastoId])
   @@index([deudaId])
   @@index([juntadoConId])
+  @@index([miembroId])
+  @@index([cuentaBancariaId])
   @@map("movimientos")
 }
 
@@ -622,8 +653,9 @@ model CuentaBancaria {
   apodo     String?            @db.VarChar(60)
   creadoEn  DateTime           @default(now()) @map("creado_en")
 
-  hogar   Hogar    @relation(fields: [hogarId], references: [id], onDelete: Restrict)
-  miembro Miembro? @relation(fields: [miembroId], references: [id], onDelete: SetNull)
+  hogar       Hogar        @relation(fields: [hogarId], references: [id], onDelete: Restrict)
+  miembro     Miembro?     @relation(fields: [miembroId], references: [id], onDelete: SetNull)
+  movimientos Movimiento[]
 
   @@unique([hogarId, banco, tipo, ultimos4])
   @@index([hogarId, ultimos4])
@@ -654,4 +686,110 @@ model ReglaDeComercio {
   @@unique([hogarId, clave])
   @@index([categoriaId])
   @@map("reglas_de_comercio")
+}
+
+// ---------------------------------------------------------------------------
+// Los correos y el buzon
+// ---------------------------------------------------------------------------
+
+/// Quien da el correo: para mostrar los pasos de su regla de reenvio.
+enum ProveedorDeCorreo {
+  /// Gmail y Google Workspace.
+  GMAIL
+  /// Outlook, Hotmail, Live y Microsoft 365.
+  OUTLOOK
+  ICLOUD
+  YAHOO
+  OTRO
+}
+
+/// Un correo donde a alguien del hogar le llegan comprobantes, de cualquier
+/// proveedor. Solo cuenta despues de confirmarlo con el codigo que le llega:
+/// lo que el buzon recibe desde un correo sin confirmar no se lee. El correo
+/// de Google con que la persona entra a Luka ya es suyo y no va aqui.
+model CorreoRegistrado {
+  id              String            @id @default(cuid())
+  miembroId       String            @map("miembro_id")
+  /// En minusculas.
+  direccion       String            @db.VarChar(254)
+  proveedor       ProveedorDeCorreo
+  /// Cuando se confirmo con el codigo. Vacio = falta el codigo.
+  confirmadoEn    DateTime?         @map("confirmado_en")
+  /// El codigo pendiente: su huella (HMAC con AUTH_SECRET), nunca el codigo.
+  huellaDelCodigo String?           @map("huella_del_codigo") @db.Char(64)
+  /// Cuando se pidio, para esperar un minuto antes de pedir otro.
+  codigoPedidoEn  DateTime?         @map("codigo_pedido_en")
+  codigoVenceEn   DateTime?         @map("codigo_vence_en")
+  /// Intentos con el codigo pendiente.
+  intentos        Int               @default(0)
+  creadoEn        DateTime          @default(now()) @map("creado_en")
+
+  /// Si la persona sale del hogar, sus correos se van con ella.
+  miembro Miembro @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+
+  @@unique([miembroId, direccion])
+  @@map("correos_registrados")
+}
+
+/// La direccion de Luka de cada persona: el correo del buzon con su clave
+/// (luka.support.app+k7q2m9xa4p@gmail.com). Lo que llega ahi es de esa
+/// persona, y se lee solo si lo reenvio uno de sus correos confirmados.
+model Buzon {
+  miembroId       String    @id @map("miembro_id")
+  /// Letras y numeros al azar (src/dominio/buzon.ts): sin ella no se le
+  /// puede escribir a nadie. Cambiarla deja la direccion anterior sin uso.
+  clave           String    @unique @db.VarChar(20)
+  creadoEn        DateTime  @default(now()) @map("creado_en")
+  /// La ultima confirmacion de reenvio que mando Gmail: el codigo que hay que
+  /// escribir en Gmail para que empiece a reenviar, y para que correo.
+  codigoDeGmail   String?   @map("codigo_de_gmail") @db.VarChar(12)
+  codigoDeGmailDe String?   @map("codigo_de_gmail_de") @db.VarChar(254)
+  codigoDeGmailEn DateTime? @map("codigo_de_gmail_en")
+
+  /// Se va con la persona.
+  miembro Miembro @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+
+  @@map("buzones")
+}
+
+/// Que paso con cada correo que llego al buzon de alguien.
+enum ResultadoDeLlegada {
+  /// Lo leyo y quedo un movimiento nuevo.
+  NUEVO
+  /// Ya habia llegado: no se anoto otra vez.
+  REPETIDO
+  /// Publicidad o un aviso que no mueve plata.
+  NO_ES_COMPROBANTE
+  /// Parece un comprobante pero no se pudo leer.
+  NO_SE_PUDO_LEER
+  /// La cartola o el estado de cuenta del mes, que se lee aparte.
+  CARTOLA
+  /// Lo reenvio un correo que no esta confirmado: no se leyo.
+  SIN_CONFIRMAR
+  /// Dice venir de un correo confirmado, pero sin la firma de ese correo.
+  SIN_FIRMA
+  /// Gmail pide confirmar el reenvio: el codigo queda a la vista.
+  CONFIRMACION_DE_GMAIL
+}
+
+/// Lo que fue llegando al buzon de cada persona, para que vea si Luka lo
+/// leyo, si ya habia llegado o por que no. Del correo se guarda solo quien
+/// lo mando y que paso; se guardan los ultimos (src/datos/buzon.ts).
+model LlegadaAlBuzon {
+  id           String             @id @default(cuid())
+  miembroId    String             @map("miembro_id")
+  llegoEn      DateTime           @default(now()) @map("llego_en")
+  resultado    ResultadoDeLlegada
+  /// El banco o la tienda, o el correo desde el que llego si no se leyo.
+  remitente    String             @db.VarChar(254)
+  /// Lo que se muestra: "Comprobante de Santander", o por que no se leyo.
+  detalle      String?            @db.VarChar(200)
+  movimientoId String?            @map("movimiento_id")
+
+  miembro    Miembro     @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+  movimiento Movimiento? @relation(fields: [movimientoId], references: [id], onDelete: SetNull)
+
+  @@index([miembroId, llegoEn])
+  @@index([movimientoId])
+  @@map("llegadas_al_buzon")
 }

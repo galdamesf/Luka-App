@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { fechaDesdeISO, hoyISO, isoDesdeFecha, mesDesdeFecha, rangoDelMesISO, sumarMeses } from "@/lib/fecha";
 import { periodoDeFecha, sumarDias } from "@/lib/periodo";
 import { cuotaEnMes } from "@/dominio/balance";
+import { bancoDelComprobante, cuentaDelMovimiento, nombreDeLaCuenta } from "@/dominio/bancos";
 import type { Bandeja, ItemDejadoFuera, ItemPorRevisar, ReglaPosible } from "@/dominio/bandeja";
 import type { LecturaLeida } from "@/dominio/comprobantes/tipos";
 import type { MedioPago } from "@/dominio/esquemas";
@@ -86,6 +87,12 @@ export type EntradaDeMovimiento = {
   lectura: LecturaLeida;
   /** Cuando llego el correo. */
   recibidoEn: Date;
+  /** Quien lo reenvio, si llego por el buzon. Tiene que ser del hogar. */
+  miembroId?: string | null;
+  /** El correo confirmado desde el que llego. */
+  reenviadoPor?: string | null;
+  /** El banco o la tienda que lo mando. */
+  remitente?: string | null;
 };
 
 export type MovimientoRegistrado = {
@@ -121,9 +128,25 @@ export async function registrarMovimiento(
     return await db.$transaction(async (tx) => {
       const cuentas = await tx.cuentaBancaria.findMany({
         where: { hogarId },
-        select: { banco: true, tipo: true, ultimos4: true },
+        select: { id: true, banco: true, tipo: true, ultimos4: true, miembroId: true },
       });
       const datos = deLectura(entrada.lectura, cuentas);
+
+      // Quien lo reenvio, solo si es del hogar; y de que cuenta es.
+      const miembroId =
+        entrada.miembroId
+          ? ((await tx.miembro.findFirst({ where: { id: entrada.miembroId, hogarId }, select: { id: true } }))?.id ?? null)
+          : null;
+      const remitente = entrada.remitente?.trim().toLowerCase().slice(0, 254) || null;
+      const banco = bancoDelComprobante({ plantilla: datos.plantilla, remitente, fuente: datos.fuente });
+      const cuentaCon = (ultimos4: string | null) =>
+        cuentaDelMovimiento({ tipo: datos.tipo, medioPago: datos.medioPago, ultimos4 }, banco, cuentas, miembroId);
+      const delBuzon = {
+        miembroId,
+        reenviadoPor: entrada.reenviadoPor?.trim().toLowerCase().slice(0, 254) || null,
+        remitente,
+        cuentaBancariaId: cuentaCon(datos.ultimos4),
+      };
 
       const candidatos = await tx.movimiento.findMany({
         where: {
@@ -148,6 +171,7 @@ export async function registrarMovimiento(
           ultimos4: true,
           sinDetalle: true,
           medioPago: true,
+          cuentaBancariaId: true,
           _count: { select: { juntados: true } },
         },
       });
@@ -156,24 +180,34 @@ export async function registrarMovimiento(
         candidatos.map((c) => ({ ...c, fecha: isoDesdeFecha(c.fecha), tieneJuntado: c._count.juntados > 0 })),
       );
 
-      const base = { hogarId, huella: entrada.huella, recibidoEn: entrada.recibidoEn, ...columnas(datos) };
+      const base = { hogarId, huella: entrada.huella, recibidoEn: entrada.recibidoEn, ...columnas(datos), ...delBuzon };
       const elegir = { id: true, estado: true } as const;
 
       if (pareja === null) {
         return { ...(await tx.movimiento.create({ data: base, select: elegir })), nuevo: true };
       }
+      const otro = candidatos.find((c) => c.id === pareja.candidato.id)!;
       if (pareja.principal === "candidato") {
         const creado = await tx.movimiento.create({
           data: { ...base, estado: "JUNTADO", juntadoConId: pareja.candidato.id },
           select: elegir,
         });
+        // Si el que se ve no sabia de que cuenta era y este si, ahora lo sabe.
+        if (otro.cuentaBancariaId === null && base.cuentaBancariaId !== null) {
+          await tx.movimiento.update({ where: { id: otro.id }, data: { cuentaBancariaId: base.cuentaBancariaId } });
+        }
         return { ...creado, nuevo: true };
       }
 
       // El nuevo dice mas: queda a la vista, con lo que le faltaba del otro.
-      const otro = candidatos.find((c) => c.id === pareja.candidato.id)!;
+      const ultimos4 = base.ultimos4 ?? otro.ultimos4;
       const creado = await tx.movimiento.create({
-        data: { ...base, medioPago: base.medioPago ?? otro.medioPago, ultimos4: base.ultimos4 ?? otro.ultimos4 },
+        data: {
+          ...base,
+          medioPago: base.medioPago ?? otro.medioPago,
+          ultimos4,
+          cuentaBancariaId: base.cuentaBancariaId ?? otro.cuentaBancariaId ?? cuentaCon(ultimos4),
+        },
         select: elegir,
       });
       await tx.movimiento.update({ where: { id: otro.id }, data: { estado: "JUNTADO", juntadoConId: creado.id } });
@@ -214,6 +248,7 @@ const SELECCION_POR_REVISAR = {
   sinDetalle: true,
   reenviadoAMano: true,
   juntados: { select: { fuente: true }, orderBy: { recibidoEn: "asc" } },
+  cuentaBancaria: { select: { apodo: true, tipo: true, ultimos4: true } },
 } as const;
 
 const SELECCION_GASTO = {
@@ -418,6 +453,7 @@ export async function leerBandeja(
       contraparte: { nombre: fila.contraparteNombre, banco: fila.contraparteBanco, ultimos4: fila.contraparteUltimos4 },
       confianza: fila.confianza,
       juntados: fila.juntados.map((j) => j.fuente),
+      cuenta: fila.cuentaBancaria === null ? null : nombreDeLaCuenta(fila.cuentaBancaria),
       revision,
     };
   });

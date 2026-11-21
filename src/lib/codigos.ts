@@ -1,7 +1,8 @@
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 
 /**
- * Los codigos que llegan al correo (por ahora, el de borrar un hogar).
+ * Los codigos que llegan al correo (el de borrar un hogar y el que confirma
+ * un correo registrado) y la clave de cada buzon.
  *
  * El codigo sale de un generador criptografico, no de Math.random: no se
  * puede adivinar el siguiente. En la base se guarda solo su huella, un HMAC
@@ -20,6 +21,28 @@ export function codigoAlAzar(digitos = 6): string {
  */
 export function huellaDelCodigo(codigo: string, hogarId: string, secreto: string): string {
   return createHmac("sha256", secreto).update(`borrar-hogar:${hogarId}:${codigo}`).digest("hex");
+}
+
+/**
+ * La huella del codigo que confirma un correo registrado, atada a ese
+ * registro: el mismo codigo para otro correo deja otra huella.
+ */
+export function huellaDelCodigoDeCorreo(codigo: string, correoId: string, secreto: string): string {
+  return createHmac("sha256", secreto).update(`confirmar-correo:${correoId}:${codigo}`).digest("hex");
+}
+
+/** Letras y numeros que no se confunden entre si (sin i, l, o, 0 ni 1). */
+const ALFABETO_DE_CLAVES = "abcdefghjkmnpqrstuvwxyz23456789";
+
+/**
+ * La clave de un buzon: diez caracteres al azar de un generador
+ * criptografico. Son unos 10^15 posibles: nadie le escribe a un buzon
+ * adivinando su direccion.
+ */
+export function claveDeBuzonAlAzar(largo = 10): string {
+  let clave = "";
+  for (let i = 0; i < largo; i++) clave += ALFABETO_DE_CLAVES[randomInt(0, ALFABETO_DE_CLAVES.length)];
+  return clave;
 }
 
 /** Compara dos huellas sin delatar, por lo que demora, cuanto se parecen. */

@@ -37,6 +37,15 @@ async function llenarMac() {
     data: { id: "m-yo", hogarId: HOGAR_INICIAL, correo: YO, nombre: "Yo", rol: "DUENO", entroEn: new Date("2026-11-01T12:00:00Z") },
   });
   await mac.miembro.create({ data: { hogarId: HOGAR_INICIAL, correo: "pareja@gmail.com" } });
+  // Su otro correo, confirmado, y su direccion de Luka: en la nube siguen iguales.
+  await mac.correoRegistrado.create({
+    data: { miembroId: dueno.id, direccion: "yo@hotmail.com", proveedor: "OUTLOOK", confirmadoEn: new Date("2026-11-02T12:00:00Z") },
+  });
+  await mac.buzon.create({
+    data: { miembroId: dueno.id, clave: "k7q2m9xa4p", codigoDeGmail: "123456789", codigoDeGmailDe: YO, codigoDeGmailEn: new Date("2026-11-02T12:00:00Z") },
+  });
+  // Lo que fue llegando a su buzon es un registro de estos dias: no se copia.
+  await mac.llegadaAlBuzon.create({ data: { miembroId: dueno.id, resultado: "NUEVO", remitente: "mensajeria@santander.cl" } });
   await mac.ajustes.create({ data: { hogarId: HOGAR_INICIAL, diaInicioMes: 27 } });
 
   const super_ = await mac.categoria.create({
@@ -137,6 +146,8 @@ describe("copiarDatos", () => {
 
     await copiarDatos(datos, nube, { lote: 2 }); // de a 2, para probar los lotes
     expect(await tablasDistintas(datos, nube)).toEqual([]);
+    expect(await nube.buzon.findUnique({ where: { miembroId: "m-yo" }, select: { clave: true } })).toEqual({ clave: "k7q2m9xa4p" });
+    expect(await nube.llegadaAlBuzon.count()).toBe(0);
 
     const conteo = contar(await leerTodo(nube));
     expect(conteo).toEqual(contar(datos));
@@ -214,7 +225,7 @@ describe("loQueSePierde, con lo que de verdad hay en la nube", () => {
     expect(perdida.filas.map((f) => f.tabla)).toEqual(["hogar", "miembro"]);
   });
 
-  test("lee las catorce tablas", async () => {
+  test("lee las dieciseis tablas", async () => {
     const datos = await leerTodo(nube);
     expect(Object.keys(datos).sort()).toEqual([...TABLAS].sort());
   });

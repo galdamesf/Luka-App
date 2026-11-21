@@ -44,6 +44,7 @@ escuchando. `docker compose ps` te dice si el contenedor quedo `healthy`.
 | `npm run db:studio` | Explorador visual de la base |
 | `npm run db:reset` | Borra todo y vuelve a migrar y sembrar |
 | `npm run ejemplos:bandeja` | Llena la bandeja «Por revisar» con comprobantes de ejemplo (`-- --quitar` los saca) |
+| `npm run correos:probar -- correo.eml` | Muestra como lee Luka un correo guardado (`--guardar --correo tu@gmail.com` lo deja «Por revisar») |
 
 Los tests van separados en dos proyectos a proposito: mientras trabajas en una
 seccion corres solo la que toca con `test:unit` o `test:db`, en vez de la suite
@@ -186,6 +187,35 @@ Supermercado») las crea quien revisa. Para verla sin correos todavia:
 `npm run ejemplos:bandeja`. Se prueba con `npm run test:unit -- movimientos` y
 `npm run test:db -- movimientos`.
 
+**Cada comprobante llega desde un correo confirmado y queda en su cuenta.** Es
+la seccion C. En Hogar, cada persona agrega sus bancos con sus cuentas y
+tarjetas (solo los ultimos 4 digitos) y registra los correos donde le llegan
+los comprobantes, de cualquier proveedor: cada uno se confirma con un codigo de
+6 numeros que llega a ese correo (se guarda su huella, nunca el codigo), y el
+de Google con que entra ya cuenta como suyo. Luka nunca pide la contrasena de
+un correo. Cada persona tiene su direccion de Luka, el correo del buzon con una
+clave al azar (`luka.support.app+k7q2m9xa4p@gmail.com`), y Luka le muestra los
+pasos de Gmail, Outlook, iCloud, Yahoo u otro (reconoce Google Workspace y
+Microsoft 365 por el MX de un dominio propio) con los remitentes de sus bancos
+y tiendas. El buzon se lee por IMAP con la misma cuenta y contrasena de
+aplicacion con que Luka manda los codigos (`src/lib/buzon-imap.ts`); solo toca
+los correos que van a una direccion con clave, y los borra despues de leerlos.
+Las reglas del buzon (`src/dominio/buzon.ts`): un correo reenviado desde una
+direccion que no esta confirmada no crea nada; uno reenviado a mano tiene que
+traer la firma de ese correo (DKIM o DMARC, segun el Authentication-Results del
+servidor del buzon), porque cualquiera puede escribir «De: tu correo»; el
+mismo correo dos veces es un solo movimiento (tambien reenviado a mano, o como
+archivo adjunto); y cada comprobante va a la cuenta o tarjeta del hogar que
+calza por banco y ultimos 4 digitos, o a ninguna si no hay certeza. Cuando
+Gmail pide confirmar el reenvio, Luka muestra el codigo sin abrir el enlace. Lo
+que va llegando a cada buzon queda anotado (quien lo mando y que paso, nunca
+el correo). Por ahora el buzon se revisa con «Revisar ahora» en Hogar: si Luka
+corre en tu Mac y en la nube a la vez, revisalo desde uno solo, porque el
+primero que lee un correo se lo lleva. Para probar con un correo de verdad sin
+el buzon: `npm run correos:probar -- comprobante.eml`. Se prueba con
+`npm run test:unit -- correos bancos` y
+`npm run test:db -- buzon correos-registrados cuentas-bancarias`.
+
 ## Sobre las dependencias
 
 `npm audit` deja **3 avisos altos** que no se pueden cerrar hoy, y es a
@@ -223,6 +253,7 @@ prisma/
   schema.prisma      Modelos: Categoria, Gasto, enum MedioPago
   seed.ts            13 categorias base, idempotente (upsert por nombre)
   ejemplos-por-revisar.ts  Comprobantes de ejemplo para ver la bandeja en local
+  probar-correo.ts   npm run correos:probar: como lee Luka un .eml
 src/
   app/
     acciones/        Server Actions (crear y eliminar gastos)
@@ -243,10 +274,19 @@ src/
     movimientos.ts   Las reglas de lo que llega: que queda fuera, que se junta,
                      que se pregunta y que se propone
     bandeja.ts       Los datos planos que dibuja la bandeja «Por revisar»
+    bancos.ts        Catalogo de bancos, sus remitentes y a que cuenta va cada
+                     comprobante
+    correos-registrados.ts  Los correos de cada persona: proveedor, codigo y
+                     los pasos de cada proveedor
+    buzon.ts         La direccion de Luka, las firmas, quien reenvio el correo
+                     y la confirmacion de Gmail
   datos/             Acceso a Prisma. Recibe el cliente por parametro
     gastos.ts
     categorias.ts
     movimientos.ts   Registrar lo que llega, la bandeja, confirmar y deshacer
+    bancos.ts        Las cuentas y tarjetas del hogar
+    correos-registrados.ts  Registrar y confirmar correos con su codigo
+    buzon.ts         Procesar lo que llega al buzon y la direccion de cada persona
   lib/
     prisma.ts        Cliente singleton, para no agotar el pool en dev
     fecha.ts         Helpers de fecha UTC y rangos de mes
@@ -256,11 +296,16 @@ src/
     contraste.ts     Calculo de contraste WCAG, usado por los tests del tema
     boletas.ts       Guardado seguro de las fotos de boletas
     leer-con-ia.ts   Lectura de comprobantes con Claude Haiku (opcional)
+    correo-entrante.ts  Abrir un correo (MIME, PDF y correos adjuntos)
+    buzon.ts         La configuracion del buzon
+    buzon-imap.ts    El buzon por IMAP: listar, traer y borrar
+    mx.ts            Los MX de un dominio, para reconocer su proveedor
 tests/
   unit/              Logica pura
   db/                Integracion contra Postgres
   fixtures/
     comprobantes/    Correos de ejemplo por banco y tienda, con datos inventados
+    correos/         Arma esos ejemplos como llegan al buzon (MIME, PDF, reenvios)
 ```
 
 ## Estado
@@ -277,5 +322,6 @@ tests/
 - [ ] Mas adelante: presupuestos por categoria
 - [x] Gastos que llegan solos, seccion A: lector de comprobantes (plantillas + IA)
 - [x] Gastos que llegan solos, seccion B: movimientos y la bandeja «Por revisar»
-- [ ] Gastos que llegan solos, secciones C a F: bancos y correos con el buzon,
-      cartola, puesta en marcha y Luka en Claude
+- [x] Gastos que llegan solos, seccion C: bancos, correos confirmados y el buzon
+- [ ] Gastos que llegan solos, secciones D a F: cartola, puesta en marcha y Luka
+      en Claude

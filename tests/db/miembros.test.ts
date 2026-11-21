@@ -330,7 +330,9 @@ describe("borrar el hogar, con el codigo del correo", () => {
     await prisma.ajustes.create({ data: { hogarId, diaInicioMes: 27 } });
     // Lo que llego de los comprobantes: una cuenta del hogar, una regla, y la
     // boleta confirmada como el gasto, con el aviso del banco juntado.
-    await prisma.cuentaBancaria.create({ data: { hogarId, banco: "Santander", tipo: "CUENTA_CORRIENTE", ultimos4: "5678" } });
+    const cuentaBancaria = await prisma.cuentaBancaria.create({
+      data: { hogarId, banco: "Santander", tipo: "CUENTA_CORRIENTE", ultimos4: "5678" },
+    });
     await prisma.reglaDeComercio.create({ data: { hogarId, clave: "pan", etiqueta: "Pan", categoriaId: cat.id } });
     const comprobante = {
       hogarId,
@@ -343,8 +345,26 @@ describe("borrar el hogar, con el codigo del correo", () => {
       recibidoEn: new Date(),
     };
     const boleta = await prisma.movimiento.create({
-      data: { ...comprobante, huella: "a".repeat(64), estado: "CONFIRMADO", destino: "GASTO_NUEVO", gastoId: gasto.id },
+      data: {
+        ...comprobante,
+        huella: "a".repeat(64),
+        estado: "CONFIRMADO",
+        destino: "GASTO_NUEVO",
+        gastoId: gasto.id,
+        cuentaBancariaId: cuentaBancaria.id,
+        miembroId: alguien?.id ?? null,
+      },
     });
+    // Y lo del buzon de esa persona: un correo confirmado, su direccion y lo que llego.
+    if (alguien !== null) {
+      await prisma.correoRegistrado.create({
+        data: { miembroId: alguien.id, direccion: `otro-${hogarId}@hotmail.com`, proveedor: "OUTLOOK", confirmadoEn: new Date() },
+      });
+      await prisma.buzon.create({ data: { miembroId: alguien.id, clave: `clave${hogarId.replace(/[^a-z0-9]/g, "").slice(0, 10)}` } });
+      await prisma.llegadaAlBuzon.create({
+        data: { miembroId: alguien.id, resultado: "NUEVO", remitente: "mensajeria@santander.cl", movimientoId: boleta.id },
+      });
+    }
     await prisma.movimiento.create({
       data: { ...comprobante, tipo: "CARGO", sinDetalle: true, huella: "b".repeat(64), estado: "JUNTADO", juntadoConId: boleta.id },
     });
@@ -368,6 +388,9 @@ describe("borrar el hogar, con el codigo del correo", () => {
       prisma.movimiento.count({ where: { hogarId } }),
       prisma.cuentaBancaria.count({ where: { hogarId } }),
       prisma.reglaDeComercio.count({ where: { hogarId } }),
+      prisma.correoRegistrado.count({ where: { miembro: { hogarId } } }),
+      prisma.buzon.count({ where: { miembro: { hogarId } } }),
+      prisma.llegadaAlBuzon.count({ where: { miembro: { hogarId } } }),
     ]);
 
   test("el codigo llega al correo del dueno, y en la base queda solo su huella", async () => {
@@ -394,7 +417,7 @@ describe("borrar el hogar, con el codigo del correo", () => {
     await borrar(OTRO, ana, ` ${codigo.slice(0, 3)} ${codigo.slice(3)} `);
 
     expect(await prisma.hogar.count({ where: { id: OTRO } })).toBe(0);
-    expect(await filasDe(OTRO)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(await filasDe(OTRO)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(await prisma.miembro.count({ where: { correo: "invitada@gmail.com" } })).toBe(0);
     expect(existsSync(join(raiz, OTRO))).toBe(false);
 

@@ -1,7 +1,12 @@
 import { sumarMeses } from "@/lib/fecha";
 import { diasEntre, periodoDeFecha } from "@/lib/periodo";
+import { mismoBanco, type TipoCuentaBancaria } from "./bancos";
 import type { LecturaLeida, Moneda, TipoMovimiento } from "./comprobantes/tipos";
 import { CUOTAS_MAXIMAS, type MedioPago } from "./esquemas";
+
+// El catalogo de bancos y como se reconoce el mismo banco con otro nombre
+// viven en src/dominio/bancos.ts; se reexportan para quien ya los usaba aca.
+export { mismoBanco, type TipoCuentaBancaria };
 
 /**
  * Las reglas de los movimientos: que se hace con lo que leyo el lector de
@@ -28,13 +33,6 @@ import { CUOTAS_MAXIMAS, type MedioPago } from "./esquemas";
 export type EstadoMovimiento = "POR_REVISAR" | "CONFIRMADO" | "DESCARTADO" | "IGNORADO" | "JUNTADO";
 export type SentidoMovimiento = "GASTO" | "INGRESO" | "NINGUNO";
 export type DestinoMovimiento = "GASTO_NUEVO" | "GASTO_EXISTENTE" | "PAGO_DE_CUENTA" | "PAGO_DE_CUOTA" | "DEUDA";
-export type TipoCuentaBancaria =
-  | "CUENTA_CORRIENTE"
-  | "CUENTA_VISTA"
-  | "CUENTA_AHORRO"
-  | "TARJETA_CREDITO"
-  | "TARJETA_DEBITO";
-
 const SENTIDO: Record<LecturaLeida["sentido"], SentidoMovimiento> = {
   gasto: "GASTO",
   ingreso: "INGRESO",
@@ -85,30 +83,6 @@ function recortar(valor: string | undefined, largo: number): string | null {
 /** Sin tildes ni mayusculas. */
 function sinTildes(texto: string): string {
   return texto.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-}
-
-const PALABRAS_DEL_BANCO = new Set(["banco", "de", "del", "la", "chile", "sa", "s", "a"]);
-
-/**
- * "BANCO SANTANDER-CHILE" y "Santander" son el mismo; "BancoEstado" y "Banco
- * del Estado de Chile", tambien. Si no queda nada (el "Banco de Chile"), el
- * nombre entero es lo que lo distingue.
- */
-function nombreDelBanco(banco: string): string {
-  const palabras = sinTildes(banco)
-    .split(/[^\p{L}\p{N}]+/u)
-    .filter((palabra) => palabra !== "");
-  const distintivo = palabras
-    .map((palabra) => (palabra.length > 5 && palabra.startsWith("banco") ? palabra.slice(5) : palabra))
-    .filter((palabra) => !PALABRAS_DEL_BANCO.has(palabra))
-    .join(" ");
-  return distintivo !== "" ? distintivo : palabras.join(" ");
-}
-
-export function mismoBanco(a: string, b: string): boolean {
-  const x = nombreDelBanco(a);
-  const y = nombreDelBanco(b);
-  return x !== "" && y !== "" && (x.includes(y) || y.includes(x));
 }
 
 /**

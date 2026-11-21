@@ -10,7 +10,10 @@
  * despues de las que apunta con sus llaves foraneas. Para vaciar, al reves.
  *
  * Los codigos para borrar un hogar no se copian: duran unos minutos y valen
- * solo donde se pidieron.
+ * solo donde se pidieron. Tampoco lo que fue llegando a cada buzon: es un
+ * registro de los ultimos dias, no datos del hogar. Los correos registrados
+ * y los buzones si: con ellos, la direccion de Luka de cada persona y sus
+ * correos confirmados siguen siendo los mismos en la nube.
  *
  * Los movimientos van al final porque apuntan a gastos y deudas, y ademas a
  * otros movimientos (el juntado a su principal): copiarDatos los inserta en
@@ -19,6 +22,8 @@
 export const TABLAS = [
   "hogar",
   "miembro",
+  "correoRegistrado",
+  "buzon",
   "categoria",
   "deuda",
   "sueldo",
@@ -45,6 +50,8 @@ export type Datos = Record<Tabla, Fila[]>;
 export const NOMBRE_DE_TABLA: Record<Tabla, string> = {
   hogar: "hogares",
   miembro: "miembros",
+  correoRegistrado: "correos registrados",
+  buzon: "buzones",
   categoria: "categorias",
   deuda: "deudas",
   sueldo: "sueldos",
@@ -70,9 +77,14 @@ export function enOrdenDeInsercion(tabla: Tabla, filas: readonly Fila[]): Fila[]
   return [...filas.filter((f) => !apuntaAOtro(f)), ...filas.filter(apuntaAOtro)];
 }
 
-/** La llave primaria de cada fila: `id`, salvo en ajustes, que es la del hogar. */
+/**
+ * La llave primaria de cada fila: `id`, salvo en ajustes, que es la del
+ * hogar, y en el buzon, que es la de la persona.
+ */
 export function llavePrimaria(tabla: Tabla, fila: Fila): string {
-  return String(tabla === "ajustes" ? fila.hogarId : fila.id);
+  if (tabla === "ajustes") return String(fila.hogarId);
+  if (tabla === "buzon") return String(fila.miembroId);
+  return String(fila.id);
 }
 
 /**

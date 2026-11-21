@@ -40,6 +40,8 @@ describe("el orden de las tablas", () => {
   const APUNTA_A: Record<Tabla, Tabla[]> = {
     hogar: [],
     miembro: ["hogar"],
+    correoRegistrado: ["miembro"],
+    buzon: ["miembro"],
     categoria: ["hogar"],
     deuda: ["hogar"],
     sueldo: ["hogar"],
@@ -81,9 +83,10 @@ describe("el orden de las tablas", () => {
 });
 
 describe("la llave y el orden de las filas", () => {
-  test("la llave es el id, salvo en ajustes, que es el hogar", () => {
+  test("la llave es el id, salvo en ajustes, que es el hogar, y en el buzon, que es la persona", () => {
     expect(llavePrimaria("gasto", { id: "g1", hogarId: "h1" })).toBe("g1");
     expect(llavePrimaria("ajustes", { hogarId: "h1", diaInicioMes: 27 })).toBe("h1");
+    expect(llavePrimaria("buzon", { miembroId: "m1", clave: "k7q2m9xa4p" })).toBe("m1");
   });
 
   test("ordena caracter a caracter, igual en cualquier base", () => {

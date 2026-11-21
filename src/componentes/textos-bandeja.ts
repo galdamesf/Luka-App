@@ -30,7 +30,9 @@ export function cuandoFue(fecha: string, hoy: string): string {
 }
 
 /** "Crédito •••• 4821", "Transferencia", "•••• 5678", o null si el comprobante no dice. */
-export function medioDe(item: Pick<ItemPorRevisar, "medioPago" | "ultimos4">): string | null {
+export function medioDe(item: Pick<ItemPorRevisar, "medioPago" | "ultimos4" | "cuenta">): string | null {
+  // Si se sabe de que cuenta o tarjeta del hogar es, se nombra esa.
+  if (item.cuenta) return item.cuenta;
   const tarjeta = item.ultimos4 === null ? null : `•••• ${item.ultimos4}`;
   if (item.medioPago === null) return tarjeta;
   const medio = ETIQUETA_MEDIO_PAGO[item.medioPago];
