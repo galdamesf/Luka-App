@@ -106,52 +106,71 @@ export async function pagarCuota(
   db: typeof prisma = prisma,
 ): Promise<void> {
   await db.$transaction(async (tx: ClienteTx) => {
-    // Una deuda de otro hogar no se encuentra: no se paga.
-    const deuda = await tx.deuda.findFirstOrThrow({ where: { id: deudaId, hogarId } });
+    await pagarCuotaEn(tx, hogarId, deudaId, mes, fechaPago, montoReal, boletaArchivo);
+  });
+}
 
-    const yaPagada = await tx.cuotaPagada.findUnique({
-      where: { deudaId_mes: { deudaId, mes: rangoDelMesISO(mes).desde } },
+/**
+ * Lo de pagarCuota dentro de una transaccion que ya esta abierta: la usa
+ * tambien la bandeja, que paga la cuota y cierra el comprobante de una vez.
+ * Devuelve el gasto que creo.
+ */
+export async function pagarCuotaEn(
+  tx: ClienteTx,
+  hogarId: string,
+  deudaId: string,
+  mes: string,
+  fechaPago: string,
+  montoReal: number,
+  boletaArchivo: string | null,
+): Promise<{ gastoId: string }> {
+  // Una deuda de otro hogar no se encuentra: no se paga.
+  const deuda = await tx.deuda.findFirstOrThrow({ where: { id: deudaId, hogarId } });
+
+  const yaPagada = await tx.cuotaPagada.findUnique({
+    where: { deudaId_mes: { deudaId, mes: rangoDelMesISO(mes).desde } },
+    select: { id: true },
+  });
+  if (yaPagada !== null) throw new Error("Esa cuota ya está pagada.");
+
+  const categoria =
+    (await tx.categoria.findUnique({
+      where: { hogarId_nombre: { hogarId: deuda.hogarId, nombre: CATEGORIA_CUOTAS } },
       select: { id: true },
-    });
-    if (yaPagada !== null) throw new Error("Esa cuota ya está pagada.");
-
-    const categoria =
-      (await tx.categoria.findUnique({
-        where: { hogarId_nombre: { hogarId: deuda.hogarId, nombre: CATEGORIA_CUOTAS } },
-        select: { id: true },
-      })) ??
-      (await tx.categoria.create({
-        data: {
-          hogarId: deuda.hogarId,
-          nombre: CATEGORIA_CUOTAS,
-          color: colorDeGrupo("otros"),
-          icono: "credit-card",
-          esencial: true,
-        },
-        select: { id: true },
-      }));
-
-    const gasto = await tx.gasto.create({
+    })) ??
+    (await tx.categoria.create({
       data: {
         hogarId: deuda.hogarId,
-        fecha: fechaDesdeISO(fechaPago),
-        descripcion: deuda.nombre.slice(0, 120),
-        monto: montoReal,
-        categoriaId: categoria.id,
-        boletaArchivo,
+        nombre: CATEGORIA_CUOTAS,
+        color: colorDeGrupo("otros"),
+        icono: "credit-card",
+        esencial: true,
       },
-    });
+      select: { id: true },
+    }));
 
-    await tx.cuotaPagada.create({
-      data: {
-        deudaId,
-        mes: rangoDelMesISO(mes).desde,
-        pagadaEn: fechaDesdeISO(fechaPago),
-        monto: montoReal,
-        gastoId: gasto.id,
-      },
-    });
+  const gasto = await tx.gasto.create({
+    data: {
+      hogarId: deuda.hogarId,
+      fecha: fechaDesdeISO(fechaPago),
+      descripcion: deuda.nombre.slice(0, 120),
+      monto: montoReal,
+      categoriaId: categoria.id,
+      boletaArchivo,
+    },
   });
+
+  await tx.cuotaPagada.create({
+    data: {
+      deudaId,
+      mes: rangoDelMesISO(mes).desde,
+      pagadaEn: fechaDesdeISO(fechaPago),
+      monto: montoReal,
+      gastoId: gasto.id,
+    },
+  });
+
+  return { gastoId: gasto.id };
 }
 
 /**
@@ -167,20 +186,23 @@ export async function revertirCuota(
   mes: string,
   db: typeof prisma = prisma,
 ): Promise<void> {
-  await db.$transaction(async (tx: ClienteTx) => {
-    // El pago se busca por su deuda Y el hogar de la deuda: el pago de otro
-    // hogar no se encuentra, y no hay nada que deshacer.
-    const cuota = await tx.cuotaPagada.findFirst({
-      where: { deudaId, mes: rangoDelMesISO(mes).desde, deuda: { hogarId } },
-      select: { id: true, gastoId: true },
-    });
-    if (cuota === null) return;
+  await db.$transaction(async (tx: ClienteTx) => revertirCuotaEn(tx, hogarId, deudaId, mes));
+}
 
-    await tx.cuotaPagada.delete({ where: { id: cuota.id } });
-    if (cuota.gastoId !== null) {
-      await tx.gasto.delete({ where: { id: cuota.gastoId, hogarId } });
-    }
+/** Lo de revertirCuota dentro de una transaccion que ya esta abierta. */
+export async function revertirCuotaEn(tx: ClienteTx, hogarId: string, deudaId: string, mes: string): Promise<void> {
+  // El pago se busca por su deuda Y el hogar de la deuda: el pago de otro
+  // hogar no se encuentra, y no hay nada que deshacer.
+  const cuota = await tx.cuotaPagada.findFirst({
+    where: { deudaId, mes: rangoDelMesISO(mes).desde, deuda: { hogarId } },
+    select: { id: true, gastoId: true },
   });
+  if (cuota === null) return;
+
+  await tx.cuotaPagada.delete({ where: { id: cuota.id } });
+  if (cuota.gastoId !== null) {
+    await tx.gasto.delete({ where: { id: cuota.gastoId, hogarId } });
+  }
 }
 
 /** Las cuotas pagadas de un mes, para que el balance sepa que descontar. */

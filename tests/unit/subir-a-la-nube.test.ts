@@ -8,6 +8,7 @@ import {
   compararMigraciones,
   contar,
   credencialesDeBlob,
+  enOrdenDeInsercion,
   llavePrimaria,
   loQueSePierde,
   nadaSePierde,
@@ -48,6 +49,10 @@ describe("el orden de las tablas", () => {
     cuenta: ["hogar", "categoria", "gasto"],
     cuotaPagada: ["deuda", "gasto"],
     presupuesto: ["hogar", "categoria"],
+    cuentaBancaria: ["hogar", "miembro"],
+    reglaDeComercio: ["hogar", "categoria"],
+    // Tambien a otro movimiento (el juntado a su principal): ver enOrdenDeInsercion.
+    movimiento: ["hogar", "gasto", "deuda"],
   };
 
   test("cada tabla va despues de las que apunta, asi se puede insertar en orden", () => {
@@ -61,6 +66,17 @@ describe("el orden de las tablas", () => {
   test("estan todas las del esquema que guardan datos, una vez cada una", () => {
     expect([...TABLAS].sort()).toEqual(Object.keys(APUNTA_A).sort());
     expect(new Set(TABLAS).size).toBe(TABLAS.length);
+  });
+
+  test("un movimiento juntado se inserta despues de su principal, aunque su id vaya antes", () => {
+    const juntado = { id: "a-viejo", juntadoConId: "b-nuevo" };
+    const principal = { id: "b-nuevo", juntadoConId: null };
+    const solo = { id: "c", juntadoConId: null };
+    const filas = ordenarFilas("movimiento", [principal, solo, juntado]);
+    expect(filas.map((f) => f.id)).toEqual(["a-viejo", "b-nuevo", "c"]);
+    expect(enOrdenDeInsercion("movimiento", filas).map((f) => f.id)).toEqual(["b-nuevo", "c", "a-viejo"]);
+    // En las demas tablas no cambia nada.
+    expect(enOrdenDeInsercion("gasto", filas)).toEqual(filas);
   });
 });
 

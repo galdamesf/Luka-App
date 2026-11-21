@@ -11,6 +11,10 @@
  *
  * Los codigos para borrar un hogar no se copian: duran unos minutos y valen
  * solo donde se pidieron.
+ *
+ * Los movimientos van al final porque apuntan a gastos y deudas, y ademas a
+ * otros movimientos (el juntado a su principal): copiarDatos los inserta en
+ * dos vueltas, primero los que no apuntan a otro movimiento.
  */
 export const TABLAS = [
   "hogar",
@@ -24,6 +28,9 @@ export const TABLAS = [
   "cuenta",
   "cuotaPagada",
   "presupuesto",
+  "cuentaBancaria",
+  "reglaDeComercio",
+  "movimiento",
 ] as const;
 
 export type Tabla = (typeof TABLAS)[number];
@@ -47,7 +54,21 @@ export const NOMBRE_DE_TABLA: Record<Tabla, string> = {
   cuenta: "cuentas",
   cuotaPagada: "cuotas pagadas",
   presupuesto: "presupuestos",
+  cuentaBancaria: "cuentas bancarias",
+  reglaDeComercio: "reglas de comercio",
+  movimiento: "movimientos",
 };
+
+/**
+ * En que orden se insertan las filas de una tabla. Casi siempre da igual;
+ * en los movimientos, el principal tiene que estar antes que su juntado,
+ * aunque el juntado sea mas antiguo y su id quede antes.
+ */
+export function enOrdenDeInsercion(tabla: Tabla, filas: readonly Fila[]): Fila[] {
+  if (tabla !== "movimiento") return [...filas];
+  const apuntaAOtro = (fila: Fila) => fila.juntadoConId !== null && fila.juntadoConId !== undefined;
+  return [...filas.filter((f) => !apuntaAOtro(f)), ...filas.filter(apuntaAOtro)];
+}
 
 /** La llave primaria de cada fila: `id`, salvo en ajustes, que es la del hogar. */
 export function llavePrimaria(tabla: Tabla, fila: Fila): string {

@@ -25,7 +25,7 @@ export function clienteDeLaNube(): PrismaClient {
  */
 export async function limpiar(prisma: PrismaClient): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "gastos", "categorias", "sueldos", "deudas", "ahorros", "ajustes", "miembros", "hogares" RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE "movimientos", "reglas_de_comercio", "cuentas_bancarias", "gastos", "categorias", "sueldos", "deudas", "ahorros", "ajustes", "miembros", "hogares" RESTART IDENTITY CASCADE',
   );
   await prisma.hogar.create({ data: { id: HOGAR_INICIAL, nombre: "Mi hogar" } });
 }

@@ -214,7 +214,7 @@ describe("loQueSePierde, con lo que de verdad hay en la nube", () => {
     expect(perdida.filas.map((f) => f.tabla)).toEqual(["hogar", "miembro"]);
   });
 
-  test("lee las once tablas", async () => {
+  test("lee las catorce tablas", async () => {
     const datos = await leerTodo(nube);
     expect(Object.keys(datos).sort()).toEqual([...TABLAS].sort());
   });

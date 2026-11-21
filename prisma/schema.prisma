@@ -56,6 +56,10 @@ model Hogar {
   ajustes      Ajustes?
   /// El codigo pendiente para borrar el hogar, si el dueno pidio uno.
   codigoDeBorrado CodigoDeBorrado?
+  /// Lo que llega de los comprobantes de los bancos y las tiendas.
+  movimientos      Movimiento[]
+  cuentasBancarias CuentaBancaria[]
+  reglasDeComercio ReglaDeComercio[]
 
   @@map("hogares")
 }
@@ -90,6 +94,8 @@ model Miembro {
   /// Su sueldo, con su historial. Antes de que salga del hogar se cierra
   /// (src/datos/sueldos.ts): mientras tenga uno abierto, no se puede borrar.
   sueldos             Sueldo[]
+  /// Sus cuentas y tarjetas, por sus ultimos 4 digitos.
+  cuentasBancarias    CuentaBancaria[]
 
   /// Para que el sueldo apunte al miembro y a su hogar a la vez.
   @@unique([id, hogarId])
@@ -198,6 +204,7 @@ model Categoria {
   gastos       Gasto[]
   presupuestos Presupuesto[]
   cuentas      Cuenta[]
+  reglasDeComercio ReglaDeComercio[]
 
   @@unique([hogarId, nombre])
   /// Para que gastos, cuentas y presupuestos apunten a la categoria Y a su hogar.
@@ -234,6 +241,8 @@ model Gasto {
   cuenta     Cuenta?
   /// La cuota de deuda que se pago y genero este gasto, si vino de ahi.
   cuota      CuotaPagada?
+  /// Los comprobantes que se confirmaron como este gasto.
+  movimientos Movimiento[]
 
   @@index([fecha])
   @@index([categoriaId, fecha])
@@ -300,6 +309,8 @@ model Deuda {
 
   hogar         Hogar         @relation(fields: [hogarId], references: [id], onDelete: Restrict)
   cuotasPagadas CuotaPagada[]
+  /// La compra en cuotas que se anoto como esta deuda, si vino de un comprobante.
+  movimientos   Movimiento[]
 
   @@index([activa, primeraCuota])
   @@index([hogarId])
@@ -441,4 +452,206 @@ model Ajustes {
   hogar Hogar @relation(fields: [hogarId], references: [id], onDelete: Restrict)
 
   @@map("ajustes")
+}
+
+// ---------------------------------------------------------------------------
+// Lo que llega de los comprobantes
+//
+// Un comprobante es un correo de un banco o de una tienda. El lector
+// (src/dominio/comprobantes) lo lee y deja un Movimiento; las reglas de los
+// movimientos (src/dominio/movimientos.ts) deciden si va a la bandeja «Por
+// revisar», si se deja fuera (un ingreso, un traspaso, el pago de la
+// tarjeta) o si es el mismo de otro que ya llego. Un movimiento nunca suma
+// en el mes por si solo: suma el gasto que se crea al confirmarlo.
+// ---------------------------------------------------------------------------
+
+/// Que dice el comprobante que paso. Los mismos valores de TIPOS_MOVIMIENTO
+/// en src/dominio/comprobantes/tipos.ts.
+enum TipoMovimiento {
+  COMPRA
+  TRANSFERENCIA
+  PAGO
+  BOLETA
+  PAGO_TARJETA
+  /// Entre cuentas del hogar. Lo decide una regla, nunca el lector.
+  TRASPASO_PROPIO
+  ABONO
+  GIRO
+  CARGO
+}
+
+/// Para donde va la plata, segun el comprobante.
+enum Sentido {
+  /// Sale: puede ser un gasto.
+  GASTO
+  /// Entra: un ingreso, o un traspaso desde otra cuenta del hogar.
+  INGRESO
+  NINGUNO
+}
+
+enum Moneda {
+  CLP
+  USD
+}
+
+enum EstadoMovimiento {
+  /// Espera en la bandeja «Por revisar».
+  POR_REVISAR
+  /// Ya esta en Luka: `destino` dice como.
+  CONFIRMADO
+  /// Quien lo reviso dijo que no va.
+  DESCARTADO
+  /// Luka lo dejo fuera, con el motivo a la vista: un ingreso, un traspaso
+  /// entre cuentas del hogar, el pago de la tarjeta o un giro.
+  IGNORADO
+  /// Es el mismo movimiento que otro que ya llego (la boleta y el aviso de
+  /// una compra): se ve con el y no cuenta aparte.
+  JUNTADO
+}
+
+/// En que quedo un movimiento confirmado.
+enum DestinoMovimiento {
+  /// Se anoto como un gasto nuevo.
+  GASTO_NUEVO
+  /// Ya estaba anotado a mano: se enlazo con ese gasto.
+  GASTO_EXISTENTE
+  /// Pago una cuenta del mes, que creo su gasto.
+  PAGO_DE_CUENTA
+  /// Pago la cuota de una deuda, que creo su gasto.
+  PAGO_DE_CUOTA
+  /// Una compra en cuotas: quedo como deuda, sin gasto.
+  DEUDA
+}
+
+enum TipoCuentaBancaria {
+  CUENTA_CORRIENTE
+  CUENTA_VISTA
+  CUENTA_AHORRO
+  TARJETA_CREDITO
+  TARJETA_DEBITO
+}
+
+/// Lo que llego de un comprobante.
+///
+/// La huella es unica por hogar: el mismo correo reenviado dos veces es un
+/// solo movimiento. Confirmarlo crea el gasto (o paga la cuenta, o crea la
+/// deuda) en la misma transaccion que lo cierra (src/datos/movimientos.ts).
+model Movimiento {
+  id                  String             @id @default(cuid())
+  hogarId             String             @map("hogar_id")
+  /// SHA-256 en hexadecimal del identificador del correo (Message-ID) o, si
+  /// no trae, de su contenido.
+  huella              String             @db.Char(64)
+  estado              EstadoMovimiento   @default(POR_REVISAR)
+  tipo                TipoMovimiento
+  sentido             Sentido
+  /// Entero, en la unidad minima de la moneda: pesos si es CLP (como
+  /// Gasto.monto), centavos si es USD. Mayor que cero.
+  monto               Int
+  moneda              Moneda             @default(CLP)
+  /// El dia del movimiento en Chile.
+  fecha               DateTime           @db.Date
+  /// El comercio o la persona, como lo leyo el lector: es la descripcion
+  /// que se propone para el gasto.
+  comercio            String             @db.VarChar(120)
+  /// De donde vino, para mostrarlo: "Comprobante de Santander".
+  fuente              String             @db.VarChar(80)
+  /// La plantilla que lo leyo. Vacia si lo leyo la IA.
+  plantilla           String?            @db.VarChar(60)
+  /// De 0 a 1, solo si lo leyo la IA.
+  confianza           Float?
+  medioPago           MedioPago?         @map("medio_pago")
+  /// Los ultimos 4 digitos de la cuenta o tarjeta de donde salio. Nunca el
+  /// numero completo.
+  ultimos4            String?            @db.Char(4)
+  /// En cuantas cuotas, si es una compra en cuotas (2 o mas).
+  cuotas              Int?
+  /// Con quien, si el comprobante lo dice.
+  contraparteNombre   String?            @map("contraparte_nombre") @db.VarChar(120)
+  contraparteBanco    String?            @map("contraparte_banco") @db.VarChar(60)
+  /// Los ultimos 4 digitos de la cuenta de destino (o de origen, si entra).
+  /// Si es una cuenta del hogar, es un traspaso.
+  contraparteUltimos4 String?            @map("contraparte_ultimos4") @db.Char(4)
+  /// Un aviso de cargo o de abono que no dice con quien.
+  sinDetalle          Boolean            @default(false) @map("sin_detalle")
+  /// Llego reenviado a mano: el remitente sale del texto, no de su firma.
+  reenviadoAMano      Boolean            @default(false) @map("reenviado_a_mano")
+  /// Cuando llego el correo.
+  recibidoEn          DateTime           @map("recibido_en")
+  /// Como se confirmo. Solo en CONFIRMADO.
+  destino             DestinoMovimiento?
+  /// El gasto que se creo o con el que se enlazo. Si se borra ese gasto,
+  /// queda vacio y el movimiento sigue confirmado: no vuelve a la bandeja.
+  gastoId             String?            @map("gasto_id")
+  /// La deuda que se creo, si era una compra en cuotas.
+  deudaId             String?            @map("deuda_id")
+  /// El movimiento con que se junto. Solo en JUNTADO.
+  juntadoConId        String?            @map("juntado_con_id")
+  creadoEn            DateTime           @default(now()) @map("creado_en")
+  actualizadoEn       DateTime           @updatedAt @map("actualizado_en")
+
+  hogar      Hogar        @relation(fields: [hogarId], references: [id], onDelete: Restrict)
+  gasto      Gasto?       @relation(fields: [gastoId], references: [id], onDelete: SetNull)
+  deuda      Deuda?       @relation(fields: [deudaId], references: [id], onDelete: SetNull)
+  /// Si el principal se fuera, el juntado se va con el: era su eco.
+  juntadoCon Movimiento?  @relation("Juntados", fields: [juntadoConId], references: [id], onDelete: Cascade)
+  juntados   Movimiento[] @relation("Juntados")
+
+  @@unique([hogarId, huella])
+  @@index([hogarId, estado])
+  @@index([hogarId, fecha])
+  @@index([gastoId])
+  @@index([deudaId])
+  @@index([juntadoConId])
+  @@map("movimientos")
+}
+
+/// Una cuenta o tarjeta de alguien del hogar, por sus ultimos 4 digitos.
+/// Con ellas Luka sabe que una transferencia a otra cuenta del hogar es un
+/// traspaso y no un gasto.
+model CuentaBancaria {
+  id        String             @id @default(cuid())
+  hogarId   String             @map("hogar_id")
+  /// De quien es. Vacio si es de todo el hogar o si esa persona ya no esta.
+  miembroId String?            @map("miembro_id")
+  banco     String             @db.VarChar(60)
+  tipo      TipoCuentaBancaria
+  /// Solo los ultimos 4 digitos, nunca el numero completo.
+  ultimos4  String             @db.Char(4)
+  /// Como la llama el hogar: "Cuenta sueldo".
+  apodo     String?            @db.VarChar(60)
+  creadoEn  DateTime           @default(now()) @map("creado_en")
+
+  hogar   Hogar    @relation(fields: [hogarId], references: [id], onDelete: Restrict)
+  miembro Miembro? @relation(fields: [miembroId], references: [id], onDelete: SetNull)
+
+  @@unique([hogarId, banco, tipo, ultimos4])
+  @@index([hogarId, ultimos4])
+  @@map("cuentas_bancarias")
+}
+
+/// La categoria de siempre de un comercio: «Líder → Supermercado». La crea
+/// quien revisa la bandeja, y desde ahi lo de ese comercio llega con su
+/// categoria puesta.
+model ReglaDeComercio {
+  id            String   @id @default(cuid())
+  hogarId       String   @map("hogar_id")
+  /// El comercio normalizado (claveDeComercio en src/dominio/movimientos.ts):
+  /// sin tildes, en minusculas y sin la sucursal. Calza con todo lo que
+  /// empieza igual.
+  clave         String   @db.VarChar(120)
+  /// Como se muestra: "Líder".
+  etiqueta      String   @db.VarChar(120)
+  categoriaId   String   @map("categoria_id")
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  hogar     Hogar     @relation(fields: [hogarId], references: [id], onDelete: Restrict)
+  /// La categoria tiene que ser del mismo hogar. Las categorias no se borran
+  /// (se desactivan), pero si se borrara una, sus reglas se van con ella.
+  categoria Categoria @relation(fields: [categoriaId, hogarId], references: [id, hogarId], onDelete: Cascade)
+
+  @@unique([hogarId, clave])
+  @@index([categoriaId])
+  @@map("reglas_de_comercio")
 }

@@ -21,6 +21,7 @@ import { esquemaMes } from "@/dominio/esquemas";
 import { hoyISO } from "@/lib/fecha";
 import { enPeriodo, periodoDe, periodoDeFecha, periodoVecino } from "@/lib/periodo";
 import { leerAjustes } from "@/datos/ajustes";
+import { leerBandeja } from "@/datos/movimientos";
 import { sinAutor } from "@/dominio/resumen";
 import { hogarActual } from "@/lib/hogar-actual";
 import { accionCrearGasto, accionEliminarGasto } from "./acciones/gastos";
@@ -49,6 +50,14 @@ import {
   accionCrearPresupuesto,
   accionEliminarPresupuesto,
 } from "./acciones/presupuestos";
+import {
+  accionAnotarIgual,
+  accionConfirmarListas,
+  accionConfirmarMovimiento,
+  accionCrearReglaDeComercio,
+  accionDescartarMovimiento,
+  accionDeshacerEnLaBandeja,
+} from "./acciones/movimientos";
 import { SecuenciaBalance } from "@/componentes/SecuenciaBalance";
 import { ListaDeudas } from "@/componentes/ListaDeudas";
 import { Presupuestos } from "@/componentes/Presupuestos";
@@ -75,6 +84,7 @@ import { BarraDelMes } from "@/componentes/BarraDelMes";
 import { LoQueQueda } from "@/componentes/LoQueQueda";
 import { Ahorros } from "@/componentes/Ahorros";
 import { Bienvenida, type ResumenBienvenida } from "@/componentes/Bienvenida";
+import { BandejaPorRevisar } from "@/componentes/BandejaPorRevisar";
 import { auth } from "@/auth";
 
 export const dynamic = "force-dynamic";
@@ -110,7 +120,7 @@ export default async function Home({ searchParams }: Props) {
 
   const [
     gastos, gastosAnterior, pagos, presupuestos, categorias, sueldos, deudas, cuentas,
-    sueldoAnterior, pagosAnterior, cuentasAnterior, presupuestosAnterior, ahorros,
+    sueldoAnterior, pagosAnterior, cuentasAnterior, presupuestosAnterior, ahorros, bandeja,
   ] = await Promise.all([
     listarGastosDelMes(hogarId, periodo),
     // Para el detalle al pasar el mouse por una categoria, la variacion del
@@ -130,6 +140,9 @@ export default async function Home({ searchParams }: Props) {
     listarPresupuestosDelMes(hogarId, mesAnterior),
     // Hasta este mes: de ahi salen los del mes, el total y el historial.
     listarAhorrosHasta(hogarId, mes),
+    // Lo que llego de los comprobantes y espera que alguien lo revise. No
+    // depende del mes que se mira: se revisa cuando llega.
+    leerBandeja(hogarId, { hoy, diaInicioMes }),
   ]);
 
   // Quien anoto cada gasto se muestra solo si en el hogar hay mas de una
@@ -315,6 +328,25 @@ export default async function Home({ searchParams }: Props) {
       <div className="mt-6">
         <IndiceSecciones />
       </div>
+
+      {/* Lo que llego de los comprobantes de los bancos y las tiendas. Va
+          antes que todo: hasta que se confirma, no suma en las cifras de
+          abajo. Solo aparece cuando el hogar ya recibe comprobantes. */}
+      {bandeja.visible && (
+        <div className="mt-6">
+          <BandejaPorRevisar
+            bandeja={bandeja}
+            categorias={categorias}
+            hoy={hoy}
+            accionConfirmar={accionConfirmarMovimiento}
+            accionConfirmarListas={accionConfirmarListas}
+            accionDescartar={accionDescartarMovimiento}
+            accionAnotarIgual={accionAnotarIgual}
+            accionDeshacer={accionDeshacerEnLaBandeja}
+            accionCrearRegla={accionCrearReglaDeComercio}
+          />
+        </div>
+      )}
 
       <main className="mt-8 space-y-14">
         {/* 01 · Las cuatro cifras, la barra del sueldo y la secuencia del

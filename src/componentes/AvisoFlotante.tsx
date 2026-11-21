@@ -11,6 +11,8 @@ type Props = {
   alCerrar: () => void;
   /** Cuanto se queda antes de irse solo, en milisegundos. */
   duracion?: number;
+  /** Un boton junto al texto, como «Deshacer». */
+  accion?: { etiqueta: string; icono?: string; alHacer: () => void } | null;
 };
 
 /**
@@ -22,7 +24,7 @@ type Props = {
  * existe desde que se monta: si apareciera junto con el texto, el lector de
  * pantalla no lo anunciaria.
  */
-export function AvisoFlotante({ titulo, mensaje, alCerrar, duracion = 4500 }: Props) {
+export function AvisoFlotante({ titulo, mensaje, alCerrar, duracion = 4500, accion = null }: Props) {
   const [montado, setMontado] = useState(false);
   const cerrar = useRef(alCerrar);
   cerrar.current = alCerrar;
@@ -52,6 +54,16 @@ export function AvisoFlotante({ titulo, mensaje, alCerrar, duracion = 4500 }: Pr
             <p className="text-sm font-bold">{titulo}</p>
             <p className="text-[13px] text-texto-tenue">{mensaje}</p>
           </div>
+          {accion !== null && (
+            <button
+              type="button"
+              onClick={() => accion.alHacer()}
+              className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1 self-center rounded-md px-2 text-[13px] font-bold enlace-luka transition-colors duration-150 hover:bg-superficie-tenue"
+            >
+              {accion.icono !== undefined && <Icono nombre={accion.icono} tamano={14} />}
+              {accion.etiqueta}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => cerrar.current()}

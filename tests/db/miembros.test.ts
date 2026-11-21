@@ -328,6 +328,26 @@ describe("borrar el hogar, con el codigo del correo", () => {
     // Y el sueldo cerrado de alguien que ya salio: tambien se va con el hogar.
     await prisma.sueldo.create({ data: { hogarId, monto: 400_000, vigenteDesde: mes, vigenteHasta: mes } });
     await prisma.ajustes.create({ data: { hogarId, diaInicioMes: 27 } });
+    // Lo que llego de los comprobantes: una cuenta del hogar, una regla, y la
+    // boleta confirmada como el gasto, con el aviso del banco juntado.
+    await prisma.cuentaBancaria.create({ data: { hogarId, banco: "Santander", tipo: "CUENTA_CORRIENTE", ultimos4: "5678" } });
+    await prisma.reglaDeComercio.create({ data: { hogarId, clave: "pan", etiqueta: "Pan", categoriaId: cat.id } });
+    const comprobante = {
+      hogarId,
+      tipo: "BOLETA" as const,
+      sentido: "GASTO" as const,
+      monto: 1_000,
+      fecha: fechaDesdeISO("2026-11-03"),
+      comercio: "Pan",
+      fuente: "Boleta",
+      recibidoEn: new Date(),
+    };
+    const boleta = await prisma.movimiento.create({
+      data: { ...comprobante, huella: "a".repeat(64), estado: "CONFIRMADO", destino: "GASTO_NUEVO", gastoId: gasto.id },
+    });
+    await prisma.movimiento.create({
+      data: { ...comprobante, tipo: "CARGO", sinDetalle: true, huella: "b".repeat(64), estado: "JUNTADO", juntadoConId: boleta.id },
+    });
     await mkdir(join(raiz, hogarId), { recursive: true });
     await writeFile(join(raiz, hogarId, `${"a".repeat(32)}.jpg`), "boleta");
   }
@@ -345,6 +365,9 @@ describe("borrar el hogar, con el codigo del correo", () => {
       prisma.ajustes.count({ where: { hogarId } }),
       prisma.miembro.count({ where: { hogarId } }),
       prisma.codigoDeBorrado.count({ where: { hogarId } }),
+      prisma.movimiento.count({ where: { hogarId } }),
+      prisma.cuentaBancaria.count({ where: { hogarId } }),
+      prisma.reglaDeComercio.count({ where: { hogarId } }),
     ]);
 
   test("el codigo llega al correo del dueno, y en la base queda solo su huella", async () => {
@@ -371,7 +394,7 @@ describe("borrar el hogar, con el codigo del correo", () => {
     await borrar(OTRO, ana, ` ${codigo.slice(0, 3)} ${codigo.slice(3)} `);
 
     expect(await prisma.hogar.count({ where: { id: OTRO } })).toBe(0);
-    expect(await filasDe(OTRO)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(await filasDe(OTRO)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(await prisma.miembro.count({ where: { correo: "invitada@gmail.com" } })).toBe(0);
     expect(existsSync(join(raiz, OTRO))).toBe(false);
 

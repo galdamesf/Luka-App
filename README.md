@@ -43,6 +43,7 @@ escuchando. `docker compose ps` te dice si el contenedor quedo `healthy`.
 | `npm run db:seed` | Carga o actualiza las categorias base |
 | `npm run db:studio` | Explorador visual de la base |
 | `npm run db:reset` | Borra todo y vuelve a migrar y sembrar |
+| `npm run ejemplos:bandeja` | Llena la bandeja «Por revisar» con comprobantes de ejemplo (`-- --quitar` los saca) |
 
 Los tests van separados en dos proyectos a proposito: mientras trabajas en una
 seccion corres solo la que toca con `test:unit` o `test:db`, en vez de la suite
@@ -169,6 +170,22 @@ solo con plantillas. Para agregar un banco o una tienda: un archivo como
 datos inventados) y su caso en `tests/unit/plantillas.test.ts`. Se prueba con
 `npm run test:unit -- comprobantes plantillas`.
 
+**Lo que llega de un comprobante no suma hasta que alguien lo confirma.** Es la
+seccion B: cada lectura queda como un `Movimiento` y va a la bandeja «Por
+revisar», arriba del panel. Las reglas (`src/dominio/movimientos.ts`) cuidan
+que el mes no se infle: el mismo correo dos veces es un solo movimiento (la
+huella es unica por hogar); un ingreso, un traspaso entre cuentas del hogar, el
+pago de la tarjeta y un giro quedan fuera con el motivo a la vista; la boleta de
+la tienda y el aviso del banco de la misma compra se juntan; si ya hay un gasto
+con el mismo monto dos dias antes o despues, se pregunta si es el mismo; una
+compra en cuotas se propone como deuda; y lo que calza con una cuenta o una
+cuota por pagar se propone pagarla, que es lo que crea su gasto. Confirmar crea
+el gasto y cierra el movimiento en una sola transaccion, y si despues se borra
+ese gasto el movimiento no vuelve. Las reglas de comercio («Lider →
+Supermercado») las crea quien revisa. Para verla sin correos todavia:
+`npm run ejemplos:bandeja`. Se prueba con `npm run test:unit -- movimientos` y
+`npm run test:db -- movimientos`.
+
 ## Sobre las dependencias
 
 `npm audit` deja **3 avisos altos** que no se pueden cerrar hoy, y es a
@@ -205,6 +222,7 @@ faltaban los binarios opcionales de Apple Silicon. Lo crea tu `npm install`.
 prisma/
   schema.prisma      Modelos: Categoria, Gasto, enum MedioPago
   seed.ts            13 categorias base, idempotente (upsert por nombre)
+  ejemplos-por-revisar.ts  Comprobantes de ejemplo para ver la bandeja en local
 src/
   app/
     acciones/        Server Actions (crear y eliminar gastos)
@@ -222,9 +240,13 @@ src/
     comprobantes/    El lector de comprobantes por correo: tipos, normalizar,
                      limpiar datos personales y el lector (plantillas y luego IA)
     plantillas/      Como leer cada banco y tienda sin IA
+    movimientos.ts   Las reglas de lo que llega: que queda fuera, que se junta,
+                     que se pregunta y que se propone
+    bandeja.ts       Los datos planos que dibuja la bandeja «Por revisar»
   datos/             Acceso a Prisma. Recibe el cliente por parametro
     gastos.ts
     categorias.ts
+    movimientos.ts   Registrar lo que llega, la bandeja, confirmar y deshacer
   lib/
     prisma.ts        Cliente singleton, para no agotar el pool en dev
     fecha.ts         Helpers de fecha UTC y rangos de mes
@@ -254,5 +276,6 @@ tests/
 - [ ] Seccion 9: resumen diario por correo
 - [ ] Mas adelante: presupuestos por categoria
 - [x] Gastos que llegan solos, seccion A: lector de comprobantes (plantillas + IA)
-- [ ] Gastos que llegan solos, secciones B a F: bandeja, buzon, cartola, bancos y
-      cuentas, y Luka en Claude
+- [x] Gastos que llegan solos, seccion B: movimientos y la bandeja «Por revisar»
+- [ ] Gastos que llegan solos, secciones C a F: bancos y correos con el buzon,
+      cartola, puesta en marcha y Luka en Claude
