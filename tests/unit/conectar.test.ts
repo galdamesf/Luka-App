@@ -227,12 +227,18 @@ describe("el resumen diario por correo", () => {
 });
 
 describe("lo que Luka hace sola", () => {
-  test("revisa el buzon sola en Vercel, y en tu computador solo si se lo pides", () => {
-    expect(revisionAutomatica({ VERCEL: "1" })).toBe(true);
+  test("revisa el buzon sola en la version publicada, y en tu computador solo si se lo pides", () => {
+    expect(revisionAutomatica({ VERCEL: "1", VERCEL_ENV: "production" })).toBe(true);
     expect(revisionAutomatica({})).toBe(false);
     expect(revisionAutomatica({ BUZON_AUTOMATICO: "1" })).toBe(true);
     expect(revisionAutomatica({ BUZON_AUTOMATICO: "si" })).toBe(true);
-    expect(revisionAutomatica({ VERCEL: "1", BUZON_AUTOMATICO: "0" })).toBe(false);
+    expect(revisionAutomatica({ VERCEL: "1", VERCEL_ENV: "production", BUZON_AUTOMATICO: "0" })).toBe(false);
+  });
+
+  test("una vista previa de Vercel no revisa el buzon sola: se llevaria los correos de la version publicada", () => {
+    expect(revisionAutomatica({ VERCEL: "1", VERCEL_ENV: "preview" })).toBe(false);
+    expect(revisionAutomatica({ VERCEL: "1" })).toBe(false);
+    expect(revisionAutomatica({ VERCEL: "1", VERCEL_ENV: "preview", BUZON_AUTOMATICO: "1" })).toBe(true);
   });
 
   test("los enlaces de los correos van a LUKA_URL, o al dominio de Vercel, o a localhost", () => {

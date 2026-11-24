@@ -259,8 +259,9 @@ tiro. El buzon se revisa solo al abrir el panel y cada mañana, con la tarea de
 `vercel.json` (`/api/tareas/diaria`, protegida con `CRON_SECRET`), que ademas
 manda el resumen diario: lo que se anoto ayer, lo que espera en «Por revisar»
 y las cuentas por vencer, uno por dia y solo si hay algo que contar. Se apaga
-en Hogar. En tu computador el buzon no se revisa solo (`BUZON_AUTOMATICO`),
-para no llevarse los correos de la nube. Se prueba con
+en Hogar. En tu computador y en las vistas previas de Vercel el buzon no se
+revisa solo (`BUZON_AUTOMATICO`), para no llevarse los correos de la version
+publicada. Se prueba con
 `npm run test:unit -- conectar` y `npm run test:db -- conectar`.
 
 ## Sobre las dependencias
