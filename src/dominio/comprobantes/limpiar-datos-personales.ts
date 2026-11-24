@@ -28,7 +28,7 @@ const CORREO = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
 const RUT_CON_ETIQUETA = /\b(R\.?U\.?[TN]\.?(?:\s*N[º°o.]*)?\s*:?\s*)\d{1,2}\.?\d{3}\.?\d{3}-?[\dkK]\b/gi;
 const RUT_CON_PUNTOS = /\b\d{1,2}\.\d{3}\.\d{3}-[\dkK]\b/g;
 const RUT_SIN_PUNTOS = /\b\d{7,8}-[\dkK]\b/g;
-/** ************0583, *******8878, XXXX-XXXX-XXXX-1234 */
+/** ************0583, *******4521, XXXX-XXXX-XXXX-1234 */
 const ENMASCARADO = /(?:[*xX•·]{3,}[\s-]?){1,4}(\d{4})(?!\d)/g;
 const CELULAR = /(?:\+56[\s-]?9|(?<!\d)9)[\s-]?\d{4}[\s-]?\d{4}(?!\d)/g;
 const FIJO = /\+56[\s-]?\(?2\)?[\s-]?\d{4}[\s-]?\d{4}(?!\d)/g;

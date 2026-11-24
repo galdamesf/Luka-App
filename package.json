@@ -20,6 +20,7 @@
     "db:mover-mes": "tsx prisma/mover-mes.ts",
     "ejemplos:bandeja": "tsx prisma/ejemplos-por-revisar.ts",
     "correos:probar": "tsx prisma/probar-correo.ts",
+    "cartola:probar": "tsx prisma/probar-cartola.ts",
     "db:respaldo": "tsx prisma/respaldo.ts",
     "nube:subir": "tsx prisma/subir-a-la-nube.ts",
     "db:studio": "prisma studio",

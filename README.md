@@ -45,6 +45,7 @@ escuchando. `docker compose ps` te dice si el contenedor quedo `healthy`.
 | `npm run db:reset` | Borra todo y vuelve a migrar y sembrar |
 | `npm run ejemplos:bandeja` | Llena la bandeja «Por revisar» con comprobantes de ejemplo (`-- --quitar` los saca) |
 | `npm run correos:probar -- correo.eml` | Muestra como lee Luka un correo guardado (`--guardar --correo tu@gmail.com` lo deja «Por revisar») |
+| `npm run cartola:probar -- cartolas/cartola.pdf` | Muestra como lee Luka una cartola en PDF y si cuadra (`--guardar --correo tu@gmail.com` la anota, `--volcar` deja su texto) |
 
 Los tests van separados en dos proyectos a proposito: mientras trabajas en una
 seccion corres solo la que toca con `test:unit` o `test:db`, en vez de la suite
@@ -216,6 +217,28 @@ el buzon: `npm run correos:probar -- comprobante.eml`. Se prueba con
 `npm run test:unit -- correos bancos` y
 `npm run test:db -- buzon correos-registrados cuentas-bancarias`.
 
+**La cartola del mes cuadra el mes y trae lo que no tuvo aviso.** Es la
+seccion D, por ahora solo con Santander. La cartola llega en un PDF con clave
+(el RUT sin puntos, sin guion y sin el digito verificador). Cada persona la
+escribe una vez en Hogar, en la ficha de su banco, y Luka la guarda cifrada
+(AES-256-GCM, con una llave que sale de `CLAVE_DOS_PASOS`) y nunca la muestra.
+Con la clave guardada, la cartola que llega al buzon se lee sola; sin ella, el
+correo espera en el buzon y queda anotado que falta la clave. Tambien se puede
+subir a mano desde la misma ficha. La plantilla
+(`src/dominio/cartolas/santander.ts`) lee cada fila por la posicion de su texto
+en la pagina, y antes de anotar nada se cuadra: los cargos y los abonos tienen
+que sumar lo que dice el resumen del banco, y el saldo de cada dia tiene que
+calzar. Si no cuadra, no se anota nada. Cada fila es un movimiento mas: lo que
+ya llego por correo se reconoce (mismo monto y sentido, hasta 3 dias de
+diferencia, la misma cuenta y, en las transferencias, un nombre en comun) y se
+junta con el, sin duplicarse; la misma cartola dos veces no anota nada la
+segunda. Para probar con una cartola de verdad, sin el buzon:
+`npm run cartola:probar -- cartolas/cartola.pdf`. La carpeta `cartolas/` no va
+al repositorio, porque lo que pongas ahi tiene tus datos. Para ensenarle a Luka
+la cartola de otro banco, `--volcar` deja el texto de cada pagina con su
+posicion. Se prueba con `npm run test:unit -- cartola` y
+`npm run test:db -- cartolas`.
+
 ## Sobre las dependencias
 
 `npm audit` deja **3 avisos altos** que no se pueden cerrar hoy, y es a
@@ -254,6 +277,7 @@ prisma/
   seed.ts            13 categorias base, idempotente (upsert por nombre)
   ejemplos-por-revisar.ts  Comprobantes de ejemplo para ver la bandeja en local
   probar-correo.ts   npm run correos:probar: como lee Luka un .eml
+  probar-cartola.ts  npm run cartola:probar: como lee Luka una cartola en PDF
 src/
   app/
     acciones/        Server Actions (crear y eliminar gastos)
@@ -280,6 +304,8 @@ src/
                      los pasos de cada proveedor
     buzon.ts         La direccion de Luka, las firmas, quien reenvio el correo
                      y la confirmacion de Gmail
+    cartolas/        La cartola del mes: la plantilla de cada banco, el cuadre
+                     con sus totales y como queda cada fila
   datos/             Acceso a Prisma. Recibe el cliente por parametro
     gastos.ts
     categorias.ts
@@ -287,6 +313,7 @@ src/
     bancos.ts        Las cuentas y tarjetas del hogar
     correos-registrados.ts  Registrar y confirmar correos con su codigo
     buzon.ts         Procesar lo que llega al buzon y la direccion de cada persona
+    cartolas.ts      Leer una cartola y anotar sus filas, y la clave de su PDF
   lib/
     prisma.ts        Cliente singleton, para no agotar el pool en dev
     fecha.ts         Helpers de fecha UTC y rangos de mes
@@ -300,12 +327,15 @@ src/
     buzon.ts         La configuracion del buzon
     buzon-imap.ts    El buzon por IMAP: listar, traer y borrar
     mx.ts            Los MX de un dominio, para reconocer su proveedor
+    cartola-pdf.ts   Abrir el PDF de la cartola, con su clave, y sacar su texto
+    claves-de-cartola.ts  Cifrar y descifrar la clave del PDF
 tests/
   unit/              Logica pura
   db/                Integracion contra Postgres
   fixtures/
     comprobantes/    Correos de ejemplo por banco y tienda, con datos inventados
     correos/         Arma esos ejemplos como llegan al buzon (MIME, PDF, reenvios)
+    cartolas/        Cartolas de ejemplo, con datos inventados, y una con clave
 ```
 
 ## Estado
@@ -323,5 +353,6 @@ tests/
 - [x] Gastos que llegan solos, seccion A: lector de comprobantes (plantillas + IA)
 - [x] Gastos que llegan solos, seccion B: movimientos y la bandeja «Por revisar»
 - [x] Gastos que llegan solos, seccion C: bancos, correos confirmados y el buzon
-- [ ] Gastos que llegan solos, secciones D a F: cartola, puesta en marcha y Luka
+- [x] Gastos que llegan solos, seccion D: la cartola del mes (Santander)
+- [ ] Gastos que llegan solos, secciones E y F: puesta en marcha y Luka
       en Claude

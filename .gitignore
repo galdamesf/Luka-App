@@ -29,6 +29,9 @@ yarn-error.log*
 # Respaldos de la base (npm run db:respaldo): tienen tus datos
 /respaldos/
 
+# Cartolas que pruebas con npm run cartola:probar: tienen tus datos
+/cartolas/
+
 # Prisma
 prisma/*.db
 prisma/*.db-journal

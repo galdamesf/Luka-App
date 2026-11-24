@@ -53,8 +53,9 @@ describe("el orden de las tablas", () => {
     presupuesto: ["hogar", "categoria"],
     cuentaBancaria: ["hogar", "miembro"],
     reglaDeComercio: ["hogar", "categoria"],
+    cartola: ["hogar", "miembro", "cuentaBancaria"],
     // Tambien a otro movimiento (el juntado a su principal): ver enOrdenDeInsercion.
-    movimiento: ["hogar", "gasto", "deuda"],
+    movimiento: ["hogar", "gasto", "deuda", "miembro", "cuentaBancaria", "cartola"],
   };
 
   test("cada tabla va despues de las que apunta, asi se puede insertar en orden", () => {

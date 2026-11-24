@@ -138,7 +138,7 @@ export const PASOS: Record<ProveedorDeCorreo, PasosDelProveedor> = {
     pasos: [
       "En Gmail, en el computador: la rueda → Ver toda la configuración → Reenvío y correo POP/IMAP → Agregar una dirección de reenvío. Pega tu dirección de Luka.",
       "Gmail le manda un código a Luka para confirmar que esa dirección acepta tu correo. Cuando llegue, aparece aquí: escríbelo en Gmail y presiona Verificar.",
-      "Ve a Filtros y direcciones bloqueadas → Crear un filtro nuevo. En «De», pega los remitentes de tus bancos y tiendas, y presiona Crear filtro.",
+      "Ve a Filtros y direcciones bloqueadas → Crear un filtro nuevo. En «De», pega las direcciones de tus bancos y tiendas (las de abajo, con el botón Copiar), y presiona Crear filtro.",
       "Marca «Reenviarlo a» tu dirección de Luka y «Nunca enviarlo a spam», y crea el filtro.",
     ],
     nota: "No actives «Reenviar una copia del correo entrante»: eso le mandaría a Luka todo tu correo. Basta con el filtro.",
@@ -148,7 +148,7 @@ export const PASOS: Record<ProveedorDeCorreo, PasosDelProveedor> = {
     reenviaSolo: true,
     pasos: [
       "En outlook.com: la rueda → Correo → Reglas → Agregar nueva regla.",
-      "Condición: «De», con el remitente de tu banco o tienda. Puedes agregar varios.",
+      "Condición: «De», con la dirección de tu banco o tienda. Puedes agregar varias.",
       "Acción: «Redirigir a» tu dirección de Luka. Redirigir, no reenviar: así el correo llega con el remitente del banco.",
     ],
     nota: "Outlook a veces pide confirmar tu cuenta antes de dejar reenviar. Si la regla no reenvía, reenvía a mano.",
@@ -158,7 +158,7 @@ export const PASOS: Record<ProveedorDeCorreo, PasosDelProveedor> = {
     reenviaSolo: true,
     pasos: [
       "En icloud.com/mail: la rueda → Reglas → Agregar una regla.",
-      "«Si un mensaje es de» el remitente de tu banco o tienda.",
+      "«Si un mensaje es de» la dirección de tu banco o tienda.",
       "«Reenviar a» tu dirección de Luka. iCloud pide una regla por cada remitente.",
     ],
   },
@@ -176,7 +176,7 @@ export const PASOS: Record<ProveedorDeCorreo, PasosDelProveedor> = {
     reenviaSolo: true,
     pasos: [
       "Busca en la configuración de tu correo «Reglas» o «Filtros».",
-      "Crea una regla para los remitentes de tus bancos y tiendas que los reenvíe (o mejor, que los redirija) a tu dirección de Luka.",
+      "Crea una regla para las direcciones de tus bancos y tiendas que reenvíe sus correos (o mejor, que los redirija) a tu dirección de Luka.",
       "Si es el correo del trabajo y la regla no reenvía, puede que tu empresa lo tenga bloqueado: reenvía a mano.",
     ],
   },

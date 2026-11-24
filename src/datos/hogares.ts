@@ -462,6 +462,7 @@ export async function borrarHogar(
     // Los movimientos de los comprobantes apuntan a gastos y deudas: van
     // primero. Las reglas, antes que las categorias.
     await tx.movimiento.deleteMany(delHogar);
+    await tx.cartola.deleteMany(delHogar);
     await tx.reglaDeComercio.deleteMany(delHogar);
     await tx.cuentaBancaria.deleteMany(delHogar);
     await tx.cuotaPagada.deleteMany({ where: { deuda: { hogarId } } });

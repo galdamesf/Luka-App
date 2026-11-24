@@ -97,10 +97,14 @@ function contarRevision(resumen: ResumenDeRevision): string {
   if (resumen.revisados === 0) return "Revisé el buzón: no hay correos nuevos.";
   const partes = [
     resumen.nuevos > 0 ? (resumen.nuevos === 1 ? "1 comprobante nuevo" : `${resumen.nuevos} comprobantes nuevos`) : null,
+    resumen.cartolas > 0 ? (resumen.cartolas === 1 ? "1 cartola leída" : `${resumen.cartolas} cartolas leídas`) : null,
     resumen.repetidos > 0 ? (resumen.repetidos === 1 ? "1 que ya había llegado" : `${resumen.repetidos} que ya habían llegado`) : null,
     resumen.sinMovimiento > 0 ? (resumen.sinMovimiento === 1 ? "1 que no era un comprobante" : `${resumen.sinMovimiento} que no eran comprobantes`) : null,
     resumen.rechazados > 0 ? (resumen.rechazados === 1 ? "1 desde un correo sin confirmar" : `${resumen.rechazados} desde correos sin confirmar`) : null,
     resumen.pendientes > 0 ? `${resumen.pendientes} para la próxima` : null,
+    resumen.esperanClave > 0
+      ? `${resumen.esperanClave === 1 ? "1 cartola que espera" : `${resumen.esperanClave} cartolas que esperan`} la clave de su PDF (guárdala en «Tus bancos y tarjetas»)`
+      : null,
   ].filter((p): p is string => p !== null);
   return partes.length === 0 ? "Revisé el buzón: todo al día." : `Revisé el buzón: ${partes.join(", ")}.`;
 }
@@ -129,7 +133,7 @@ export async function accionCambiarMiDireccion(_previo: EstadoFormulario, _datos
     return fallo(error);
   }
   revalidatePath("/hogar");
-  return LISTO(`Tu dirección nueva es ${direccion}. Cámbiala también en tus reglas de reenvío.`);
+  return LISTO(`Tu dirección nueva es ${direccion}. Cámbiala también en el filtro o la regla de tu correo.`);
 }
 
 export async function accionOlvidarCodigoDeGmail(_previo: EstadoFormulario, _datos: FormData): Promise<EstadoFormulario> {

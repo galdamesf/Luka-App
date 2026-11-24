@@ -13,7 +13,9 @@
  * solo donde se pidieron. Tampoco lo que fue llegando a cada buzon: es un
  * registro de los ultimos dias, no datos del hogar. Los correos registrados
  * y los buzones si: con ellos, la direccion de Luka de cada persona y sus
- * correos confirmados siguen siendo los mismos en la nube.
+ * correos confirmados siguen siendo los mismos en la nube. Las cartolas
+ * leidas tambien, pero no las claves de sus PDF: van cifradas con la
+ * CLAVE_DOS_PASOS de tu Mac, y en la nube cada uno las escribe de nuevo.
  *
  * Los movimientos van al final porque apuntan a gastos y deudas, y ademas a
  * otros movimientos (el juntado a su principal): copiarDatos los inserta en
@@ -35,6 +37,7 @@ export const TABLAS = [
   "presupuesto",
   "cuentaBancaria",
   "reglaDeComercio",
+  "cartola",
   "movimiento",
 ] as const;
 
@@ -63,6 +66,7 @@ export const NOMBRE_DE_TABLA: Record<Tabla, string> = {
   presupuesto: "presupuestos",
   cuentaBancaria: "cuentas bancarias",
   reglaDeComercio: "reglas de comercio",
+  cartola: "cartolas",
   movimiento: "movimientos",
 };
 

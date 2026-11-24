@@ -210,18 +210,107 @@ export type MovimientoParaJuntar = {
   fecha: string;
   ultimos4: string | null;
   sinDetalle: boolean;
+  /** La cartola de donde salio. Sin esto (o null), llego por correo. */
+  cartolaId?: string | null;
+  /** La cuenta del hogar, si se sabe. */
+  cuentaBancariaId?: string | null;
+  /** El comercio o la persona: con dos parecidos, decide cual es. */
+  comercio?: string;
 };
 
 export type CandidatoParaJuntar = MovimientoParaJuntar & {
   id: string;
-  /** Si ya tiene uno juntado: cada movimiento se junta con uno solo. */
+  /**
+   * Si ya tiene juntado uno que llego por correo: cada movimiento se junta
+   * con una sola otra mitad (la boleta con el aviso, el cargo con su
+   * comprobante).
+   */
   tieneJuntado: boolean;
+  /** Si ya tiene juntada una fila de cartola: tambien una sola. */
+  tieneJuntadoDeCartola?: boolean;
 };
 
 /** Los avisos del banco pueden llegar fechados el dia siguiente al de la boleta. */
 export const DIAS_PARA_JUNTAR = 1;
 
+/**
+ * La cartola anota una compra con tarjeta el dia en que el banco la carga,
+ * que puede ser un par de dias despues (un fin de semana de por medio).
+ */
+export const DIAS_PARA_CARTOLA = 3;
+
+/** Cuantos dias antes o despues se buscan las otras mitades: el mas amplio de los dos. */
+export const DIAS_PARA_BUSCAR_PAREJA = Math.max(DIAS_PARA_JUNTAR, DIAS_PARA_CARTOLA);
+
 const ESTADOS_QUE_JUNTAN: readonly EstadoMovimiento[] = ["POR_REVISAR", "CONFIRMADO", "IGNORADO"];
+
+/**
+ * Una fila de la cartola se junta tambien con lo descartado: si alguien ya
+ * descarto ese movimiento cuando llego por correo, la cartola no lo trae de
+ * vuelta.
+ */
+const ESTADOS_QUE_JUNTAN_CON_CARTOLA: readonly EstadoMovimiento[] = [...ESTADOS_QUE_JUNTAN, "DESCARTADO"];
+
+function esDeCartola(movimiento: Pick<MovimientoParaJuntar, "cartolaId">): boolean {
+  return movimiento.cartolaId !== undefined && movimiento.cartolaId !== null;
+}
+
+/** Con que puede ser el mismo movimiento una fila de la cartola de cada tipo. */
+const CALZA_CON_LA_CARTOLA: Record<TipoMovimiento, readonly TipoMovimiento[]> = {
+  COMPRA: ["COMPRA", "BOLETA", "CARGO", "PAGO"],
+  PAGO: ["PAGO", "COMPRA", "BOLETA", "CARGO"],
+  CARGO: ["CARGO", "COMPRA", "BOLETA", "PAGO", "TRANSFERENCIA", "PAGO_TARJETA"],
+  TRANSFERENCIA: ["TRANSFERENCIA", "TRASPASO_PROPIO", "PAGO_TARJETA", "CARGO", "PAGO"],
+  TRASPASO_PROPIO: ["TRANSFERENCIA", "TRASPASO_PROPIO", "ABONO", "CARGO"],
+  ABONO: ["ABONO", "TRASPASO_PROPIO"],
+  GIRO: ["GIRO", "CARGO"],
+  PAGO_TARJETA: ["PAGO_TARJETA", "TRANSFERENCIA", "CARGO", "PAGO"],
+  BOLETA: ["COMPRA", "PAGO", "CARGO"],
+};
+
+const ENTRE_PERSONAS: readonly TipoMovimiento[] = ["TRANSFERENCIA", "ABONO", "TRASPASO_PROPIO"];
+
+/** Las palabras que no dicen de quien se trata, en la glosa de un banco. */
+const DE_LA_GLOSA = new Set(["transf", "transferencia", "cargo", "abono", "cuenta", "nacional", "internacional", "rec"]);
+
+/** Las palabras que distinguen a una persona o un comercio. */
+function palabrasQueDistinguen(texto: string | undefined): Set<string> {
+  return new Set(
+    palabrasDe(texto ?? "")
+      .map((p) => p.normal)
+      .filter((p) => p.length >= 3 && !GENERICAS.has(p) && !DE_UNION.has(p) && !DE_LA_GLOSA.has(p)),
+  );
+}
+
+/** Cuantas palabras que distinguen comparten dos nombres: "Ana Rojas" y "ANA MARIA ROJAS PEREZ", dos. */
+export function nombresEnComun(a: string | undefined, b: string | undefined): number {
+  const deA = palabrasQueDistinguen(a);
+  let comunes = 0;
+  for (const palabra of palabrasQueDistinguen(b)) if (deA.has(palabra)) comunes++;
+  return comunes;
+}
+
+/**
+ * Si una fila de la cartola y un movimiento que llego por correo son el
+ * mismo: mismo monto, moneda y lado, a lo mas tres dias de distancia, de la
+ * misma cuenta si los dos la saben, y de tipos que calzan. Entre personas
+ * (una transferencia), ademas, con el nombre en comun si los dos lo dicen:
+ * dos transferencias iguales el mismo dia pueden ser a dos personas.
+ */
+function calzaConLaFila(fila: MovimientoParaJuntar, otro: MovimientoParaJuntar): boolean {
+  if (fila.sentido !== otro.sentido || fila.sentido === "NINGUNO") return false;
+  if (fila.moneda !== otro.moneda || fila.monto !== otro.monto) return false;
+  if (Math.abs(diasEntre(fila.fecha, otro.fecha)) > DIAS_PARA_CARTOLA) return false;
+  const cuentaFila = fila.cuentaBancariaId ?? null;
+  const cuentaOtro = otro.cuentaBancariaId ?? null;
+  if (cuentaFila !== null && cuentaOtro !== null && cuentaFila !== cuentaOtro) return false;
+  if (!CALZA_CON_LA_CARTOLA[fila.tipo].includes(otro.tipo)) return false;
+  const entrePersonas = ENTRE_PERSONAS.includes(fila.tipo) && ENTRE_PERSONAS.includes(otro.tipo) && !otro.sinDetalle;
+  if (entrePersonas && palabrasQueDistinguen(fila.comercio).size > 0 && palabrasQueDistinguen(otro.comercio).size > 0) {
+    return nombresEnComun(fila.comercio, otro.comercio) > 0;
+  }
+  return true;
+}
 
 function esAvisoDeCuenta(movimiento: Pick<MovimientoParaJuntar, "tipo" | "sinDetalle">): boolean {
   return movimiento.sinDetalle || movimiento.tipo === "COMPRA" || movimiento.tipo === "CARGO";
@@ -244,6 +333,21 @@ function esAvisoDeCuenta(movimiento: Pick<MovimientoParaJuntar, "tipo" | "sinDet
  * de verdad (a dos personas, por lo mismo).
  */
 export function sonLaMismaCompra(a: MovimientoParaJuntar, b: MovimientoParaJuntar): boolean {
+  if (esDeCartola(a) || esDeCartola(b)) {
+    if (!esDeCartola(a)) return calzaConLaFila(b, a);
+    if (!esDeCartola(b)) return calzaConLaFila(a, b);
+    // Dos cartolas de la misma cuenta que se traslapan (otra version del
+    // mismo PDF): la misma fila, el mismo dia.
+    return (
+      a.cartolaId !== b.cartolaId &&
+      (a.cuentaBancariaId ?? null) !== null &&
+      a.cuentaBancariaId === b.cuentaBancariaId &&
+      a.sentido === b.sentido &&
+      a.moneda === b.moneda &&
+      a.monto === b.monto &&
+      a.fecha === b.fecha
+    );
+  }
   if (a.sentido !== b.sentido || a.sentido === "NINGUNO") return false;
   if (a.moneda !== b.moneda || a.monto !== b.monto) return false;
   if (Math.abs(diasEntre(a.fecha, b.fecha)) > DIAS_PARA_JUNTAR) return false;
@@ -256,9 +360,15 @@ export function sonLaMismaCompra(a: MovimientoParaJuntar, b: MovimientoParaJunta
   );
 }
 
-/** De dos movimientos que son la misma compra, el que dice mas: el que no es un aviso sin detalle, y si no la boleta. */
+/**
+ * De dos movimientos que son la misma compra, el que dice mas: el que no es
+ * un aviso sin detalle; si no, el que llego por correo antes que la fila de
+ * la cartola (el comprobante trae la cuenta de destino, la cartola no); y si
+ * no, la boleta.
+ */
 function diceMas(a: MovimientoParaJuntar, b: MovimientoParaJuntar): "a" | "b" {
   if (a.sinDetalle !== b.sinDetalle) return a.sinDetalle ? "b" : "a";
+  if (esDeCartola(a) !== esDeCartola(b)) return esDeCartola(a) ? "b" : "a";
   if (a.tipo === "BOLETA" && b.tipo !== "BOLETA") return "a";
   if (b.tipo === "BOLETA" && a.tipo !== "BOLETA") return "b";
   return "a";
@@ -280,16 +390,27 @@ export type Pareja = {
  * comprobante tiene que aparecer.
  */
 export function elegirPareja(nuevo: MovimientoParaJuntar, candidatos: readonly CandidatoParaJuntar[]): Pareja | null {
+  const deCartola = esDeCartola(nuevo);
   const posibles = candidatos
-    .filter((c) => ESTADOS_QUE_JUNTAN.includes(c.estado) && !c.tieneJuntado && sonLaMismaCompra(nuevo, c))
-    .sort(
-      (x, y) =>
+    .filter((c) => {
+      if (deCartola) return ESTADOS_QUE_JUNTAN_CON_CARTOLA.includes(c.estado) && !c.tieneJuntadoDeCartola;
+      return ESTADOS_QUE_JUNTAN.includes(c.estado) && !c.tieneJuntado;
+    })
+    .filter((c) => sonLaMismaCompra(nuevo, c))
+    .sort((x, y) => {
+      // Con una fila de cartola, primero el que se llama igual.
+      const porNombre =
+        deCartola || esDeCartola(x) || esDeCartola(y) ? nombresEnComun(nuevo.comercio, y.comercio) - nombresEnComun(nuevo.comercio, x.comercio) : 0;
+      return (
+        porNombre ||
         Math.abs(diasEntre(nuevo.fecha, x.fecha)) - Math.abs(diasEntre(nuevo.fecha, y.fecha)) ||
-        (x.id < y.id ? -1 : x.id > y.id ? 1 : 0),
-    );
+        (x.id < y.id ? -1 : x.id > y.id ? 1 : 0)
+      );
+    });
   const candidato = posibles[0];
   if (candidato === undefined) return null;
-  if (candidato.estado === "CONFIRMADO") return { candidato, principal: "candidato" };
+  // Lo que alguien ya decidio (confirmarlo o descartarlo) manda.
+  if (candidato.estado === "CONFIRMADO" || candidato.estado === "DESCARTADO") return { candidato, principal: "candidato" };
   return { candidato, principal: diceMas(nuevo, candidato) === "a" ? "nuevo" : "candidato" };
 }
 

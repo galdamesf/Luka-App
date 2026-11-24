@@ -129,7 +129,9 @@ export function TusCorreos(props: Props) {
         )}
         <p className="text-sm font-semibold">
           En {proveedor === "OTRO" ? "tu correo" : guia.nombre}:{" "}
-          {guia.reenviaSolo ? "una regla que reenvía solo los de tus bancos y tiendas" : "sin reenvío automático gratis"}
+          {guia.reenviaSolo
+            ? `${proveedor === "GMAIL" ? "un filtro" : "una regla"} que le pasa a Luka solo los avisos de tus bancos y tiendas`
+            : "sin reenvío automático gratis"}
         </p>
         <ol className="list-decimal space-y-1.5 pl-5 text-sm">
           {guia.pasos.map((paso) => (
@@ -139,17 +141,21 @@ export function TusCorreos(props: Props) {
         {guia.nota && <p className="text-sm text-texto-tenue">{guia.nota}</p>}
         {guia.reenviaSolo && remitentes.length > 0 && (
           <div>
-            <p className="mb-1 text-xs font-semibold text-texto-tenue">Remitentes de tus bancos y tiendas</p>
+            <p className="mb-1 text-xs font-semibold text-texto-tenue">
+              {proveedor === "GMAIL"
+                ? "Esto va en el campo «De» del filtro. El «OR» es para que Gmail tome cualquiera de estas direcciones."
+                : "Las direcciones desde donde te escriben tus bancos y tiendas"}
+            </p>
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-borde bg-superficie-tenue p-2 pl-3">
               <code className="min-w-0 flex-1 break-all font-mono text-[13px]">
                 {proveedor === "GMAIL" ? remitentes.join(" OR ") : remitentes.join(", ")}
               </code>
               <BotonCopiar
                 texto={proveedor === "GMAIL" ? remitentes.join(" OR ") : remitentes.join("\n")}
-                descripcion="los remitentes de tus bancos y tiendas"
+                descripcion="las direcciones de tus bancos y tiendas"
               />
             </div>
-            <p className="mt-1 text-xs text-texto-tenue">Luka la arma con tus bancos y con los remitentes que van llegando.</p>
+            <p className="mt-1 text-xs text-texto-tenue">Luka arma esta lista con tus bancos y la completa con lo que va llegando.</p>
           </div>
         )}
         <p className="text-sm text-texto-tenue">{REENVIO_A_MANO}</p>
@@ -348,7 +354,7 @@ function LoUltimo({
         claseBoton={DE_TEXTO}
       >
         <p>La dirección de ahora deja de servir: lo que llegue ahí se borra sin leer.</p>
-        <p>Sirve si alguien más la conoce. Después tienes que cambiarla en tus reglas de reenvío.</p>
+        <p>Sirve si alguien más la conoce. Después tienes que cambiarla en el filtro o la regla de tu correo.</p>
       </ConfirmarAccion>
     </div>
   );

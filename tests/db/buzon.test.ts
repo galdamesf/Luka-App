@@ -12,8 +12,8 @@ import {
   type OpcionesDelBuzon,
 } from "@/datos/buzon";
 import { leerBandeja } from "@/datos/movimientos";
-import { destinatariosDeEncabezados, type CorreoEnElBuzon, type FuenteDeCorreos } from "@/lib/buzon-imap";
 import { armarCorreo, correoDelEjemplo, firmaDe, reenvioDeGmail, sinFirmaDe } from "../fixtures/correos/armar";
+import { buzonEnMemoria } from "../fixtures/correos/buzon-en-memoria";
 
 /*
   El buzon contra la base, con correos armados como llegan de verdad. Lo que
@@ -377,31 +377,6 @@ describe("la direccion de cada persona", () => {
   });
 });
 
-/** Un buzon en memoria, como el de IMAP: cada correo con sus destinatarios, como los trae IMAP. */
-function buzonEnMemoria(correos: Buffer[]): FuenteDeCorreos & { quedan: () => number; cerrado: () => boolean } {
-  const vivos = new Map(correos.map((correo, i) => [i + 1, correo]));
-  let cerrado = false;
-  return {
-    async listar() {
-      return [...vivos].map(([uid, correo]): CorreoEnElBuzon => {
-        const texto = correo.toString("utf8");
-        return { carpeta: "INBOX", uid, destinatarios: destinatariosDeEncabezados(texto.slice(0, texto.indexOf("\r\n\r\n"))) };
-      });
-    },
-    async traer(correo) {
-      return new Uint8Array(vivos.get(correo.uid)!);
-    },
-    async borrar(lista) {
-      for (const correo of lista) vivos.delete(correo.uid);
-    },
-    async cerrar() {
-      cerrado = true;
-    },
-    quedan: () => vivos.size,
-    cerrado: () => cerrado,
-  };
-}
-
 describe("una revision del buzon", () => {
   test("lee y borra lo que es para Luka, y deja el correo de soporte donde estaba", async () => {
     await cuentaSantander();
@@ -413,7 +388,16 @@ describe("una revision del buzon", () => {
       soporte,
     ]);
     const resumen = await revisarBuzon(buzon, opciones());
-    expect(resumen).toEqual({ revisados: 3, nuevos: 1, repetidos: 1, sinMovimiento: 0, rechazados: 1, pendientes: 0 });
+    expect(resumen).toEqual({
+      revisados: 3,
+      nuevos: 1,
+      repetidos: 1,
+      sinMovimiento: 0,
+      rechazados: 1,
+      pendientes: 0,
+      cartolas: 0,
+      esperanClave: 0,
+    });
     expect(buzon.quedan()).toBe(1);
     expect(await prisma.movimiento.count()).toBe(1);
   });

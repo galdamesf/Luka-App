@@ -25,6 +25,8 @@ import {
   quienLoReenvio,
   type ResultadoDeLlegada,
 } from "@/dominio/buzon";
+import type { AdjuntoEntrante } from "@/lib/correo-entrante";
+import { leerCartolaEnPdf, type ResumenDeCartola } from "./cartolas";
 import { correosConfirmados } from "./correos-registrados";
 import { huellaDeCorreo, registrarMovimiento } from "./movimientos";
 
@@ -57,8 +59,11 @@ export class ErrorDelBuzon extends Error {}
 export type ResultadoDelCorreo =
   /** No va a ningun buzon de Luka (por ejemplo, alguien le escribio a soporte): no se toca. */
   | { tipo: "ajeno" }
-  /** Algo pasajero (la IA no contesto): se queda en el buzon para la proxima. */
-  | { tipo: "reintentar"; motivo: string }
+  /**
+   * Algo pasajero (la IA no contesto): se queda en el buzon para la proxima.
+   * porLaClave: es la cartola y espera que alguien guarde la clave de su PDF.
+   */
+  | { tipo: "reintentar"; motivo: string; porLaClave?: true }
   /** Ya se proceso: se puede borrar del buzon. SIN_DUENO = una clave que no es de nadie. */
   | { tipo: "leido"; resultado: ResultadoDeLlegada | "SIN_DUENO"; movimientoId?: string };
 
@@ -69,6 +74,8 @@ export type OpcionesDelBuzon = {
   /** El lector para un hogar, con los nombres de su gente. Por omision, plantillas y la IA del .env. */
   lectorPara?: (nombres: readonly string[]) => Lector;
   ahora?: Date;
+  /** Para descifrar las claves de las cartolas. Por omision, la de CLAVE_DOS_PASOS. */
+  maestra?: Buffer;
 };
 
 function lectorDelEntorno(nombres: readonly string[]): Lector {
@@ -106,6 +113,23 @@ const RESULTADO_SIN_LECTURA = {
   "no-se-pudo-leer": "NO_SE_PUDO_LEER",
   "es-cartola": "CARTOLA",
 } as const satisfies Record<string, ResultadoDeLlegada>;
+
+/** 30 sep, del 2026-09-30. */
+function diaCorto(iso: string): string {
+  const meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return `${Number(iso.slice(8, 10))} ${meses[Number(iso.slice(5, 7)) - 1]}`;
+}
+
+/** "Cartola de Santander del 30 sep al 30 oct: 5 nuevos, 9 ya estaban." */
+export function detalleDeLaCartola(cartola: ResumenDeCartola): string {
+  const partes = [`${cartola.nuevas} por revisar`, `${cartola.yaEstaban} ya estaban`];
+  if (cartola.fuera > 0) partes.push(`${cartola.fuera} fuera`);
+  return `Cartola de ${cartola.banco} del ${diaCorto(cartola.desde)} al ${diaCorto(cartola.hasta)}: ${partes.join(", ")}.`;
+}
+
+function esPdf(adjunto: AdjuntoEntrante): boolean {
+  return adjunto.tipo === "application/pdf" || /\.pdf$/i.test(adjunto.nombre);
+}
 
 /** Anota la llegada y deja solo las ultimas de esa persona. */
 async function anotarLlegada(
@@ -193,6 +217,10 @@ export async function procesarCorreo(fuente: Uint8Array | string, opciones: Opci
     return { tipo: "reintentar", motivo: error instanceof Error ? error.message : String(error) };
   }
 
+  if (!lectura.ok && lectura.motivo === "es-cartola") {
+    return await leerLaCartola(original ?? correo, { db, ahora, hogarId, miembroId, remitente, maestra: opciones.maestra });
+  }
+
   if (!lectura.ok) {
     const resultado = RESULTADO_SIN_LECTURA[lectura.motivo];
     await anotarLlegada(db, miembroId, { resultado, remitente, detalle: lectura.detalle ?? null }, ahora);
@@ -217,6 +245,53 @@ export async function procesarCorreo(fuente: Uint8Array | string, opciones: Opci
   return { tipo: "leido", resultado, movimientoId: registrado.id };
 }
 
+/**
+ * La cartola del mes que llego al buzon: se lee con la clave que la persona
+ * (o alguien de su hogar) guardo para ese banco. Si todavia no la guarda, el
+ * correo se queda en el buzon y se vuelve a intentar en la proxima revision,
+ * hasta que la escriba; la llegada se anota una vez.
+ */
+async function leerLaCartola(
+  correo: CorreoEntrante,
+  contexto: { db: Db; ahora: Date; hogarId: string; miembroId: string; remitente: string; maestra?: Buffer },
+): Promise<ResultadoDelCorreo> {
+  const { db, ahora, hogarId, miembroId, remitente } = contexto;
+  const anotar = (resultado: ResultadoDeLlegada, detalle: string) => anotarLlegada(db, miembroId, { resultado, remitente, detalle }, ahora);
+
+  const pdf = correo.adjuntos.find(esPdf);
+  if (!pdf) {
+    await anotar("CARTOLA", "Habla de la cartola, pero no trae el PDF.");
+    return { tipo: "leido", resultado: "CARTOLA" };
+  }
+
+  const leida = await leerCartolaEnPdf(
+    hogarId,
+    { pdf: pdf.contenido, miembroId, recibidoEn: correo.fecha ?? ahora, remitente },
+    { db, maestra: contexto.maestra },
+  );
+  if (leida.ok) {
+    await anotar("CARTOLA_LEIDA", detalleDeLaCartola(leida.cartola));
+    return { tipo: "leido", resultado: "CARTOLA_LEIDA" };
+  }
+  if (leida.motivo === "falta-la-clave" || leida.motivo === "clave-incorrecta") {
+    const ultima = await db.llegadaAlBuzon.findFirst({
+      where: { miembroId },
+      orderBy: [{ llegoEn: "desc" }, { id: "desc" }],
+      select: { resultado: true, remitente: true },
+    });
+    if (ultima?.resultado !== "CARTOLA_SIN_CLAVE" || ultima.remitente !== remitente.trim().toLowerCase()) {
+      await anotar("CARTOLA_SIN_CLAVE", leida.mensaje);
+    }
+    return { tipo: "reintentar", motivo: "Falta la clave del PDF de la cartola.", porLaClave: true };
+  }
+  if (leida.motivo === "no-cuadra" || leida.motivo === "incompleta") {
+    await anotar("CARTOLA_NO_CUADRA", leida.mensaje);
+    return { tipo: "leido", resultado: "CARTOLA_NO_CUADRA" };
+  }
+  await anotar("CARTOLA", leida.mensaje);
+  return { tipo: "leido", resultado: "CARTOLA" };
+}
+
 /** Lo que paso en una revision del buzon. */
 export type ResumenDeRevision = {
   /** Los que iban a una direccion de Luka. */
@@ -229,6 +304,10 @@ export type ResumenDeRevision = {
   rechazados: number;
   /** Los que quedaron para la proxima, por algo pasajero. */
   pendientes: number;
+  /** Las cartolas que se leyeron. */
+  cartolas: number;
+  /** Las cartolas que esperan en el buzon la clave de su PDF. */
+  esperanClave: number;
 };
 
 /**
@@ -237,7 +316,16 @@ export type ResumenDeRevision = {
  * queda donde estaba.
  */
 export async function revisarBuzon(fuente: FuenteDeCorreos, opciones: OpcionesDelBuzon): Promise<ResumenDeRevision> {
-  const resumen: ResumenDeRevision = { revisados: 0, nuevos: 0, repetidos: 0, sinMovimiento: 0, rechazados: 0, pendientes: 0 };
+  const resumen: ResumenDeRevision = {
+    revisados: 0,
+    nuevos: 0,
+    repetidos: 0,
+    sinMovimiento: 0,
+    rechazados: 0,
+    pendientes: 0,
+    cartolas: 0,
+    esperanClave: 0,
+  };
   const listos = [];
 
   for (const correo of await fuente.listar()) {
@@ -257,11 +345,13 @@ export async function revisarBuzon(fuente: FuenteDeCorreos, opciones: OpcionesDe
       continue;
     }
     if (resultado.tipo === "reintentar") {
-      resumen.pendientes += 1;
+      if (resultado.porLaClave) resumen.esperanClave += 1;
+      else resumen.pendientes += 1;
       continue;
     }
     listos.push(correo);
     if (resultado.resultado === "NUEVO") resumen.nuevos += 1;
+    else if (resultado.resultado === "CARTOLA_LEIDA") resumen.cartolas += 1;
     else if (resultado.resultado === "REPETIDO") resumen.repetidos += 1;
     else if (resultado.resultado === "SIN_CONFIRMAR" || resultado.resultado === "SIN_FIRMA") resumen.rechazados += 1;
     else if (resultado.resultado !== "CONFIRMACION_DE_GMAIL" && resultado.resultado !== "SIN_DUENO") resumen.sinMovimiento += 1;

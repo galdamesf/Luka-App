@@ -364,7 +364,31 @@ describe("borrar el hogar, con el codigo del correo", () => {
       await prisma.llegadaAlBuzon.create({
         data: { miembroId: alguien.id, resultado: "NUEVO", remitente: "mensajeria@santander.cl", movimientoId: boleta.id },
       });
+      await prisma.claveDeCartola.create({ data: { miembroId: alguien.id, banco: "Santander", cifrada: "v1.aaaa.bbbb.cccc" } });
     }
+    // Y una cartola leida, con una fila que salio de ella.
+    const cartola = await prisma.cartola.create({
+      data: {
+        hogarId,
+        huella: "c".repeat(64),
+        miembroId: alguien?.id ?? null,
+        cuentaBancariaId: cuentaBancaria.id,
+        banco: "Santander",
+        ultimos4: "5678",
+        plantilla: "santander/cuenta-corriente",
+        desde: fechaDesdeISO("2026-10-01"),
+        hasta: fechaDesdeISO("2026-10-31"),
+        filas: 1,
+        nuevas: 0,
+        yaEstaban: 1,
+        fuera: 0,
+        cargos: 1_000,
+        abonos: 0,
+      },
+    });
+    await prisma.movimiento.create({
+      data: { ...comprobante, tipo: "COMPRA", huella: "d".repeat(64), estado: "JUNTADO", juntadoConId: boleta.id, cartolaId: cartola.id },
+    });
     await prisma.movimiento.create({
       data: { ...comprobante, tipo: "CARGO", sinDetalle: true, huella: "b".repeat(64), estado: "JUNTADO", juntadoConId: boleta.id },
     });
@@ -391,6 +415,8 @@ describe("borrar el hogar, con el codigo del correo", () => {
       prisma.correoRegistrado.count({ where: { miembro: { hogarId } } }),
       prisma.buzon.count({ where: { miembro: { hogarId } } }),
       prisma.llegadaAlBuzon.count({ where: { miembro: { hogarId } } }),
+      prisma.cartola.count({ where: { hogarId } }),
+      prisma.claveDeCartola.count({ where: { miembro: { hogarId } } }),
     ]);
 
   test("el codigo llega al correo del dueno, y en la base queda solo su huella", async () => {
@@ -417,7 +443,7 @@ describe("borrar el hogar, con el codigo del correo", () => {
     await borrar(OTRO, ana, ` ${codigo.slice(0, 3)} ${codigo.slice(3)} `);
 
     expect(await prisma.hogar.count({ where: { id: OTRO } })).toBe(0);
-    expect(await filasDe(OTRO)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(await filasDe(OTRO)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(await prisma.miembro.count({ where: { correo: "invitada@gmail.com" } })).toBe(0);
     expect(existsSync(join(raiz, OTRO))).toBe(false);
 

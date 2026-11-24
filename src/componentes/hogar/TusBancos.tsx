@@ -7,14 +7,24 @@ import {
   NOMBRE_DEL_TIPO,
   TIPOS_DE_CUENTA,
   limpiarUltimos4,
+  mismoBanco,
   nombreDeLaCuenta,
   type BancoDelHogar,
   type CuentaBancariaDelHogar,
   type TipoCuentaBancaria,
 } from "@/dominio/bancos";
 import { fechaCorta } from "@/componentes/formato";
-import { BotonCopiar } from "./BotonCopiar";
+import { CartolaDelBanco, type AccionesDeLaCartola, type CartolaLeidaParaMostrar } from "./CartolaDelBanco";
 import { ConfirmarAccion } from "./ConfirmarAccion";
+
+/** Lo de las cartolas: de que bancos se leen, las claves que guardo quien mira y las ya leidas. */
+export type CartolasParaMostrar = AccionesDeLaCartola & {
+  /** Por banco del catalogo, cual es la clave de su PDF. Solo los bancos cuyas cartolas Luka lee. */
+  pistas: Record<string, string>;
+  /** Los bancos de los que quien mira ya guardo la clave. */
+  misClaves: string[];
+  leidas: CartolaLeidaParaMostrar[];
+};
 
 type Props = {
   bancos: BancoDelHogar[];
@@ -25,6 +35,7 @@ type Props = {
   accionAgregar: AccionFormulario;
   accionEditar: AccionFormulario;
   accionQuitar: AccionFormulario;
+  cartolas: CartolasParaMostrar;
 };
 
 const CAMPO =
@@ -43,7 +54,7 @@ type CuentaEnArmado = { tipo: TipoCuentaBancaria; apodo: string; ultimos4: strin
  * paso a paso para agregar otro: el banco, sus cuentas, y que el banco le
  * avise a Luka por correo.
  */
-export function TusBancos({ bancos, nombres, remitentesDelCatalogo, accionAgregar, accionEditar, accionQuitar }: Props) {
+export function TusBancos({ bancos, nombres, remitentesDelCatalogo, accionAgregar, accionEditar, accionQuitar, cartolas }: Props) {
   const [agregando, setAgregando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -56,7 +67,14 @@ export function TusBancos({ bancos, nombres, remitentesDelCatalogo, accionAgrega
       {bancos.length > 0 && (
         <ul className="divide-y divide-borde rounded-xl border border-borde">
           {bancos.map((banco) => (
-            <FilaBanco key={banco.banco} banco={banco} nombres={nombres} accionEditar={accionEditar} accionQuitar={accionQuitar} />
+            <FilaBanco
+              key={banco.banco}
+              banco={banco}
+              nombres={nombres}
+              accionEditar={accionEditar}
+              accionQuitar={accionQuitar}
+              cartolas={cartolas}
+            />
           ))}
         </ul>
       )}
@@ -95,18 +113,21 @@ function FilaBanco({
   nombres,
   accionEditar,
   accionQuitar,
+  cartolas,
 }: {
   banco: BancoDelHogar;
   nombres: Record<string, string>;
   accionEditar: AccionFormulario;
   accionQuitar: AccionFormulario;
+  cartolas: CartolasParaMostrar;
 }) {
+  const bancoConCartola = Object.keys(cartolas.pistas).find((b) => mismoBanco(b, banco.banco));
   return (
     <li className="space-y-3 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h3 className="text-base font-bold tracking-tight">{banco.banco}</h3>
         <p className="text-xs text-texto-tenue">
-          {banco.conPlantillas ? "Luka ya sabe leer sus correos." : "Luka lee sus correos con IA y aprende su remitente."}
+          {banco.conPlantillas ? "Luka ya sabe leer sus correos." : "Luka lee sus correos con IA."}
         </p>
       </div>
 
@@ -137,8 +158,22 @@ function FilaBanco({
       </p>
       {banco.remitentes.length > 0 && (
         <p className="text-xs leading-relaxed text-texto-tenue">
-          Sus remitentes: <span className="break-all font-mono">{banco.remitentes.join(", ")}</span>
+          Sus avisos llegan desde: <span className="break-all font-mono">{banco.remitentes.join(", ")}</span>
         </p>
+      )}
+
+      {bancoConCartola ? (
+        <CartolaDelBanco
+          banco={bancoConCartola}
+          pista={cartolas.pistas[bancoConCartola]!}
+          tengoClave={cartolas.misClaves.some((b) => mismoBanco(b, bancoConCartola))}
+          leidas={cartolas.leidas.filter((c) => mismoBanco(c.banco, bancoConCartola))}
+          accionGuardarClave={cartolas.accionGuardarClave}
+          accionQuitarClave={cartolas.accionQuitarClave}
+          accionSubir={cartolas.accionSubir}
+        />
+      ) : (
+        <p className="text-xs text-texto-tenue">Luka todavía no sabe leer las cartolas de {banco.banco}.</p>
       )}
     </li>
   );
@@ -180,8 +215,8 @@ function FilaCuenta({
               </select>
             </div>
             <div>
-              <label htmlFor={ids.apodo} className="mb-1 block text-xs font-semibold text-texto-tenue">Nombre (opcional)</label>
-              <input id={ids.apodo} name="apodo" defaultValue={cuenta.apodo ?? ""} maxLength={60} className={`${CAMPO} bg-superficie`} />
+              <label htmlFor={ids.apodo} className="mb-1 block text-xs font-semibold text-texto-tenue">Apodo (opcional)</label>
+              <input id={ids.apodo} name="apodo" defaultValue={cuenta.apodo ?? ""} maxLength={60} placeholder="Ej.: la del sueldo" className={`${CAMPO} bg-superficie`} />
             </div>
             <div>
               <label htmlFor={ids.ultimos4} className="mb-1 block text-xs font-semibold text-texto-tenue">Últimos 4</label>
@@ -235,7 +270,7 @@ function FilaCuenta({
   );
 }
 
-const PASOS = ["El banco", "Sus cuentas", "Que avise a Luka"] as const;
+const PASOS = ["El banco", "Sus cuentas", "Los avisos"] as const;
 
 function AgregarBanco({
   accion,
@@ -378,8 +413,8 @@ function AgregarBanco({
                 </select>
               </div>
               <div>
-                <label htmlFor={ids.apodo} className="mb-1 block text-xs font-semibold text-texto-tenue">Nombre (opcional)</label>
-                <input id={ids.apodo} value={apodo} onChange={(e) => setApodo(e.target.value)} maxLength={60} placeholder="Cuenta sueldo" className={CAMPO} />
+                <label htmlFor={ids.apodo} className="mb-1 block text-xs font-semibold text-texto-tenue">Apodo (opcional)</label>
+                <input id={ids.apodo} value={apodo} onChange={(e) => setApodo(e.target.value)} maxLength={60} placeholder="Ej.: la del sueldo" className={CAMPO} />
               </div>
               <div>
                 <label htmlFor={ids.ultimos4} className="mb-1 block text-xs font-semibold text-texto-tenue">Últimos 4</label>
@@ -416,22 +451,28 @@ function AgregarBanco({
 
         {paso === 2 && (
           <>
-            <p className="font-semibold">Que {nombre} le avise a Luka</p>
+            <p className="font-semibold">Para que tus compras en {nombre} lleguen solas a Luka</p>
             <ol className="list-decimal space-y-2 pl-5">
-              <li>En la app o la web de {nombre}, activa los avisos por correo de tus transferencias y compras, si los ofrece.</li>
               <li>
-                Suma sus correos a tu regla de reenvío (los pasos están en «Tus correos y tu buzón», más abajo).{" "}
-                {remitentes.length > 0
-                  ? "Estos son sus remitentes:"
-                  : "Luka todavía no conoce sus remitentes: reenvía a mano el primer comprobante que te llegue, y Luka lo muestra aquí."}
+                En la app o la web de {nombre}, activa que te avise por correo cada compra y transferencia. Si ya te
+                llegan esos correos, esto ya está listo.
+              </li>
+              <li>
+                En tu correo, haz que esos avisos le lleguen solos a Luka. Los pasos están más abajo, en «Tus correos y
+                tu buzón».{" "}
+                {remitentes.length > 0 ? (
+                  <>
+                    {nombre} manda sus avisos desde <span className="break-all font-mono text-[13px]">{remitentes.join(" y ")}</span>.
+                  </>
+                ) : (
+                  <>
+                    Luka todavía no sabe desde qué dirección manda {nombre} sus avisos: cuando te llegue uno, reenvíalo
+                    a mano a tu dirección de Luka y desde ahí lo reconoce.
+                  </>
+                )}
               </li>
             </ol>
-            {remitentes.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-borde bg-superficie-tenue p-2 pl-3">
-                <code className="min-w-0 flex-1 break-all font-mono text-[13px]">{remitentes.join(" OR ")}</code>
-                <BotonCopiar texto={remitentes.join(" OR ")} descripcion={`los remitentes de ${nombre}`} />
-              </div>
-            )}
+            <p className="text-texto-tenue">Esto lo puedes hacer después: ya puedes guardar el banco.</p>
           </>
         )}
 

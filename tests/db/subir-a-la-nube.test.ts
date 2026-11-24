@@ -46,6 +46,31 @@ async function llenarMac() {
   });
   // Lo que fue llegando a su buzon es un registro de estos dias: no se copia.
   await mac.llegadaAlBuzon.create({ data: { miembroId: dueno.id, resultado: "NUEVO", remitente: "mensajeria@santander.cl" } });
+  // La clave del PDF de su cartola va cifrada con la maestra de tu Mac: no se copia. La cartola leida si.
+  await mac.claveDeCartola.create({ data: { miembroId: dueno.id, banco: "Santander", cifrada: "v1.aaaa.bbbb.cccc" } });
+  const cuentaBancaria = await mac.cuentaBancaria.create({
+    data: { hogarId: HOGAR_INICIAL, miembroId: dueno.id, banco: "Santander", tipo: "CUENTA_CORRIENTE", ultimos4: "5678" },
+  });
+  await mac.cartola.create({
+    data: {
+      hogarId: HOGAR_INICIAL,
+      huella: "c".repeat(64),
+      miembroId: dueno.id,
+      cuentaBancariaId: cuentaBancaria.id,
+      banco: "Santander",
+      ultimos4: "5678",
+      plantilla: "santander/cuenta-corriente",
+      numero: 9,
+      desde: fechaDesdeISO("2026-09-30"),
+      hasta: fechaDesdeISO("2026-10-30"),
+      filas: 3,
+      nuevas: 1,
+      yaEstaban: 1,
+      fuera: 1,
+      cargos: 20_000,
+      abonos: 5_000,
+    },
+  });
   await mac.ajustes.create({ data: { hogarId: HOGAR_INICIAL, diaInicioMes: 27 } });
 
   const super_ = await mac.categoria.create({
@@ -148,6 +173,8 @@ describe("copiarDatos", () => {
     expect(await tablasDistintas(datos, nube)).toEqual([]);
     expect(await nube.buzon.findUnique({ where: { miembroId: "m-yo" }, select: { clave: true } })).toEqual({ clave: "k7q2m9xa4p" });
     expect(await nube.llegadaAlBuzon.count()).toBe(0);
+    expect(await nube.claveDeCartola.count()).toBe(0);
+    expect(await nube.cartola.count()).toBe(1);
 
     const conteo = contar(await leerTodo(nube));
     expect(conteo).toEqual(contar(datos));
@@ -225,7 +252,7 @@ describe("loQueSePierde, con lo que de verdad hay en la nube", () => {
     expect(perdida.filas.map((f) => f.tabla)).toEqual(["hogar", "miembro"]);
   });
 
-  test("lee las dieciseis tablas", async () => {
+  test("lee las diecisiete tablas", async () => {
     const datos = await leerTodo(nube);
     expect(Object.keys(datos).sort()).toEqual([...TABLAS].sort());
   });

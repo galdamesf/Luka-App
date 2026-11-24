@@ -8,7 +8,7 @@ import type { Bandeja, ItemDejadoFuera, ItemPorRevisar, ReglaPosible } from "@/d
 import type { LecturaLeida } from "@/dominio/comprobantes/tipos";
 import type { MedioPago } from "@/dominio/esquemas";
 import {
-  DIAS_PARA_JUNTAR,
+  DIAS_PARA_BUSCAR_PAREJA,
   DIAS_PARA_PREGUNTAR,
   calzaConClave,
   claveDeComercio,
@@ -93,6 +93,11 @@ export type EntradaDeMovimiento = {
   reenviadoPor?: string | null;
   /** El banco o la tienda que lo mando. */
   remitente?: string | null;
+  /**
+   * Si es una fila de una cartola: la cartola y su cuenta del hogar (la que
+   * dice el encabezado, no la que se deduce de la fila).
+   */
+  cartola?: { id: string; cuentaBancariaId: string | null };
 };
 
 export type MovimientoRegistrado = {
@@ -100,6 +105,8 @@ export type MovimientoRegistrado = {
   estado: EstadoMovimiento;
   /** false si ese correo ya habia llegado: no se creo nada. */
   nuevo: boolean;
+  /** Si se junto con uno que ya estaba: no es nada nuevo que revisar. */
+  juntado: boolean;
 };
 
 /**
@@ -122,7 +129,7 @@ export async function registrarMovimiento(
   }
   const llave = { hogarId_huella: { hogarId, huella: entrada.huella } };
   const yaEstaba = await db.movimiento.findUnique({ where: llave, select: { id: true, estado: true } });
-  if (yaEstaba !== null) return { ...yaEstaba, nuevo: false };
+  if (yaEstaba !== null) return { ...yaEstaba, nuevo: false, juntado: false };
 
   try {
     return await db.$transaction(async (tx) => {
@@ -145,7 +152,8 @@ export async function registrarMovimiento(
         miembroId,
         reenviadoPor: entrada.reenviadoPor?.trim().toLowerCase().slice(0, 254) || null,
         remitente,
-        cuentaBancariaId: cuentaCon(datos.ultimos4),
+        cuentaBancariaId: entrada.cartola ? entrada.cartola.cuentaBancariaId : cuentaCon(datos.ultimos4),
+        cartolaId: entrada.cartola?.id ?? null,
       };
 
       const candidatos = await tx.movimiento.findMany({
@@ -154,10 +162,10 @@ export async function registrarMovimiento(
           monto: datos.monto,
           moneda: datos.moneda,
           sentido: datos.sentido,
-          estado: { in: ["POR_REVISAR", "CONFIRMADO", "IGNORADO"] },
+          estado: { in: entrada.cartola ? ["POR_REVISAR", "CONFIRMADO", "IGNORADO", "DESCARTADO"] : ["POR_REVISAR", "CONFIRMADO", "IGNORADO"] },
           fecha: {
-            gte: fechaDesdeISO(sumarDias(datos.fecha, -DIAS_PARA_JUNTAR)),
-            lte: fechaDesdeISO(sumarDias(datos.fecha, DIAS_PARA_JUNTAR)),
+            gte: fechaDesdeISO(sumarDias(datos.fecha, -DIAS_PARA_BUSCAR_PAREJA)),
+            lte: fechaDesdeISO(sumarDias(datos.fecha, DIAS_PARA_BUSCAR_PAREJA)),
           },
         },
         select: {
@@ -172,19 +180,26 @@ export async function registrarMovimiento(
           sinDetalle: true,
           medioPago: true,
           cuentaBancariaId: true,
-          _count: { select: { juntados: true } },
+          cartolaId: true,
+          comercio: true,
+          juntados: { select: { cartolaId: true } },
         },
       });
       const pareja = elegirPareja(
-        datos,
-        candidatos.map((c) => ({ ...c, fecha: isoDesdeFecha(c.fecha), tieneJuntado: c._count.juntados > 0 })),
+        { ...datos, cartolaId: delBuzon.cartolaId, cuentaBancariaId: delBuzon.cuentaBancariaId },
+        candidatos.map((c) => ({
+          ...c,
+          fecha: isoDesdeFecha(c.fecha),
+          tieneJuntado: c.juntados.some((j) => j.cartolaId === null),
+          tieneJuntadoDeCartola: c.juntados.some((j) => j.cartolaId !== null),
+        })),
       );
 
       const base = { hogarId, huella: entrada.huella, recibidoEn: entrada.recibidoEn, ...columnas(datos), ...delBuzon };
       const elegir = { id: true, estado: true } as const;
 
       if (pareja === null) {
-        return { ...(await tx.movimiento.create({ data: base, select: elegir })), nuevo: true };
+        return { ...(await tx.movimiento.create({ data: base, select: elegir })), nuevo: true, juntado: false };
       }
       const otro = candidatos.find((c) => c.id === pareja.candidato.id)!;
       if (pareja.principal === "candidato") {
@@ -196,7 +211,7 @@ export async function registrarMovimiento(
         if (otro.cuentaBancariaId === null && base.cuentaBancariaId !== null) {
           await tx.movimiento.update({ where: { id: otro.id }, data: { cuentaBancariaId: base.cuentaBancariaId } });
         }
-        return { ...creado, nuevo: true };
+        return { ...creado, nuevo: true, juntado: true };
       }
 
       // El nuevo dice mas: queda a la vista, con lo que le faltaba del otro.
@@ -211,14 +226,16 @@ export async function registrarMovimiento(
         select: elegir,
       });
       await tx.movimiento.update({ where: { id: otro.id }, data: { estado: "JUNTADO", juntadoConId: creado.id } });
-      return { ...creado, nuevo: true };
+      // Lo que estaba juntado con el otro pasa al nuevo: todo el grupo queda bajo el que se ve.
+      await tx.movimiento.updateMany({ where: { juntadoConId: otro.id }, data: { juntadoConId: creado.id } });
+      return { ...creado, nuevo: true, juntado: true };
     });
   } catch (error) {
     // Las dos copias del mismo correo a la vez: la segunda choca con el
     // indice unico, y lo correcto es devolver la que quedo.
     if (codigoDe(error) === "P2002") {
       const quedo = await db.movimiento.findUnique({ where: llave, select: { id: true, estado: true } });
-      if (quedo !== null) return { ...quedo, nuevo: false };
+      if (quedo !== null) return { ...quedo, nuevo: false, juntado: false };
     }
     throw error;
   }

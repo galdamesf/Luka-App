@@ -60,6 +60,8 @@ model Hogar {
   movimientos      Movimiento[]
   cuentasBancarias CuentaBancaria[]
   reglasDeComercio ReglaDeComercio[]
+  /// Las cartolas que Luka ya leyo.
+  cartolas         Cartola[]
 
   @@map("hogares")
 }
@@ -105,6 +107,10 @@ model Miembro {
   llegadasAlBuzon       LlegadaAlBuzon[]
   /// Los movimientos que llegaron reenviados por esta persona.
   movimientosReenviados Movimiento[]
+  /// Las claves de los PDF de sus cartolas, una por banco, cifradas.
+  clavesDeCartola       ClaveDeCartola[]
+  /// Las cartolas que subio o reenvio.
+  cartolas              Cartola[]
 
   /// Para que el sueldo apunte al miembro y a su hogar a la vez.
   @@unique([id, hogarId])
@@ -611,6 +617,9 @@ model Movimiento {
   deudaId             String?            @map("deuda_id")
   /// El movimiento con que se junto. Solo en JUNTADO.
   juntadoConId        String?            @map("juntado_con_id")
+  /// La cartola de donde salio, si salio de una. Lo que llega de un correo
+  /// no tiene.
+  cartolaId           String?            @map("cartola_id")
   creadoEn            DateTime           @default(now()) @map("creado_en")
   actualizadoEn       DateTime           @updatedAt @map("actualizado_en")
 
@@ -624,6 +633,8 @@ model Movimiento {
   miembro        Miembro?         @relation(fields: [miembroId], references: [id], onDelete: SetNull)
   /// Si se borra la cuenta, el movimiento se queda, sin cuenta.
   cuentaBancaria CuentaBancaria?  @relation(fields: [cuentaBancariaId], references: [id], onDelete: SetNull)
+  /// Si la cartola se borra, sus movimientos se quedan.
+  cartola        Cartola?         @relation(fields: [cartolaId], references: [id], onDelete: SetNull)
   llegadas       LlegadaAlBuzon[]
 
   @@unique([hogarId, huella])
@@ -634,6 +645,7 @@ model Movimiento {
   @@index([juntadoConId])
   @@index([miembroId])
   @@index([cuentaBancariaId])
+  @@index([cartolaId])
   @@map("movimientos")
 }
 
@@ -656,6 +668,7 @@ model CuentaBancaria {
   hogar       Hogar        @relation(fields: [hogarId], references: [id], onDelete: Restrict)
   miembro     Miembro?     @relation(fields: [miembroId], references: [id], onDelete: SetNull)
   movimientos Movimiento[]
+  cartolas    Cartola[]
 
   @@unique([hogarId, banco, tipo, ultimos4])
   @@index([hogarId, ultimos4])
@@ -762,8 +775,17 @@ enum ResultadoDeLlegada {
   NO_ES_COMPROBANTE
   /// Parece un comprobante pero no se pudo leer.
   NO_SE_PUDO_LEER
-  /// La cartola o el estado de cuenta del mes, que se lee aparte.
+  /// La cartola o el estado de cuenta del mes de un banco cuyas cartolas
+  /// Luka todavia no sabe leer.
   CARTOLA
+  /// La cartola del mes: se leyo y cuadro, y lo nuevo quedo por revisar.
+  CARTOLA_LEIDA
+  /// La cartola del mes, pero falta la clave de su PDF. Se queda en el buzon
+  /// hasta que la persona la escriba.
+  CARTOLA_SIN_CLAVE
+  /// La cartola del mes, pero lo que se leyo no suma lo que dice el banco:
+  /// no se anoto nada.
+  CARTOLA_NO_CUADRA
   /// Lo reenvio un correo que no esta confirmado: no se leyo.
   SIN_CONFIRMAR
   /// Dice venir de un correo confirmado, pero sin la firma de ese correo.
@@ -792,4 +814,68 @@ model LlegadaAlBuzon {
   @@index([miembroId, llegoEn])
   @@index([movimientoId])
   @@map("llegadas_al_buzon")
+}
+
+/// La clave del PDF de la cartola de un banco, de una persona del hogar
+/// (Santander cifra la suya con el RUT). Se guarda cifrada con una llave que
+/// sale de CLAVE_DOS_PASOS y nunca se muestra: solo sirve para abrir las
+/// cartolas que llegan al buzon.
+model ClaveDeCartola {
+  id        String   @id @default(cuid())
+  miembroId String   @map("miembro_id")
+  /// Como se llama el banco en el catalogo: "Santander".
+  banco     String   @db.VarChar(60)
+  /// v1.<iv>.<cifrado>.<etiqueta>, con la persona y el banco como dato asociado.
+  cifrada   String   @db.VarChar(300)
+  creadaEn  DateTime @default(now()) @map("creada_en")
+
+  miembro Miembro @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+
+  @@unique([miembroId, banco])
+  @@map("claves_de_cartola")
+}
+
+/// Una cartola que Luka leyo: de que cuenta y periodo, cuantas filas traia y
+/// que paso con ellas. Del PDF no se guarda nada mas: sus filas quedan como
+/// movimientos.
+model Cartola {
+  id               String   @id @default(cuid())
+  hogarId          String   @map("hogar_id")
+  /// SHA-256 del banco, la cuenta, el numero de la cartola y el periodo: la
+  /// misma cartola dos veces (o en otra version del PDF) se lee una.
+  huella           String   @db.Char(64)
+  /// Quien la subio o la reenvio, mientras siga en el hogar.
+  miembroId        String?  @map("miembro_id")
+  /// La cuenta del hogar de la cartola, si esta en «Tus bancos».
+  cuentaBancariaId String?  @map("cuenta_bancaria_id")
+  banco            String   @db.VarChar(60)
+  /// Los ultimos 4 digitos de la cuenta, como los imprime el banco.
+  ultimos4         String   @db.Char(4)
+  /// La plantilla que la leyo: "santander/cuenta-corriente".
+  plantilla        String   @db.VarChar(60)
+  /// El numero de la cartola, si el banco lo imprime.
+  numero           Int?
+  desde            DateTime @db.Date
+  hasta            DateTime @db.Date
+  /// Cuantas filas traia, y de ellas cuantas quedaron por revisar, cuantas ya
+  /// estaban anotadas y cuantas quedaron fuera (ingresos, traspasos, giros).
+  filas            Int
+  nuevas           Int
+  yaEstaban        Int      @map("ya_estaban")
+  fuera            Int
+  /// Lo que suman sus cargos y sus abonos, en pesos: cuadran con el banco.
+  cargos           Int
+  abonos           Int
+  leidaEn          DateTime @default(now()) @map("leida_en")
+
+  hogar          Hogar           @relation(fields: [hogarId], references: [id], onDelete: Restrict)
+  miembro        Miembro?        @relation(fields: [miembroId], references: [id], onDelete: SetNull)
+  cuentaBancaria CuentaBancaria? @relation(fields: [cuentaBancariaId], references: [id], onDelete: SetNull)
+  movimientos    Movimiento[]
+
+  @@unique([hogarId, huella])
+  @@index([hogarId, leidaEn])
+  @@index([miembroId])
+  @@index([cuentaBancariaId])
+  @@map("cartolas")
 }

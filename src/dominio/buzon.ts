@@ -271,6 +271,9 @@ export type ResultadoDeLlegada =
   | "NO_ES_COMPROBANTE"
   | "NO_SE_PUDO_LEER"
   | "CARTOLA"
+  | "CARTOLA_LEIDA"
+  | "CARTOLA_SIN_CLAVE"
+  | "CARTOLA_NO_CUADRA"
   | "SIN_CONFIRMAR"
   | "SIN_FIRMA"
   | "CONFIRMACION_DE_GMAIL";
@@ -283,7 +286,10 @@ export const TEXTO_DE_LA_LLEGADA: Record<ResultadoDeLlegada, string> = {
   REPETIDO: "Ya había llegado: no se anotó otra vez.",
   NO_ES_COMPROBANTE: "No es un comprobante (publicidad o un aviso): no se anotó.",
   NO_SE_PUDO_LEER: "Parece un comprobante, pero Luka no lo pudo leer.",
-  CARTOLA: "Es la cartola del mes: Luka la va a leer aparte.",
+  CARTOLA: "Es la cartola del mes, pero Luka todavía no sabe leer las de este banco.",
+  CARTOLA_LEIDA: "Leyó la cartola del mes: lo nuevo quedó en «Por revisar».",
+  CARTOLA_SIN_CLAVE: "Llegó la cartola del mes, pero falta la clave de su PDF: escríbela en «Tus bancos» y revisa de nuevo.",
+  CARTOLA_NO_CUADRA: "Llegó la cartola del mes, pero lo que Luka leyó no suma lo que dice el banco: no anotó nada.",
   SIN_CONFIRMAR: "Llegó desde un correo que no está confirmado: no se leyó.",
   SIN_FIRMA: "Dice venir de tu correo, pero sin su firma: no se leyó.",
   CONFIRMACION_DE_GMAIL: "Gmail pidió confirmar el reenvío: el código está arriba.",
@@ -291,5 +297,11 @@ export const TEXTO_DE_LA_LLEGADA: Record<ResultadoDeLlegada, string> = {
 
 /** Las llegadas que necesitan que la persona haga algo. */
 export function pideAlgo(resultado: ResultadoDeLlegada): boolean {
-  return resultado === "SIN_CONFIRMAR" || resultado === "SIN_FIRMA" || resultado === "NO_SE_PUDO_LEER";
+  return (
+    resultado === "SIN_CONFIRMAR" ||
+    resultado === "SIN_FIRMA" ||
+    resultado === "NO_SE_PUDO_LEER" ||
+    resultado === "CARTOLA_SIN_CLAVE" ||
+    resultado === "CARTOLA_NO_CUADRA"
+  );
 }

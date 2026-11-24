@@ -19,6 +19,8 @@ import { TusCorreos } from "@/componentes/hogar/TusCorreos";
 import { leerLosBancosDelHogar } from "@/datos/bancos";
 import { leerMisCorreos } from "@/datos/correos-registrados";
 import { leerMiBuzon } from "@/datos/buzon";
+import { bancosConClave, leerCartolasDelHogar } from "@/datos/cartolas";
+import { PISTA_DE_LA_CLAVE } from "@/dominio/cartolas";
 import { BANCOS, remitentesConocidos } from "@/dominio/bancos";
 import { configuracionDelBuzon } from "@/lib/buzon";
 import {
@@ -35,6 +37,7 @@ import {
   accionSalirDelHogar,
 } from "../acciones/hogar";
 import { accionAgregarBanco, accionEditarCuentaBancaria, accionQuitarCuentaBancaria } from "../acciones/bancos";
+import { accionGuardarClaveDeCartola, accionQuitarClaveDeCartola, accionSubirCartola } from "../acciones/cartolas";
 import {
   accionAgregarCorreo,
   accionCambiarMiDireccion,
@@ -66,13 +69,15 @@ export default async function PaginaHogar() {
   // ningun otro, se lee todo lo que sigue.
   const { hogarId, miembroId, rol } = await hogarActual();
   const configDelBuzon = configuracionDelBuzon();
-  const [hogar, miApp, conApp, losBancos, misCorreos, miBuzon] = await Promise.all([
+  const [hogar, miApp, conApp, losBancos, misCorreos, miBuzon, misClaves, cartolasLeidas] = await Promise.all([
     leerHogar(hogarId),
     estadoDeLaApp(miembroId),
     appsDelHogar(hogarId),
     leerLosBancosDelHogar(hogarId, { hoy: hoyISO() }),
     leerMisCorreos(hogarId, miembroId),
     configDelBuzon === null ? null : leerMiBuzon(hogarId, miembroId, { base: configDelBuzon.direccion }),
+    bancosConClave(miembroId),
+    leerCartolasDelHogar(hogarId),
   ]);
   const soyDueno = rol === "DUENO";
   const entraron = hogar.miembros.filter((m) => m.entroEn !== null).length;
@@ -151,6 +156,14 @@ export default async function PaginaHogar() {
           accionAgregar={accionAgregarBanco}
           accionEditar={accionEditarCuentaBancaria}
           accionQuitar={accionQuitarCuentaBancaria}
+          cartolas={{
+            pistas: { ...PISTA_DE_LA_CLAVE },
+            misClaves,
+            leidas: cartolasLeidas,
+            accionGuardarClave: accionGuardarClaveDeCartola,
+            accionQuitarClave: accionQuitarClaveDeCartola,
+            accionSubir: accionSubirCartola,
+          }}
         />
       </section>
 
