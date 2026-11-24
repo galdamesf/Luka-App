@@ -12,8 +12,6 @@ type CodigoDeGmail = { codigo: string | null; de: string | null };
 type Props = {
   /** Donde retoma: lo calcula el servidor con pasoParaConectar. */
   paso: PasoParaConectar;
-  /** Para recordar en este navegador que ya termino los pasos. */
-  miembroId: string;
   /** Sus correos confirmados: a cual le llegan los avisos de sus bancos. */
   correos: { direccion: string; proveedor: ProveedorDeCorreo }[];
   /** Su direccion de Luka. */
@@ -43,19 +41,19 @@ const PARA_COPIAR = "flex flex-wrap items-center gap-2 rounded-lg border border-
 const CADA_MS = 6_000;
 const HASTA_MS = 5 * 60_000;
 
-function llaveTerminado(miembroId: string) {
-  return `luka:conectar-terminado:${miembroId}`;
-}
-
 /**
- * «Conectar tus correos»: los pasos para que los avisos de los bancos le
- * lleguen solos a Luka, una sola vez. Con Gmail, sus bancos, el reenvio (el
- * codigo de Gmail aparece solo) y el filtro; con otro correo, sus bancos y
- * la regla. Luka no entra al correo: cada paso abre la pantalla exacta y deja
- * todo listo para pegar.
+ * La opcion de mas, para quien no quiere reenviar cada aviso: que le lleguen
+ * solos a Luka, configurando su correo una vez. Con Gmail, sus bancos, el
+ * reenvio (el codigo de Gmail aparece solo) y el filtro; con otro correo, sus
+ * bancos y la regla. Luka no entra al correo: cada paso abre la pantalla
+ * exacta y deja todo listo para pegar.
+ *
+ * Se ve plegada, en una linea: lo principal es reenviar a mano. Se abre sola
+ * cuando Gmail esta esperando su codigo. No dice «Conectado»: con lo que
+ * llega, Luka no sabe si llego por el filtro o reenviado a mano.
  */
 export function ConectarTusCorreos(props: Props) {
-  const { paso: pasoInicial, correos, miembroId } = props;
+  const { paso: pasoInicial, correos } = props;
   const [correo, setCorreo] = useState(correos[0]?.direccion ?? "");
   const proveedor = correos.find((c) => c.direccion === correo)?.proveedor ?? "GMAIL";
   const pasos: PasoParaConectar[] = proveedor === "GMAIL" ? ["bancos", "reenvio", "filtro"] : ["bancos", "filtro"];
@@ -66,54 +64,40 @@ export function ConectarTusCorreos(props: Props) {
     listo: "Listo",
   };
 
-  const [paso, setPaso] = useState<PasoParaConectar>(pasoInicial === "reenvio" && proveedor !== "GMAIL" ? "filtro" : pasoInicial);
-  // Ya hizo los pasos y espera el primer aviso: se recuerda en este navegador.
+  const conCodigo = proveedor === "GMAIL" && Boolean(props.codigoDeGmail?.codigo);
+  const desde: PasoParaConectar = conCodigo
+    ? "reenvio"
+    : pasoInicial === "listo"
+      ? "bancos"
+      : pasoInicial === "reenvio" && proveedor !== "GMAIL"
+        ? "filtro"
+        : pasoInicial;
+  const [paso, setPaso] = useState<PasoParaConectar>(desde);
+  const [abierto, setAbierto] = useState(conCodigo);
   const [terminado, setTerminado] = useState(false);
-  const [abierto, setAbierto] = useState(pasoInicial !== "listo");
-
-  useEffect(() => {
-    try {
-      if (pasoInicial !== "listo" && localStorage.getItem(llaveTerminado(miembroId)) === "1") {
-        setTerminado(true);
-        setAbierto(false);
-      }
-    } catch {
-      // Sin almacenamiento, el asistente se muestra abierto.
-    }
-  }, [miembroId, pasoInicial]);
 
   function terminar() {
-    try {
-      localStorage.setItem(llaveTerminado(miembroId), "1");
-    } catch {
-      // Da igual: es solo para no mostrar los pasos de nuevo.
-    }
     setTerminado(true);
     setAbierto(false);
   }
 
   if (!abierto) {
-    const listo = pasoInicial === "listo";
-    const conCodigo = !listo && proveedor === "GMAIL" && props.codigoDeGmail?.codigo;
     return (
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-borde bg-superficie-tenue px-4 py-3 text-sm">
         <p className="min-w-0 flex-[1_1_18rem]">
-          {listo ? (
+          {terminado ? (
             <>
-              <span className="font-semibold text-exito-fuerte">Conectado.</span>{" "}
-              <span className="text-texto-tenue">Los avisos de tus bancos llegan solos a «Por revisar».</span>
-            </>
-          ) : conCodigo ? (
-            <>
-              <span className="font-semibold">Gmail pidió confirmar el reenvío.</span>{" "}
-              <span className="text-texto-tenue">Escribe su código en Gmail para que empiece a reenviar.</span>
+              <span className="font-semibold">Hecho.</span>{" "}
+              <span className="text-texto-tenue">
+                Desde ahora los avisos de tus bancos le llegan solos a Luka. Si en un par de días no llega nada, revisa los
+                pasos.
+              </span>
             </>
           ) : (
             <>
-              <span className="font-semibold">Esperando el primer aviso.</span>{" "}
+              <span className="font-semibold">¿Prefieres no reenviar cada aviso?</span>{" "}
               <span className="text-texto-tenue">
-                Cuando tu banco te mande el próximo, aparece solo en «Por revisar».
-                {terminado ? " Si en un par de días no llega nada, revisa los pasos." : ""}
+                Configura {proveedor === "GMAIL" ? "Gmail" : "tu correo"} una vez y le llegan solos a Luka.
               </span>
             </>
           )}
@@ -122,11 +106,11 @@ export function ConectarTusCorreos(props: Props) {
           type="button"
           className={DE_TEXTO}
           onClick={() => {
-            setPaso(conCodigo ? "reenvio" : "bancos");
+            setPaso(desde);
             setAbierto(true);
           }}
         >
-          {conCodigo ? "Ver el código" : "Ver los pasos"}
+          {terminado ? "Ver los pasos" : "Ver cómo"}
         </button>
       </div>
     );
@@ -160,7 +144,7 @@ export function ConectarTusCorreos(props: Props) {
           correo={correo}
           setCorreo={setCorreo}
           alSeguir={() => setPaso(proveedor === "GMAIL" ? "reenvio" : "filtro")}
-          alCerrar={pasoInicial === "listo" || terminado ? () => setAbierto(false) : null}
+          alCerrar={() => setAbierto(false)}
         />
       )}
       {paso === "reenvio" && <PasoReenvio {...props} correo={correo} alVolver={() => setPaso("bancos")} alSeguir={() => setPaso("filtro")} />}
@@ -189,7 +173,7 @@ function PasoBancos({
   accionMarcarBancos,
   alSeguir,
   alCerrar,
-}: Props & { correo: string; setCorreo: (c: string) => void; alSeguir: () => void; alCerrar: (() => void) | null }) {
+}: Props & { correo: string; setCorreo: (c: string) => void; alSeguir: () => void; alCerrar: () => void }) {
   const [marcados, setMarcados] = useState<string[]>(() => BANCOS.filter((b) => misBancos.some((m) => mismoBanco(m, b.nombre))).map((b) => b.nombre));
   const [estado, guardar, guardando] = useActionState(accionMarcarBancos, ESTADO_INICIAL);
   const idCorreos = useId();
@@ -270,14 +254,15 @@ function PasoBancos({
         )}
       </div>
       <Botones>
-        {alCerrar && (
-          <button type="button" onClick={alCerrar} className={SECUNDARIO}>
-            Cerrar
-          </button>
-        )}
-        <button type="submit" disabled={guardando || marcados.length === 0} className="boton-luka ml-auto cursor-pointer">
-          {guardando ? "Guardando…" : "Siguiente"}
+        <button type="button" onClick={alCerrar} className={SECUNDARIO}>
+          Cerrar
         </button>
+        <div className="ml-auto flex items-center gap-3">
+          {marcados.length === 0 && <span className="text-xs text-texto-tenue">Toca al menos uno.</span>}
+          <button type="submit" disabled={guardando || marcados.length === 0} className="boton-luka cursor-pointer">
+            {guardando ? "Guardando…" : "Siguiente"}
+          </button>
+        </div>
       </Botones>
     </form>
   );

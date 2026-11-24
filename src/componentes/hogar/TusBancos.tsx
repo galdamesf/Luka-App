@@ -60,8 +60,7 @@ export function TusBancos({ bancos, nombres, accionAgregar, accionEditar, accion
     <div className="space-y-4">
       {bancos.length === 0 && !agregando && (
         <p className="text-sm text-texto-tenue">
-          Todavía no hay ninguno. Marca tus bancos en «Que tus gastos lleguen solos», y Luka reconoce tus cuentas y
-          tarjetas con los primeros avisos.
+          Todavía no hay ninguno. Con el primer aviso que le reenvíes, Luka reconoce tu cuenta o tarjeta.
         </p>
       )}
 

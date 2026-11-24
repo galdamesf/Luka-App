@@ -17,6 +17,7 @@ import { RenovarRespaldos } from "@/componentes/hogar/RenovarRespaldos";
 import { TusBancos } from "@/componentes/hogar/TusBancos";
 import { TusCorreos } from "@/componentes/hogar/TusCorreos";
 import { ConectarTusCorreos } from "@/componentes/hogar/ConectarTusCorreos";
+import { TuDireccionDeLuka } from "@/componentes/conectar/TuDireccionDeLuka";
 import { ResumenDiario } from "@/componentes/hogar/ResumenDiario";
 import { leerLosBancosDelHogar } from "@/datos/bancos";
 import { leerMisCorreos } from "@/datos/correos-registrados";
@@ -159,28 +160,25 @@ export default async function PaginaHogar() {
 
       <section id="correos" aria-labelledby="titulo-correos" className={`mt-6 scroll-mt-24 ${TARJETA}`}>
         <h2 id="titulo-correos" className="text-lg font-bold tracking-tight">
-          Tus correos y tu buzón
+          Reenvíale a Luka los avisos de tu banco
         </h2>
         <p className="mt-1 mb-4 max-w-[60ch] text-sm leading-relaxed text-texto-tenue">
-          Tus bancos te mandan un aviso por correo con cada compra y transferencia. Con un filtro en tu correo, esos
-          avisos le llegan solos a Luka, y Luka los deja en «Por revisar», en el panel. Nada cuenta hasta que lo
-          confirmas. Luka nunca entra a tu correo ni te pide su contraseña.
+          Cuando te llegue un aviso de compra o transferencia, reenvíalo tal cual a tu dirección de Luka. Aparece en
+          Inicio, en «Por revisar», y nada cuenta hasta que lo confirmas. Luka nunca entra a tu correo ni te pide su
+          contraseña.
         </p>
         <div className="space-y-6">
-          {miBuzon !== null && correosConfirmados.length > 0 && (
-            <ConectarTusCorreos
-              paso={pasoDeConectar}
-              miembroId={miembroId}
-              correos={correosConfirmados}
-              direccionDeLuka={miBuzon.direccion}
-              misBancos={misBancos}
-              remitentes={losBancos.remitentes}
-              codigoDeGmail={miBuzon.codigoDeGmail ? { codigo: miBuzon.codigoDeGmail.codigo, de: miBuzon.codigoDeGmail.de } : null}
-              revisaSolo={revisionAutomatica()}
-              accionMarcarBancos={accionMarcarMisBancos}
-              accionBuscarCodigo={accionBuscarCodigoDeGmail}
-              accionOlvidarCodigoDeGmail={accionOlvidarCodigoDeGmail}
-            />
+          {miBuzon === null ? (
+            <p className="rounded-lg border border-borde bg-superficie-tenue px-3 py-2 text-sm text-texto-tenue">
+              El buzón de Luka todavía no está configurado: falta el correo de Luka en el .env (CORREO_SMTP_USUARIO y
+              CORREO_SMTP_CLAVE).
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold tracking-tight">Tu dirección de Luka</h3>
+              <TuDireccionDeLuka direccion={miBuzon.direccion} />
+              <p className="text-xs text-texto-tenue">Es solo tuya: no la compartas.</p>
+            </div>
           )}
           <TusCorreos
             correos={misCorreos}
@@ -193,6 +191,21 @@ export default async function PaginaHogar() {
             accionRevisar={accionRevisarBuzon}
             accionCambiarDireccion={accionCambiarMiDireccion}
           />
+          {/* La opcion de mas: que lleguen solos, configurando el correo una vez. */}
+          {miBuzon !== null && correosConfirmados.length > 0 && (
+            <ConectarTusCorreos
+              paso={pasoDeConectar}
+              correos={correosConfirmados}
+              direccionDeLuka={miBuzon.direccion}
+              misBancos={misBancos}
+              remitentes={losBancos.remitentes}
+              codigoDeGmail={miBuzon.codigoDeGmail ? { codigo: miBuzon.codigoDeGmail.codigo, de: miBuzon.codigoDeGmail.de } : null}
+              revisaSolo={revisionAutomatica()}
+              accionMarcarBancos={accionMarcarMisBancos}
+              accionBuscarCodigo={accionBuscarCodigoDeGmail}
+              accionOlvidarCodigoDeGmail={accionOlvidarCodigoDeGmail}
+            />
+          )}
           <ResumenDiario activo={paraConectar.resumenDiario} puedeMandar={hayCorreo} correo={miCorreo} accion={accionCambiarResumenDiario} />
         </div>
       </section>
