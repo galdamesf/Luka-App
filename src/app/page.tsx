@@ -24,6 +24,7 @@ import { leerAjustes } from "@/datos/ajustes";
 import { leerBandeja } from "@/datos/movimientos";
 import { cartolaQueEsperaClave, leerParaConectar } from "@/datos/conectar";
 import { configuracionDelBuzon } from "@/lib/buzon";
+import { leerMiBuzon } from "@/datos/buzon";
 import { sinAutor } from "@/dominio/resumen";
 import { hogarActual } from "@/lib/hogar-actual";
 import { accionCrearGasto, accionEliminarGasto } from "./acciones/gastos";
@@ -154,6 +155,14 @@ export default async function Home({ searchParams }: Props) {
     leerParaConectar(hogarId, miembroId),
     cartolaQueEsperaClave(hogarId, miembroId),
   ]);
+
+  // A quien todavia no le manda nada a Luka: su direccion de Luka, para la
+  // invitacion a reenviarle los avisos de su banco.
+  const configDelBuzon = configuracionDelBuzon();
+  const direccionParaInvitar =
+    !paraConectar.yaLlegoAlgo && configDelBuzon !== null
+      ? (await leerMiBuzon(hogarId, miembroId, { base: configDelBuzon.direccion, cuantas: 0 })).direccion
+      : null;
 
   // Quien anoto cada gasto se muestra solo si en el hogar hay mas de una
   // persona: con una sola, cada fila diria lo mismo. Los sueldos ya traen
@@ -348,10 +357,10 @@ export default async function Home({ searchParams }: Props) {
         <CartolaQueEspera espera={cartolaEspera} accion={accionLeerCartolaQueEspera} />
       </div>
 
-      {/* Quien todavia no recibe sus avisos en Luka: la invitacion a conectar su correo. */}
-      {!paraConectar.yaLlegoAlgo && configuracionDelBuzon() !== null && (
+      {/* Quien todavia no le manda nada a Luka: la invitacion a reenviarle sus avisos. */}
+      {direccionParaInvitar !== null && (
         <div className="mt-6 empty:hidden">
-          <ConectaTuCorreo miembroId={miembroId} />
+          <ConectaTuCorreo miembroId={miembroId} direccion={direccionParaInvitar} />
         </div>
       )}
 

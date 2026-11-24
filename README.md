@@ -240,16 +240,20 @@ la cartola de otro banco, `--volcar` deja el texto de cada pagina con su
 posicion. Se prueba con `npm run test:unit -- cartola` y
 `npm run test:db -- cartolas`.
 
-**Conectar el correo es una sola vez, en unos minutos, y sin escribir
-numeros.** Es la seccion E. En Hogar, el asistente «Que tus gastos lleguen
-solos» tiene tres pasos: la persona toca sus bancos; en Gmail agrega su
-direccion de Luka para reenviar (un boton abre la pantalla exacta, y el codigo
-con que Gmail confirma aparece solo en el asistente); y crea el filtro, con lo
-que va en «De» listo para pegar. Con otro correo, los dos ultimos son una sola
-regla. Luka no entra al correo de nadie: leerlo directo, o crear el filtro por
-la persona, exige permisos de Google que piden una auditoria de seguridad cada
-año. De los bancos sin plantillas, el filtro lleva su dominio (`bci.cl`), asi
-que sus avisos llegan igual y los lee la IA. Las cuentas y tarjetas no se
+**Lo principal es reenviar: nada que configurar.** Es la seccion E. En Inicio
+(hasta que llega el primer aviso) y en Hogar, la persona ve su direccion de
+Luka con «Copiar» y «Guardar "Luka" en mis contactos», que descarga la tarjeta
+`Luka.vcf` (`/hogar/contacto`): con el contacto guardado, reenviar un aviso del
+banco desde el celular es escribir «Luka». Para quien no quiere reenviar cada
+aviso queda, plegado en Hogar, el asistente «Que tus gastos lleguen solos»: la
+persona toca sus bancos; en Gmail agrega su direccion de Luka para reenviar (un
+boton abre la pantalla exacta, y el codigo con que Gmail confirma aparece solo
+en el asistente); y crea el filtro, con lo que va en «De» listo para pegar. Con
+otro correo, los dos ultimos son una sola regla. Luka no entra al correo de
+nadie: leerlo directo, o crear el filtro por la persona, exige permisos de
+Google que piden una auditoria de seguridad cada año. De los bancos sin
+plantillas, el filtro lleva su dominio (`bci.cl`), asi que sus avisos llegan
+igual y los lee la IA. Las cuentas y tarjetas no se
 escriben: con el primer aviso que llega reenviado, Luka la deja en «Tus bancos
 y tarjetas», como de quien lo reenvio (`cuentaQueSeAprende`), solo si lo leyo
 una plantilla y los 4 digitos son de una cuenta de ese banco. Si el aviso no
@@ -262,7 +266,7 @@ y las cuentas por vencer, uno por dia y solo si hay algo que contar. Se apaga
 en Hogar. En tu computador y en las vistas previas de Vercel el buzon no se
 revisa solo (`BUZON_AUTOMATICO`), para no llevarse los correos de la version
 publicada. Se prueba con
-`npm run test:unit -- conectar` y `npm run test:db -- conectar`.
+`npm run test:unit -- conectar contacto` y `npm run test:db -- conectar`.
 
 ## Sobre las dependencias
 
@@ -333,6 +337,7 @@ src/
     cartolas/        La cartola del mes: la plantilla de cada banco, el cuadre
                      con sus totales y como queda cada fila
     conectar.ts      El asistente para conectar el correo y el resumen diario
+    contacto.ts      La tarjeta del contacto «Luka» (vCard) para el celular
   datos/             Acceso a Prisma. Recibe el cliente por parametro
     gastos.ts
     categorias.ts

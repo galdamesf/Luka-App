@@ -2,9 +2,8 @@
 
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { ESTADO_INICIAL, type AccionFormulario, type EstadoFormulario } from "@/dominio/formulario";
-import { PASOS, REENVIO_A_MANO, type ProveedorDeCorreo } from "@/dominio/correos-registrados";
+import { PASOS, type ProveedorDeCorreo } from "@/dominio/correos-registrados";
 import { TEXTO_DE_LA_LLEGADA, pideAlgo, type ResultadoDeLlegada } from "@/dominio/buzon";
-import { BotonCopiar } from "./BotonCopiar";
 import { ConfirmarAccion } from "./ConfirmarAccion";
 
 export type CorreoParaMostrar = {
@@ -57,37 +56,22 @@ function Mensaje({ estado }: { estado: EstadoFormulario }) {
 }
 
 /**
- * «Tus correos y tu buzón»: la direccion de Luka de la persona, los correos
- * desde donde reenvia (cada uno confirmado con un codigo) y lo ultimo que
- * llego a su buzon. Los pasos para conectar su correo estan en el asistente
- * (ConectarTusCorreos), justo arriba.
+ * Lo ultimo que llego al buzon de la persona y los correos desde donde le
+ * reenvia a Luka (cada uno confirmado con un codigo). Su direccion de Luka va
+ * justo arriba, en la pagina (TuDireccionDeLuka).
  */
 export function TusCorreos(props: Props) {
   const { correos, buzon } = props;
 
   return (
     <div className="space-y-6">
-      {buzon === null ? (
-        <p className="rounded-lg border border-borde bg-superficie-tenue px-3 py-2 text-sm text-texto-tenue">
-          El buzón de Luka todavía no está configurado: falta el correo de Luka en el .env (CORREO_SMTP_USUARIO y
-          CORREO_SMTP_CLAVE). Mientras, puedes dejar listos tus correos y tus bancos.
-        </p>
-      ) : (
-        <div className="space-y-2">
-          <h3 className={SUBTITULO}>Tu dirección de Luka</h3>
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-borde bg-superficie-tenue p-2 pl-3">
-            <code className="min-w-0 flex-1 break-all font-mono text-sm font-semibold">{buzon.direccion}</code>
-            <BotonCopiar texto={buzon.direccion} descripcion="tu dirección de Luka" />
-          </div>
-          <p className="text-sm text-texto-tenue">
-            Lo que le reenvíes desde uno de tus correos confirmados queda en «Por revisar». Es solo tuya: no la compartas.{" "}
-            {REENVIO_A_MANO}
-          </p>
-        </div>
+      {buzon !== null && (
+        <LoUltimo buzon={buzon} accionRevisar={props.accionRevisar} accionCambiarDireccion={props.accionCambiarDireccion} />
       )}
 
       <div className="space-y-3">
-        <h3 className={SUBTITULO}>Tus correos</h3>
+        <h3 className={SUBTITULO}>Desde dónde le reenvías</h3>
+        <p className="text-sm text-texto-tenue">Luka lee lo que le reenvías desde estos correos, y nada más.</p>
         <ul className="space-y-2">
           {correos.map((correo) => (
             <FilaCorreo key={correo.id ?? correo.direccion} correo={correo} {...props} />
@@ -97,15 +81,10 @@ export function TusCorreos(props: Props) {
           <AgregarCorreo accion={props.accionAgregar} />
         ) : (
           <p className="text-sm text-texto-tenue">
-            Para conectar otro correo, Luka tiene que poder mandarte un código, y todavía no está configurado.
+            Para agregar otro correo, Luka tiene que poder mandarte un código, y todavía no está configurado.
           </p>
         )}
-        <p className="text-xs text-texto-tenue">Luka nunca te pide la contraseña de tu correo: solo lee lo que tú le reenvías.</p>
       </div>
-
-      {buzon !== null && (
-        <LoUltimo buzon={buzon} accionRevisar={props.accionRevisar} accionCambiarDireccion={props.accionCambiarDireccion} />
-      )}
     </div>
   );
 }
@@ -209,7 +188,7 @@ function AgregarCorreo({ accion }: { accion: AccionFormulario }) {
   return (
     <form ref={formulario} action={agregar} className="space-y-2">
       <label htmlFor={id} className="block text-sm text-texto-tenue">
-        Agrega otro correo donde te lleguen comprobantes: Hotmail, iCloud, el del trabajo…
+        ¿Te llegan avisos a otro correo (Hotmail, iCloud, el del trabajo…)? Agrégalo para reenviar desde ahí.
       </label>
       <div className="flex flex-wrap gap-2">
         <input id={id} name="correo" type="email" required maxLength={254} placeholder="nombre@hotmail.com" className={`min-w-0 flex-1 ${CAMPO}`} />
@@ -246,7 +225,7 @@ function LoUltimo({
       <Mensaje estado={revisado} />
       {buzon.llegadas.length === 0 ? (
         <p className="text-sm text-texto-tenue">
-          Todavía no llega nada. Para probar, reenvía un comprobante antiguo a tu dirección de Luka y presiona «Revisar ahora».
+          Todavía no llega nada. Para probar, reenvíale a Luka un aviso antiguo de tu banco y presiona «Revisar ahora».
         </p>
       ) : (
         <ul className="divide-y divide-borde rounded-lg border border-borde">
@@ -269,7 +248,7 @@ function LoUltimo({
         claseBoton={DE_TEXTO}
       >
         <p>La dirección de ahora deja de servir: lo que llegue ahí se borra sin leer.</p>
-        <p>Sirve si alguien más la conoce. Después tienes que cambiarla en el filtro o la regla de tu correo.</p>
+        <p>Sirve si alguien más la conoce. Después guarda de nuevo el contacto «Luka», y cámbiala en el filtro de tu correo si lo tienes.</p>
       </ConfirmarAccion>
     </div>
   );

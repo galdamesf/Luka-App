@@ -181,7 +181,3 @@ export const PASOS: Record<ProveedorDeCorreo, PasosDelProveedor> = {
     ],
   },
 };
-
-/** Lo mismo para todos: cualquier comprobante se puede reenviar a mano. */
-export const REENVIO_A_MANO =
-  "También puedes reenviar a mano cualquier comprobante a tu dirección de Luka, desde un correo confirmado y sin cambiarle nada.";
