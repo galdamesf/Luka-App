@@ -459,6 +459,12 @@ export async function borrarHogar(
     // llaves foraneas con Restrict no dejan borrar en otro orden. Los
     // miembros, las invitaciones y el codigo se van con el hogar, en cascada.
     const delHogar = { where: { hogarId } };
+    // Los movimientos de los comprobantes apuntan a gastos y deudas: van
+    // primero. Las reglas, antes que las categorias.
+    await tx.movimiento.deleteMany(delHogar);
+    await tx.cartola.deleteMany(delHogar);
+    await tx.reglaDeComercio.deleteMany(delHogar);
+    await tx.cuentaBancaria.deleteMany(delHogar);
     await tx.cuotaPagada.deleteMany({ where: { deuda: { hogarId } } });
     await tx.presupuesto.deleteMany(delHogar);
     await tx.cuenta.deleteMany(delHogar);

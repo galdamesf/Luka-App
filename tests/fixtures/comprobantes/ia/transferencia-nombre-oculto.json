@@ -1,0 +1,28 @@
+{
+  "id": "msg_01EjemploNombreOculto",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [
+    {
+      "type": "tool_use",
+      "id": "toolu_01EjemploNombreOculto",
+      "name": "registrar_lectura",
+      "input": {
+        "es_comprobante": true,
+        "tipo": "TRANSFERENCIA",
+        "sentido": "gasto",
+        "monto": "$ 245.000",
+        "fecha": "2026-11-18",
+        "comercio": "[nombre]",
+        "medio_pago": "TRANSFERENCIA",
+        "ultimos4": "7890",
+        "cuotas": null,
+        "confianza": 0.88
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "usage": { "input_tokens": 702, "output_tokens": 104 }
+}

@@ -2,6 +2,9 @@
 # Puerto 5434 en la maquina: el 5432 suele ser de un Postgres instalado y el
 # 5433 lo usa otro proyecto (SIO). Solo escucha en tu Mac (127.0.0.1): nadie
 # mas de tu red wifi puede conectarse a la base.
+# El nombre fijo hace que Docker use siempre este contenedor y esta base,
+# aunque la carpeta del proyecto se llame distinto (Luka, control-gastos).
+name: control-gastos
 services:
   db:
     image: postgres:16-alpine

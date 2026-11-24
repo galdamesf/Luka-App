@@ -1,0 +1,37 @@
+De: mensajes@bancoconsorcio.cl
+Reenviado-por: camila@ejemplo.cl
+Asunto: Notificaci�n Abono - Banco Consorcio
+Recibido: 2026-11-18T19:30:00Z
+
+<!DOCTYPE html>
+<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>Consorcio</title></head>
+<body>
+<div style="display:none;">Conoce más aquí</div>
+<table role="presentation"><tbody><tr><td>
+<h1>
+Notificación de abono</h1>
+<p>
+<b>CAMILA ANDREA ROJAS SOTO</b></p>
+<p>
+Te informamos que se ha realizado un <b>abono</b> a tu cuenta, enviamos los detalles:</p>
+</td></tr></tbody></table>
+<center>
+<table class="table-rounded"><tbody>
+<tr class="fondo-caja"><th align="left">
+Número de cuenta: </th>
+<td align="left">
+4300012345 </td>
+</tr>
+<tr><th align="left">Fecha abono: </th>
+<td align="left">18/11/2026 </td>
+</tr>
+<tr class="fondo-caja"><th align="left">
+Monto abono: </th>
+<td align="left">
+$ 32.500 </td>
+</tr>
+</tbody></table>
+</center>
+<p>Un cordial saludo,<br><b>Banco Consorcio</b></p>
+</body>
+</html>

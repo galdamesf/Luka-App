@@ -1,0 +1,91 @@
+De: mensajes@bancoconsorcio.cl
+Reenviado-por: camila@ejemplo.cl
+Asunto: Transferencia de Fondos - Banco Consorcio
+Recibido: 2026-11-10T21:26:14Z
+
+<!DOCTYPE html>
+<html xml:lang="es" lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>Consorcio</title>
+<style type="text/css"> .fondo-caja { background-color: #f5f5f5; } </style></head>
+<body class="body" id="body">
+<div style="display:none;">Conoce más aquí</div>
+<table width="100%" role="presentation"><tbody><tr><td>
+<h1>
+Comprobante transferencia de fondos</h1>
+<p>
+<b>Camila Andrea Rojas Soto</b></p>
+<p>
+Te informamos que has recibido una <b>transferencia de fondos</b> por parte de:
+<b>ANA DIAZ PEREZ</b>, te enviamos los detalles de la transacción.</p>
+</td></tr></tbody></table>
+<center>
+<table class="table-rounded w-100" width="90%"><tbody>
+<tr class="fondo-caja"><th align="left">
+Asunto: </th>
+<td align="left">
+Transferencias Banco Consorcio </td>
+</tr>
+<tr><th align="left">Fecha Transacción: </th>
+<td align="left">2026-11-10 </td>
+</tr>
+<tr class="fondo-caja"><th align="left">
+N° de Transacción: </th>
+<td align="left">
+3070000000000002 </td>
+</tr>
+<tr><th align="left">Monto Transacción: </th>
+<td align="left">15.000 </td>
+</tr>
+</tbody></table>
+</center>
+<center>
+<table class="table-rounded w-100" width="90%"><tbody>
+<tr class="fondo-caja"><th align="left">
+<span style="color: #ffffff;">Datos originador:</span> </th>
+<td align="left"></td>
+</tr>
+<tr><th align="left">Nombre: </th>
+<td align="left">ANA DIAZ PEREZ </td>
+</tr>
+<tr class="fondo-caja"><th align="left">
+Rut: </th>
+<td align="left">
+333333333 </td>
+</tr>
+<tr><th align="left">Banco: </th>
+<td align="left">BANCO CONSORCIO </td>
+</tr>
+<tr class="fondo-caja"><th align="left">
+Cuenta Origen: </th>
+<td align="left">
+4300054321 </td>
+</tr>
+</tbody></table>
+</center>
+<center>
+<table class="table-rounded w-100" width="90%"><tbody>
+<tr class="fondo-caja"><th align="left">
+<span style="color: #ffffff;">Datos titular:</span> </th>
+<td align="left"></td>
+</tr>
+<tr><th align="left">Nombre: </th>
+<td align="left">Camila Andrea Rojas Soto </td>
+</tr>
+<tr class="fondo-caja"><th align="left">
+Rut: </th>
+<td align="left">
+111111111 </td>
+</tr>
+<tr><th align="left">Banco: </th>
+<td align="left">BANCO SANTANDER SANTIAGO </td>
+</tr>
+<tr class="fondo-caja"><th align="left">
+Cuenta Destino: </th>
+<td align="left">
+12345678 </td>
+</tr>
+</tbody></table>
+</center>
+<p>Un cordial saludo,<br><b>Banco Consorcio</b></p>
+<p>Infórmese sobre la garantía estatal de los depósitos en su banco o en www. cmfchile. cl</p>
+</body>
+</html>

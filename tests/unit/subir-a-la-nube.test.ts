@@ -8,6 +8,7 @@ import {
   compararMigraciones,
   contar,
   credencialesDeBlob,
+  enOrdenDeInsercion,
   llavePrimaria,
   loQueSePierde,
   nadaSePierde,
@@ -39,6 +40,9 @@ describe("el orden de las tablas", () => {
   const APUNTA_A: Record<Tabla, Tabla[]> = {
     hogar: [],
     miembro: ["hogar"],
+    bancoMarcado: ["miembro"],
+    correoRegistrado: ["miembro"],
+    buzon: ["miembro"],
     categoria: ["hogar"],
     deuda: ["hogar"],
     sueldo: ["hogar"],
@@ -48,6 +52,11 @@ describe("el orden de las tablas", () => {
     cuenta: ["hogar", "categoria", "gasto"],
     cuotaPagada: ["deuda", "gasto"],
     presupuesto: ["hogar", "categoria"],
+    cuentaBancaria: ["hogar", "miembro"],
+    reglaDeComercio: ["hogar", "categoria"],
+    cartola: ["hogar", "miembro", "cuentaBancaria"],
+    // Tambien a otro movimiento (el juntado a su principal): ver enOrdenDeInsercion.
+    movimiento: ["hogar", "gasto", "deuda", "miembro", "cuentaBancaria", "cartola"],
   };
 
   test("cada tabla va despues de las que apunta, asi se puede insertar en orden", () => {
@@ -62,12 +71,24 @@ describe("el orden de las tablas", () => {
     expect([...TABLAS].sort()).toEqual(Object.keys(APUNTA_A).sort());
     expect(new Set(TABLAS).size).toBe(TABLAS.length);
   });
+
+  test("un movimiento juntado se inserta despues de su principal, aunque su id vaya antes", () => {
+    const juntado = { id: "a-viejo", juntadoConId: "b-nuevo" };
+    const principal = { id: "b-nuevo", juntadoConId: null };
+    const solo = { id: "c", juntadoConId: null };
+    const filas = ordenarFilas("movimiento", [principal, solo, juntado]);
+    expect(filas.map((f) => f.id)).toEqual(["a-viejo", "b-nuevo", "c"]);
+    expect(enOrdenDeInsercion("movimiento", filas).map((f) => f.id)).toEqual(["b-nuevo", "c", "a-viejo"]);
+    // En las demas tablas no cambia nada.
+    expect(enOrdenDeInsercion("gasto", filas)).toEqual(filas);
+  });
 });
 
 describe("la llave y el orden de las filas", () => {
-  test("la llave es el id, salvo en ajustes, que es el hogar", () => {
+  test("la llave es el id, salvo en ajustes, que es el hogar, y en el buzon, que es la persona", () => {
     expect(llavePrimaria("gasto", { id: "g1", hogarId: "h1" })).toBe("g1");
     expect(llavePrimaria("ajustes", { hogarId: "h1", diaInicioMes: 27 })).toBe("h1");
+    expect(llavePrimaria("buzon", { miembroId: "m1", clave: "k7q2m9xa4p" })).toBe("m1");
   });
 
   test("ordena caracter a caracter, igual en cualquier base", () => {

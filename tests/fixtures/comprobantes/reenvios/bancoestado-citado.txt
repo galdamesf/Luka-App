@@ -1,0 +1,33 @@
+De: Camila Rojas <camila@ejemplo.cl>
+Asunto: Fwd: Aviso de Transferencia de Fondos BancoEstado
+Recibido: 2026-11-12T15:00:00Z
+
+Begin forwarded message:
+
+> From: BancoEstado <notificaciones@correo.bancoestado.cl>
+> Subject: Aviso de Transferencia de Fondos BancoEstado
+> Date: November 12, 2026 at 10:05:12 AM GMT-3
+> To: camila@ejemplo.cl
+>
+> Estimado(a) Sr(a). Camila rojas
+> COMERCIAL EL MAITEN LTDA.Fecha 12/11/2026 - 10:05
+> Hemos realizado una Transferencia instruida por nuestro cliente COMERCIAL EL MAITEN LTDA.
+> Datos de la Operación
+> Nombre Destinatario
+> Camila rojas
+> Rut Destinatario
+> 11.111.111-1
+> Fecha de Pago
+> 12/11/2026 - 10:05
+> Banco
+> BANCO SANTANDER-CHILE
+> Tipo Cuenta
+> Cuenta Corriente
+> Nro. Cuenta
+> *******5678
+> Monto
+> $175.500
+> Descripción
+>
+> Atentamente,
+> BancoEstado

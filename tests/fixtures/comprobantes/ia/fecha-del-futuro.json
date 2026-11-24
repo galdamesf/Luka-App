@@ -1,0 +1,25 @@
+{
+  "id": "msg_01EjemploFechaDelFuturo",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [
+    {
+      "type": "tool_use",
+      "id": "toolu_01EjemploFechaDelFuturo",
+      "name": "registrar_lectura",
+      "input": {
+        "es_comprobante": true,
+        "tipo": "COMPRA",
+        "sentido": "gasto",
+        "monto": "12990",
+        "fecha": "2027-01-05",
+        "comercio": "Farmacia del Barrio",
+        "confianza": 0.64
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "usage": { "input_tokens": 1187, "output_tokens": 95 }
+}

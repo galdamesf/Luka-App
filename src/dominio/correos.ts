@@ -1,3 +1,4 @@
+import { CODIGO_DE_CORREO } from "./correos-registrados";
 import { CODIGO_DE_BORRADO } from "./hogar";
 
 /**
@@ -50,4 +51,44 @@ export function correoDeCodigoDeBorrado({
   ].join("");
 
   return { asunto: `Código para borrar «${nombreDelHogar}» en Luka`, texto, html };
+}
+
+/**
+ * El codigo para confirmar un correo nuevo. Llega a ese correo, no al de
+ * Google: es lo que prueba que la persona lo lee.
+ */
+export function correoDeCodigoDeCorreo({
+  nombre,
+  direccion,
+  codigo,
+}: {
+  /** El primer nombre de quien lo pidio, si se sabe. */
+  nombre: string | null;
+  /** El correo que se esta confirmando. */
+  direccion: string;
+  codigo: string;
+}): { asunto: string; texto: string; html: string } {
+  const minutos = CODIGO_DE_CORREO.minutosDeVigencia;
+  const saludo = nombre ? `Hola, ${nombre}:` : "Hola:";
+  const parrafos = [
+    `Pediste que Luka lea los comprobantes que te llegan a ${direccion}. Para confirmar que este correo es tuyo, escribe este código en Luka:`,
+    `Vence en ${minutos} minutos y sirve una sola vez. Luka nunca te pide la contraseña de tu correo: solo lee lo que tú le reenvías.`,
+    "Si no fuiste tú, no hagas nada: sin este código, nadie puede conectar este correo a Luka.",
+  ];
+
+  const texto = [saludo, "", parrafos[0], "", `    ${codigo}`, "", parrafos[1], "", parrafos[2], "", "Luka"].join("\n");
+
+  const p = (t: string) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#334155">${escaparHtml(t)}</p>`;
+  const html = [
+    '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px">',
+    p(saludo),
+    p(parrafos[0]!),
+    `<p style="margin:0 0 16px;font-size:32px;font-weight:700;letter-spacing:6px;color:#0f172a;font-family:ui-monospace,Menlo,Consolas,monospace">${escaparHtml(codigo)}</p>`,
+    p(parrafos[1]!),
+    p(parrafos[2]!),
+    '<p style="margin:0;font-size:13px;color:#64748b">Luka</p>',
+    "</div>",
+  ].join("");
+
+  return { asunto: "Tu código para conectar este correo con Luka", texto, html };
 }

@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import type { PrismaClient } from "@prisma/client";
-import { TABLAS, ordenarFilas, type Datos, type Fila, type Tabla } from "@/dominio/subir-a-la-nube";
+import { TABLAS, enOrdenDeInsercion, ordenarFilas, type Datos, type Fila, type Tabla } from "@/dominio/subir-a-la-nube";
 
 /**
  * Leer una base completa y copiarla sobre otra (npm run nube:subir). Las
@@ -74,7 +74,7 @@ export async function copiarDatos(
       }
       // Despues se llena, de las apuntadas a las que apuntan.
       for (const tabla of TABLAS) {
-        const filas = datos[tabla];
+        const filas = enOrdenDeInsercion(tabla, datos[tabla]);
         for (let i = 0; i < filas.length; i += lote) {
           await delegado(tx, tabla).createMany({ data: filas.slice(i, i + lote) });
         }

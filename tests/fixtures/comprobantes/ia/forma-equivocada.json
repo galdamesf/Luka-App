@@ -1,0 +1,17 @@
+{
+  "id": "msg_01EjemploFormaEquivocada",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [
+    {
+      "type": "tool_use",
+      "id": "toolu_01EjemploFormaEquivocada",
+      "name": "registrar_lectura",
+      "input": { "es_comprobante": "si", "monto": "$ 12.990" }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "usage": { "input_tokens": 1187, "output_tokens": 30 }
+}

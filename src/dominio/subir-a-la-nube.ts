@@ -10,11 +10,23 @@
  * despues de las que apunta con sus llaves foraneas. Para vaciar, al reves.
  *
  * Los codigos para borrar un hogar no se copian: duran unos minutos y valen
- * solo donde se pidieron.
+ * solo donde se pidieron. Tampoco lo que fue llegando a cada buzon: es un
+ * registro de los ultimos dias, no datos del hogar. Los correos registrados
+ * y los buzones si: con ellos, la direccion de Luka de cada persona y sus
+ * correos confirmados siguen siendo los mismos en la nube. Las cartolas
+ * leidas tambien, pero no las claves de sus PDF: van cifradas con la
+ * CLAVE_DOS_PASOS de tu Mac, y en la nube cada uno las escribe de nuevo.
+ *
+ * Los movimientos van al final porque apuntan a gastos y deudas, y ademas a
+ * otros movimientos (el juntado a su principal): copiarDatos los inserta en
+ * dos vueltas, primero los que no apuntan a otro movimiento.
  */
 export const TABLAS = [
   "hogar",
   "miembro",
+  "bancoMarcado",
+  "correoRegistrado",
+  "buzon",
   "categoria",
   "deuda",
   "sueldo",
@@ -24,6 +36,10 @@ export const TABLAS = [
   "cuenta",
   "cuotaPagada",
   "presupuesto",
+  "cuentaBancaria",
+  "reglaDeComercio",
+  "cartola",
+  "movimiento",
 ] as const;
 
 export type Tabla = (typeof TABLAS)[number];
@@ -38,6 +54,9 @@ export type Datos = Record<Tabla, Fila[]>;
 export const NOMBRE_DE_TABLA: Record<Tabla, string> = {
   hogar: "hogares",
   miembro: "miembros",
+  bancoMarcado: "bancos marcados",
+  correoRegistrado: "correos registrados",
+  buzon: "buzones",
   categoria: "categorias",
   deuda: "deudas",
   sueldo: "sueldos",
@@ -47,11 +66,33 @@ export const NOMBRE_DE_TABLA: Record<Tabla, string> = {
   cuenta: "cuentas",
   cuotaPagada: "cuotas pagadas",
   presupuesto: "presupuestos",
+  cuentaBancaria: "cuentas bancarias",
+  reglaDeComercio: "reglas de comercio",
+  cartola: "cartolas",
+  movimiento: "movimientos",
 };
 
-/** La llave primaria de cada fila: `id`, salvo en ajustes, que es la del hogar. */
+/**
+ * En que orden se insertan las filas de una tabla. Casi siempre da igual;
+ * en los movimientos, el principal tiene que estar antes que su juntado,
+ * aunque el juntado sea mas antiguo y su id quede antes.
+ */
+export function enOrdenDeInsercion(tabla: Tabla, filas: readonly Fila[]): Fila[] {
+  if (tabla !== "movimiento") return [...filas];
+  const apuntaAOtro = (fila: Fila) => fila.juntadoConId !== null && fila.juntadoConId !== undefined;
+  return [...filas.filter((f) => !apuntaAOtro(f)), ...filas.filter(apuntaAOtro)];
+}
+
+/**
+ * La llave primaria de cada fila: `id`, salvo en ajustes, que es la del
+ * hogar; en el buzon, que es la de la persona; y en los bancos marcados, la
+ * persona y el banco.
+ */
 export function llavePrimaria(tabla: Tabla, fila: Fila): string {
-  return String(tabla === "ajustes" ? fila.hogarId : fila.id);
+  if (tabla === "ajustes") return String(fila.hogarId);
+  if (tabla === "buzon") return String(fila.miembroId);
+  if (tabla === "bancoMarcado") return `${String(fila.miembroId)}|${String(fila.banco)}`;
+  return String(fila.id);
 }
 
 /**

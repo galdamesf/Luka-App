@@ -1,0 +1,21 @@
+De: Farmacia del Barrio <avisos@farmaciadelbarrio-ejemplo.cl>
+Reenviado-por: camila@ejemplo.cl
+Asunto: Camila, tu compra fue aprobada
+Recibido: 2026-11-17T21:10:00Z
+
+<html><body>
+<h2>¡Gracias por tu compra!</h2>
+<p>Hola, Camila:</p>
+<p>Tu compra en Farmacia del Barrio fue aprobada.</p>
+<table>
+<tr><td>Fecha</td><td>17/11/2026 18:07</td></tr>
+<tr><td>Total pagado</td><td>$ 12.990</td></tr>
+<tr><td>Medio de pago</td><td>Tarjeta de d&eacute;bito terminada en 4821</td></tr>
+<tr><td>N&uacute;mero de orden</td><td>900012345678</td></tr>
+<tr><td>RUT</td><td>11.111.111-1</td></tr>
+<tr><td>Correo</td><td>camila@ejemplo.cl</td></tr>
+<tr><td>Tel&eacute;fono</td><td>+56 9 8765 4321</td></tr>
+<tr><td>Direcci&oacute;n de despacho</td><td>Av. Siempre Viva 742, depto 12</td></tr>
+</table>
+<p>Revisa tu pedido <a href="https://farmaciadelbarrio-ejemplo.cl/pedido?id=abc123&amp;u=camila">aqu&iacute;</a>.</p>
+</body></html>

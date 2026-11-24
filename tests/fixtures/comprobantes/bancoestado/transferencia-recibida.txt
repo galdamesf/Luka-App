@@ -1,0 +1,23 @@
+De: BancoEstado <notificaciones@correo.bancoestado.cl>
+Reenviado-por: camila@ejemplo.cl
+Asunto: Aviso de Transferencia de Fondos BancoEstado
+Recibido: 2026-11-12T13:05:12Z
+
+Email
+BancoEstado
+
+Estimado(a) Sr(a). Camila rojas
+COMERCIAL EL MAITEN LTDA.Fecha 12/11/2026 - 10:05
+
+ <tr><td colspan='2' style='padding-top: 40px;' align='center'><img src='https://image.correo.bancoestado.cl/lib/ejemplo/logo.png' width='64' height='64' style='display: block' alt='BancoEstado'/></td></tr><tr><td colspan='2'style='font-size: 16px; line-height: 32px; font-family: Helvetica, Arial, sans-serif; text-align:center; padding:16px 24px 32px'>Hemos realizado una Transferencia instruida por nuestro cliente <strong>COMERCIAL EL MAITEN LTDA.</strong></td></tr><tr><th id='datosOperacion' colspan='2' style='font-family: Helvetica, Arial, sans-serif;font-size: 15px;color: #666;background: #f3f3f3;'><strong>Datos de la Operaci&oacute;n</strong></th></tr><tr>
+<td width='176'style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>Nombre Destinatario</td><td width='334' style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>Camila rojas</td></tr><tr><td style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>Rut Destinatario</td><td style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>11.111.111-1</td></tr><tr><td style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>Fecha de Pago</td>
+<td style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>12/11/2026 - 10:05</td></tr><tr><td style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>Banco</td><td style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>BANCO SANTANDER-CHILE</td></tr><tr><td style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>Tipo Cuenta</td><td style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>Cuenta Corriente</td></tr><tr>
+<td style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>Nro. Cuenta</td><td style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'>*******5678</td></tr><tr><td style='font-size: 18px; color: #ff8103; padding: 16px 24px 16px; border-bottom: 0px solid #ccc'><strong>Monto</strong></td><td style='font-size: 18px; color: #ff8103; padding: 16px 24px 16px; border-bottom: 0px solid #ccc'><strong>$175.500</strong></td></tr><tr>
+<th id='datosOperacion' colspan='2' style='font-family: Helvetica, Arial, sans-serif;font-size: 15px;color: #666;background: #f3f3f3;'><strong>Descripci&oacute;n</strong></th></tr><tr><td colspan='2' width='176' style='font-size: 12px; color: #666; padding: 16px 24px 16px; border-bottom: 1px solid #ccc'></td></tr>
+
+Para consultas, comuníquese con Soporte Internet al teléfono
+
+ 600 000 0000
+
+Atentamente,
+BancoEstado

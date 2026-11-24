@@ -144,41 +144,57 @@ export async function pagarCuenta(
   boletaArchivo: string | null,
   db: typeof prisma = prisma,
 ): Promise<CuentaPlana> {
-  return db.$transaction(async (tx: ClienteTx) => {
-    const cuenta = await tx.cuenta.findFirstOrThrow({
-      where: { id, hogarId },
-      include: CATEGORIA_INCLUIDA,
-    });
+  return db.$transaction(
+    async (tx: ClienteTx) => (await pagarCuentaEn(tx, hogarId, id, fechaPago, montoReal, boletaArchivo)).cuenta,
+  );
+}
 
-    if (cuenta.pagadaEn !== null) {
-      throw new Error("Esa cuenta ya está pagada.");
-    }
-
-    const gasto = await tx.gasto.create({
-      data: {
-        hogarId,
-        fecha: fechaDesdeISO(fechaPago),
-        descripcion: cuenta.nombre.slice(0, 120),
-        monto: montoReal,
-        categoriaId: cuenta.categoriaId,
-        // La boleta nueva manda; si no viene, se arrastra la que ya tenia.
-        boletaArchivo: boletaArchivo ?? cuenta.boletaArchivo,
-      },
-    });
-
-    const actualizada = await tx.cuenta.update({
-      where: { id, hogarId },
-      data: {
-        pagadaEn: fechaDesdeISO(fechaPago),
-        gastoId: gasto.id,
-        monto: montoReal,
-        boletaArchivo: boletaArchivo ?? cuenta.boletaArchivo,
-      },
-      include: CATEGORIA_INCLUIDA,
-    });
-
-    return aPlano(actualizada as FilaCuenta);
+/**
+ * Lo de pagarCuenta dentro de una transaccion que ya esta abierta: la usa
+ * tambien la bandeja, que paga la cuenta y cierra el comprobante de una vez.
+ * Devuelve tambien el gasto que creo.
+ */
+export async function pagarCuentaEn(
+  tx: ClienteTx,
+  hogarId: string,
+  id: string,
+  fechaPago: string,
+  montoReal: number,
+  boletaArchivo: string | null,
+): Promise<{ cuenta: CuentaPlana; gastoId: string }> {
+  const cuenta = await tx.cuenta.findFirstOrThrow({
+    where: { id, hogarId },
+    include: CATEGORIA_INCLUIDA,
   });
+
+  if (cuenta.pagadaEn !== null) {
+    throw new Error("Esa cuenta ya está pagada.");
+  }
+
+  const gasto = await tx.gasto.create({
+    data: {
+      hogarId,
+      fecha: fechaDesdeISO(fechaPago),
+      descripcion: cuenta.nombre.slice(0, 120),
+      monto: montoReal,
+      categoriaId: cuenta.categoriaId,
+      // La boleta nueva manda; si no viene, se arrastra la que ya tenia.
+      boletaArchivo: boletaArchivo ?? cuenta.boletaArchivo,
+    },
+  });
+
+  const actualizada = await tx.cuenta.update({
+    where: { id, hogarId },
+    data: {
+      pagadaEn: fechaDesdeISO(fechaPago),
+      gastoId: gasto.id,
+      monto: montoReal,
+      boletaArchivo: boletaArchivo ?? cuenta.boletaArchivo,
+    },
+    include: CATEGORIA_INCLUIDA,
+  });
+
+  return { cuenta: aPlano(actualizada as FilaCuenta), gastoId: gasto.id };
 }
 
 /**
@@ -190,20 +206,23 @@ export async function revertirPago(
   id: string,
   db: typeof prisma = prisma,
 ): Promise<void> {
-  await db.$transaction(async (tx: ClienteTx) => {
-    const cuenta = await tx.cuenta.findFirstOrThrow({ where: { id, hogarId } });
+  await db.$transaction(async (tx: ClienteTx) => revertirPagoEn(tx, hogarId, id));
+}
 
-    // Primero soltar el enlace: con el CHECK puesto, borrar el gasto mientras
-    // la cuenta lo apunta dejaria un estado intermedio invalido.
-    await tx.cuenta.update({
-      where: { id, hogarId },
-      data: { pagadaEn: null, gastoId: null },
-    });
+/** Lo de revertirPago dentro de una transaccion que ya esta abierta. */
+export async function revertirPagoEn(tx: ClienteTx, hogarId: string, id: string): Promise<void> {
+  const cuenta = await tx.cuenta.findFirstOrThrow({ where: { id, hogarId } });
 
-    if (cuenta.gastoId !== null) {
-      await tx.gasto.delete({ where: { id: cuenta.gastoId, hogarId } });
-    }
+  // Primero soltar el enlace: con el CHECK puesto, borrar el gasto mientras
+  // la cuenta lo apunta dejaria un estado intermedio invalido.
+  await tx.cuenta.update({
+    where: { id, hogarId },
+    data: { pagadaEn: null, gastoId: null },
   });
+
+  if (cuenta.gastoId !== null) {
+    await tx.gasto.delete({ where: { id: cuenta.gastoId, hogarId } });
+  }
 }
 
 export async function eliminarCuenta(hogarId: string, id: string, db: ClienteDb = prisma): Promise<void> {

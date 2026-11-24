@@ -1,0 +1,27 @@
+{
+  "id": "msg_01EjemploCompraFarmacia",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [
+    {
+      "type": "tool_use",
+      "id": "toolu_01EjemploCompraFarmacia",
+      "name": "registrar_lectura",
+      "input": {
+        "es_comprobante": true,
+        "tipo": "COMPRA",
+        "sentido": "gasto",
+        "monto": "$ 12.990",
+        "fecha": "2026-11-17",
+        "comercio": "Farmacia del Barrio",
+        "medio_pago": "DEBITO",
+        "ultimos4": "4821",
+        "confianza": 0.93
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "usage": { "input_tokens": 1187, "output_tokens": 112 }
+}
