@@ -22,6 +22,8 @@ import { hoyISO } from "@/lib/fecha";
 import { enPeriodo, periodoDe, periodoDeFecha, periodoVecino } from "@/lib/periodo";
 import { leerAjustes } from "@/datos/ajustes";
 import { leerBandeja } from "@/datos/movimientos";
+import { cartolaQueEsperaClave, leerParaConectar } from "@/datos/conectar";
+import { configuracionDelBuzon } from "@/lib/buzon";
 import { sinAutor } from "@/dominio/resumen";
 import { hogarActual } from "@/lib/hogar-actual";
 import { accionCrearGasto, accionEliminarGasto } from "./acciones/gastos";
@@ -85,6 +87,10 @@ import { LoQueQueda } from "@/componentes/LoQueQueda";
 import { Ahorros } from "@/componentes/Ahorros";
 import { Bienvenida, type ResumenBienvenida } from "@/componentes/Bienvenida";
 import { BandejaPorRevisar } from "@/componentes/BandejaPorRevisar";
+import { RevisarAlEntrar } from "@/componentes/conectar/RevisarAlEntrar";
+import { CartolaQueEspera } from "@/componentes/conectar/CartolaQueEspera";
+import { ConectaTuCorreo } from "@/componentes/conectar/ConectaTuCorreo";
+import { accionLeerCartolaQueEspera, accionRevisarAlEntrar } from "./acciones/conectar";
 import { auth } from "@/auth";
 
 export const dynamic = "force-dynamic";
@@ -121,6 +127,7 @@ export default async function Home({ searchParams }: Props) {
   const [
     gastos, gastosAnterior, pagos, presupuestos, categorias, sueldos, deudas, cuentas,
     sueldoAnterior, pagosAnterior, cuentasAnterior, presupuestosAnterior, ahorros, bandeja,
+    paraConectar, cartolaEspera,
   ] = await Promise.all([
     listarGastosDelMes(hogarId, periodo),
     // Para el detalle al pasar el mouse por una categoria, la variacion del
@@ -143,6 +150,9 @@ export default async function Home({ searchParams }: Props) {
     // Lo que llego de los comprobantes y espera que alguien lo revise. No
     // depende del mes que se mira: se revisa cuando llega.
     leerBandeja(hogarId, { hoy, diaInicioMes }),
+    // Si esta persona ya recibe sus avisos, y si una cartola suya espera su clave.
+    leerParaConectar(hogarId, miembroId),
+    cartolaQueEsperaClave(hogarId, miembroId),
   ]);
 
   // Quien anoto cada gasto se muestra solo si en el hogar hay mas de una
@@ -328,6 +338,22 @@ export default async function Home({ searchParams }: Props) {
       <div className="mt-6">
         <IndiceSecciones />
       </div>
+
+      {/* El buzon se revisa al abrir el panel (si Luka lo revisa sola): lo
+          que llego aparece en «Por revisar» un momento despues. */}
+      <RevisarAlEntrar accion={accionRevisarAlEntrar} />
+
+      {/* La cartola del mes que espera la clave de su PDF: se pide aqui. */}
+      <div className="mt-6 empty:hidden">
+        <CartolaQueEspera espera={cartolaEspera} accion={accionLeerCartolaQueEspera} />
+      </div>
+
+      {/* Quien todavia no recibe sus avisos en Luka: la invitacion a conectar su correo. */}
+      {!paraConectar.yaLlegoAlgo && configuracionDelBuzon() !== null && (
+        <div className="mt-6 empty:hidden">
+          <ConectaTuCorreo miembroId={miembroId} />
+        </div>
+      )}
 
       {/* Lo que llego de los comprobantes de los bancos y las tiendas. Va
           antes que todo: hasta que se confirma, no suma en las cifras de

@@ -84,6 +84,12 @@ model Miembro {
   /// Cuando eligio si usar la verificacion en dos pasos, que es opcional: al
   /// activarla o con «Ahora no». Vacio = Luka se lo pregunta al entrar.
   decidioDosPasosEn DateTime?  @map("decidio_dos_pasos_en")
+  /// Si quiere el resumen diario por correo (lo de ayer y lo que espera en
+  /// «Por revisar»). Se apaga en Hogar.
+  resumenDiario     Boolean    @default(true) @map("resumen_diario")
+  /// El dia del ultimo resumen que se le mando: uno por dia, aunque la tarea
+  /// programada corra dos veces.
+  resumenEnviadoEl  DateTime?  @map("resumen_enviado_el") @db.Date
 
   /// Si el hogar se borra, sus miembros se van con el.
   hogar                 Hogar              @relation(fields: [hogarId], references: [id], onDelete: Cascade)
@@ -111,6 +117,8 @@ model Miembro {
   clavesDeCartola       ClaveDeCartola[]
   /// Las cartolas que subio o reenvio.
   cartolas              Cartola[]
+  /// Los bancos que marco al conectar su correo.
+  bancosMarcados        BancoMarcado[]
 
   /// Para que el sueldo apunte al miembro y a su hogar a la vez.
   @@unique([id, hogarId])
@@ -547,6 +555,9 @@ enum TipoCuentaBancaria {
   TARJETA_DEBITO
   /// Tenpo, MACH, Mercado Pago y las demas que se cargan antes de usarlas.
   TARJETA_PREPAGO
+  /// Una cuenta que Luka reconocio sola con un aviso que no dice si es
+  /// corriente, vista o de ahorro. La cartola la precisa.
+  CUENTA
 }
 
 /// Lo que llego de un comprobante.
@@ -878,4 +889,20 @@ model Cartola {
   @@index([miembroId])
   @@index([cuentaBancariaId])
   @@map("cartolas")
+}
+
+/// Los bancos que una persona marco al conectar su correo: van en el filtro
+/// de su correo aunque todavia no le llegue ningun aviso. Sus cuentas y
+/// tarjetas Luka las reconoce sola con los avisos (src/dominio/bancos.ts).
+model BancoMarcado {
+  miembroId String   @map("miembro_id")
+  /// Como se llama en el catalogo, o como lo escribio.
+  banco     String   @db.VarChar(60)
+  creadoEn  DateTime @default(now()) @map("creado_en")
+
+  /// Se va con la persona.
+  miembro Miembro @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+
+  @@id([miembroId, banco])
+  @@map("bancos_marcados")
 }

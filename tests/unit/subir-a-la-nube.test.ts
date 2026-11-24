@@ -40,6 +40,7 @@ describe("el orden de las tablas", () => {
   const APUNTA_A: Record<Tabla, Tabla[]> = {
     hogar: [],
     miembro: ["hogar"],
+    bancoMarcado: ["miembro"],
     correoRegistrado: ["miembro"],
     buzon: ["miembro"],
     categoria: ["hogar"],

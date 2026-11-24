@@ -26,8 +26,6 @@ type Props = {
   correos: CorreoParaMostrar[];
   /** Vacio si el buzon de Luka no esta configurado en el .env. */
   buzon: BuzonParaMostrar | null;
-  /** Los remitentes de los bancos y tiendas para la regla de reenvio. */
-  remitentes: string[];
   /** Si Luka puede mandar el codigo para confirmar un correo. */
   puedeMandarCodigos: boolean;
   accionAgregar: AccionFormulario;
@@ -36,7 +34,6 @@ type Props = {
   accionQuitar: AccionFormulario;
   accionRevisar: AccionFormulario;
   accionCambiarDireccion: AccionFormulario;
-  accionOlvidarCodigoDeGmail: AccionFormulario;
 };
 
 const CAMPO =
@@ -61,14 +58,12 @@ function Mensaje({ estado }: { estado: EstadoFormulario }) {
 
 /**
  * «Tus correos y tu buzón»: la direccion de Luka de la persona, los correos
- * desde donde reenvia (cada uno confirmado con un codigo), los pasos para su
- * proveedor y lo ultimo que llego a su buzon.
+ * desde donde reenvia (cada uno confirmado con un codigo) y lo ultimo que
+ * llego a su buzon. Los pasos para conectar su correo estan en el asistente
+ * (ConectarTusCorreos), justo arriba.
  */
 export function TusCorreos(props: Props) {
-  const { correos, buzon, remitentes } = props;
-  const proveedores = [...new Set(correos.map((c) => c.proveedor))];
-  const [proveedor, setProveedor] = useState<ProveedorDeCorreo>(proveedores[0] ?? "GMAIL");
-  const guia = PASOS[proveedor];
+  const { correos, buzon } = props;
 
   return (
     <div className="space-y-6">
@@ -85,9 +80,9 @@ export function TusCorreos(props: Props) {
             <BotonCopiar texto={buzon.direccion} descripcion="tu dirección de Luka" />
           </div>
           <p className="text-sm text-texto-tenue">
-            Lo que le reenvíes desde uno de tus correos confirmados queda en «Por revisar». Es solo tuya: no la compartas.
+            Lo que le reenvíes desde uno de tus correos confirmados queda en «Por revisar». Es solo tuya: no la compartas.{" "}
+            {REENVIO_A_MANO}
           </p>
-          {buzon.codigoDeGmail && <CodigoDeGmail codigo={buzon.codigoDeGmail} accionOlvidar={props.accionOlvidarCodigoDeGmail} />}
         </div>
       )}
 
@@ -108,89 +103,9 @@ export function TusCorreos(props: Props) {
         <p className="text-xs text-texto-tenue">Luka nunca te pide la contraseña de tu correo: solo lee lo que tú le reenvías.</p>
       </div>
 
-      <div className="space-y-3">
-        <h3 className={SUBTITULO}>Cómo reenviar solo los comprobantes</h3>
-        {proveedores.length > 1 && (
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Tu correo">
-            {proveedores.map((p) => (
-              <button
-                key={p}
-                type="button"
-                aria-pressed={p === proveedor}
-                onClick={() => setProveedor(p)}
-                className={`min-h-9 cursor-pointer rounded-full border px-3 text-[13px] font-bold transition-colors ${
-                  p === proveedor ? "border-transparent bg-acento text-acento-tinta" : "border-borde hover:bg-superficie-tenue"
-                }`}
-              >
-                {PASOS[p].nombre}
-              </button>
-            ))}
-          </div>
-        )}
-        <p className="text-sm font-semibold">
-          En {proveedor === "OTRO" ? "tu correo" : guia.nombre}:{" "}
-          {guia.reenviaSolo
-            ? `${proveedor === "GMAIL" ? "un filtro" : "una regla"} que le pasa a Luka solo los avisos de tus bancos y tiendas`
-            : "sin reenvío automático gratis"}
-        </p>
-        <ol className="list-decimal space-y-1.5 pl-5 text-sm">
-          {guia.pasos.map((paso) => (
-            <li key={paso}>{paso}</li>
-          ))}
-        </ol>
-        {guia.nota && <p className="text-sm text-texto-tenue">{guia.nota}</p>}
-        {guia.reenviaSolo && remitentes.length > 0 && (
-          <div>
-            <p className="mb-1 text-xs font-semibold text-texto-tenue">
-              {proveedor === "GMAIL"
-                ? "Esto va en el campo «De» del filtro. El «OR» es para que Gmail tome cualquiera de estas direcciones."
-                : "Las direcciones desde donde te escriben tus bancos y tiendas"}
-            </p>
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-borde bg-superficie-tenue p-2 pl-3">
-              <code className="min-w-0 flex-1 break-all font-mono text-[13px]">
-                {proveedor === "GMAIL" ? remitentes.join(" OR ") : remitentes.join(", ")}
-              </code>
-              <BotonCopiar
-                texto={proveedor === "GMAIL" ? remitentes.join(" OR ") : remitentes.join("\n")}
-                descripcion="las direcciones de tus bancos y tiendas"
-              />
-            </div>
-            <p className="mt-1 text-xs text-texto-tenue">Luka arma esta lista con tus bancos y la completa con lo que va llegando.</p>
-          </div>
-        )}
-        <p className="text-sm text-texto-tenue">{REENVIO_A_MANO}</p>
-      </div>
-
       {buzon !== null && (
         <LoUltimo buzon={buzon} accionRevisar={props.accionRevisar} accionCambiarDireccion={props.accionCambiarDireccion} />
       )}
-    </div>
-  );
-}
-
-function CodigoDeGmail({
-  codigo,
-  accionOlvidar,
-}: {
-  codigo: NonNullable<BuzonParaMostrar["codigoDeGmail"]>;
-  accionOlvidar: AccionFormulario;
-}) {
-  const [, olvidar, olvidando] = useActionState(accionOlvidar, ESTADO_INICIAL);
-  return (
-    <div role="status" className="space-y-2 rounded-lg border border-acento-canto/60 bg-durazno px-3 py-3 text-sm text-durazno-texto">
-      <p className="font-semibold">
-        Gmail pidió confirmar el reenvío{codigo.de ? ` desde ${codigo.de}` : ""}. Escribe este código en Gmail, donde agregaste tu
-        dirección de Luka:
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <code className="cifra rounded-md bg-superficie px-3 py-1.5 text-lg font-bold tracking-[0.2em] text-texto">{codigo.codigo}</code>
-        <BotonCopiar texto={codigo.codigo} descripcion="el código de Gmail" />
-        <form action={olvidar}>
-          <button type="submit" disabled={olvidando} className={DE_TEXTO}>
-            Ya lo puse
-          </button>
-        </form>
-      </div>
     </div>
   );
 }

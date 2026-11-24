@@ -25,9 +25,18 @@ export const TIPOS_DE_CUENTA = [
   "TARJETA_CREDITO",
   "TARJETA_DEBITO",
   "TARJETA_PREPAGO",
+  /**
+   * Una cuenta que Luka reconocio sola con un aviso que no dice si es
+   * corriente, vista o de ahorro. No se ofrece al agregar una: quien la
+   * conoce elige su tipo, y la cartola lo precisa.
+   */
+  "CUENTA",
 ] as const;
 
 export type TipoCuentaBancaria = (typeof TIPOS_DE_CUENTA)[number];
+
+/** Los que se ofrecen al agregar una cuenta a mano. */
+export const TIPOS_QUE_SE_OFRECEN = TIPOS_DE_CUENTA.filter((tipo) => tipo !== "CUENTA");
 
 export const NOMBRE_DEL_TIPO: Record<TipoCuentaBancaria, string> = {
   CUENTA_CORRIENTE: "Cuenta corriente",
@@ -36,6 +45,7 @@ export const NOMBRE_DEL_TIPO: Record<TipoCuentaBancaria, string> = {
   TARJETA_CREDITO: "Tarjeta de crédito",
   TARJETA_DEBITO: "Tarjeta de débito",
   TARJETA_PREPAGO: "Tarjeta de prepago",
+  CUENTA: "Cuenta",
 };
 
 export function esTarjeta(tipo: TipoCuentaBancaria): boolean {
@@ -67,6 +77,12 @@ export type BancoConocido = {
   otrosNombres?: readonly string[];
   /** Una billetera o una tarjeta de prepago, no un banco. */
   billetera?: true;
+  /**
+   * Los dominios desde donde escribe. Van en el filtro del correo cuando
+   * Luka todavia no tiene plantillas del banco (y por eso no conoce sus
+   * remitentes exactos): asi sus avisos llegan igual y los lee la IA.
+   */
+  dominios: readonly string[];
 };
 
 /**
@@ -74,22 +90,27 @@ export type BancoConocido = {
  * Cualquier otro se escribe a mano: el nombre es lo que se guarda.
  */
 export const BANCOS: readonly BancoConocido[] = [
-  { id: "santander", nombre: "Santander", otrosNombres: ["Banco Santander", "Santander Chile"] },
-  { id: "bancoestado", nombre: "BancoEstado", otrosNombres: ["Banco del Estado de Chile", "CuentaRUT"] },
-  { id: "chile", nombre: "Banco de Chile", otrosNombres: ["Banco Edwards", "Banchile"] },
-  { id: "bci", nombre: "BCI", otrosNombres: ["Banco de Crédito e Inversiones"] },
-  { id: "scotiabank", nombre: "Scotiabank" },
-  { id: "itau", nombre: "Itaú", otrosNombres: ["Itaú Corpbanca"] },
-  { id: "falabella", nombre: "Banco Falabella", otrosNombres: ["CMR Falabella"] },
-  { id: "ripley", nombre: "Banco Ripley" },
-  { id: "security", nombre: "Banco Security" },
-  { id: "consorcio", nombre: "Consorcio", otrosNombres: ["Banco Consorcio"] },
-  { id: "bice", nombre: "BICE", otrosNombres: ["Banco BICE"] },
-  { id: "internacional", nombre: "Banco Internacional" },
-  { id: "coopeuch", nombre: "Coopeuch" },
-  { id: "tenpo", nombre: "Tenpo", billetera: true },
-  { id: "mach", nombre: "MACH", billetera: true },
-  { id: "mercadopago", nombre: "Mercado Pago", otrosNombres: ["MercadoPago"], billetera: true },
+  { id: "santander", nombre: "Santander", otrosNombres: ["Banco Santander", "Santander Chile"], dominios: ["santander.cl"] },
+  {
+    id: "bancoestado",
+    nombre: "BancoEstado",
+    otrosNombres: ["Banco del Estado de Chile", "CuentaRUT"],
+    dominios: ["bancoestado.cl"],
+  },
+  { id: "chile", nombre: "Banco de Chile", otrosNombres: ["Banco Edwards", "Banchile"], dominios: ["bancochile.cl", "bancoedwards.cl"] },
+  { id: "bci", nombre: "BCI", otrosNombres: ["Banco de Crédito e Inversiones"], dominios: ["bci.cl"] },
+  { id: "scotiabank", nombre: "Scotiabank", dominios: ["scotiabank.cl"] },
+  { id: "itau", nombre: "Itaú", otrosNombres: ["Itaú Corpbanca"], dominios: ["itau.cl"] },
+  { id: "falabella", nombre: "Banco Falabella", otrosNombres: ["CMR Falabella"], dominios: ["bancofalabella.cl"] },
+  { id: "ripley", nombre: "Banco Ripley", dominios: ["bancoripley.cl"] },
+  { id: "security", nombre: "Banco Security", dominios: ["bancosecurity.cl"] },
+  { id: "consorcio", nombre: "Consorcio", otrosNombres: ["Banco Consorcio"], dominios: ["bancoconsorcio.cl"] },
+  { id: "bice", nombre: "BICE", otrosNombres: ["Banco BICE"], dominios: ["bice.cl"] },
+  { id: "internacional", nombre: "Banco Internacional", dominios: ["internacional.cl"] },
+  { id: "coopeuch", nombre: "Coopeuch", dominios: ["coopeuch.cl"] },
+  { id: "tenpo", nombre: "Tenpo", billetera: true, dominios: ["tenpo.cl"] },
+  { id: "mach", nombre: "MACH", billetera: true, dominios: ["somosmach.com"] },
+  { id: "mercadopago", nombre: "Mercado Pago", otrosNombres: ["MercadoPago"], billetera: true, dominios: ["mercadopago.cl", "mercadopago.com"] },
 ];
 
 /** Las tiendas cuyos correos Luka ya sabe leer: sus boletas tambien conviene reenviarlas. */
@@ -226,7 +247,7 @@ export type CuentaParaElegir = {
   miembroId: string | null;
 };
 
-const CUENTAS: readonly TipoCuentaBancaria[] = ["CUENTA_CORRIENTE", "CUENTA_VISTA", "CUENTA_AHORRO"];
+const CUENTAS: readonly TipoCuentaBancaria[] = ["CUENTA_CORRIENTE", "CUENTA_VISTA", "CUENTA_AHORRO", "CUENTA"];
 
 /**
  * Si el movimiento pudo salir (o entrar) por esa cuenta: una compra con
@@ -275,8 +296,69 @@ export function cuentaDelMovimiento(
 }
 
 // ---------------------------------------------------------------------------
+// Las cuentas que Luka reconoce sola
+// ---------------------------------------------------------------------------
+
+export type CuentaAprendida = { banco: string; tipo: TipoCuentaBancaria; ultimos4: string };
+
+/**
+ * La cuenta o tarjeta que deja ver un comprobante y que el hogar todavia no
+ * tiene: el banco que lo mando y los ultimos 4 digitos que trae. Asi nadie
+ * tiene que escribirlas: con el primer aviso, la cuenta queda en «Tus bancos
+ * y tarjetas», como de quien lo reenvio.
+ *
+ * Solo si no hay dudas: lo leyo una plantilla (la IA puede equivocarse en un
+ * digito), es de un banco conocido, y sus 4 digitos son de una cuenta de ese
+ * mismo banco (BancoEstado le avisa a quien recibe una transferencia, y la
+ * cuenta de esa persona puede ser de cualquier banco). Si el hogar ya tiene
+ * una de ese banco con esos 4 digitos, aunque sea de otro tipo, no se aprende
+ * nada.
+ *
+ * El tipo sale de lo que paso: una compra con credito es de una tarjeta de
+ * credito, y una compra con debito, de una tarjeta de debito. Lo demas
+ * (transferencias, pagos, abonos, giros) sale de una cuenta sin saber si es
+ * corriente, vista o de ahorro: queda «Cuenta», y la cartola la precisa.
+ */
+export function cuentaQueSeAprende(
+  lectura: { via: "plantilla" | "ia"; plantilla?: string; tipo: TipoMovimiento; medioPago?: MedioPago; ultimos4?: string },
+  banco: string | null,
+  cuentas: readonly { banco: string; ultimos4: string }[],
+  plantillas: readonly Plantilla[] = PLANTILLAS,
+): CuentaAprendida | null {
+  if (lectura.via !== "plantilla" || banco === null || lectura.ultimos4 === undefined) return null;
+  const ultimos4 = limpiarUltimos4(lectura.ultimos4);
+  if (ultimos4 === null) return null;
+  const plantilla = plantillas.find((p) => p.id === lectura.plantilla);
+  if (!plantilla || "descartar" in plantilla || plantilla.cuentaDeOtroBanco) return null;
+  if (cuentas.some((cuenta) => cuenta.ultimos4 === ultimos4 && mismoBanco(cuenta.banco, banco))) return null;
+
+  const tipo: TipoCuentaBancaria =
+    lectura.medioPago === "CREDITO"
+      ? "TARJETA_CREDITO"
+      : (lectura.tipo === "COMPRA" || lectura.tipo === "BOLETA") && lectura.medioPago === "DEBITO"
+        ? "TARJETA_DEBITO"
+        : "CUENTA";
+  return { banco: nombreParaAgrupar(banco), tipo, ultimos4 };
+}
+
+// ---------------------------------------------------------------------------
 // La regla de reenvio
 // ---------------------------------------------------------------------------
+
+/** Si un remitente de la regla ("bci.cl" o "avisos@bci.cl") ya toma esa direccion. */
+function cubre(enLaRegla: string, direccion: string): boolean {
+  return direccion === enLaRegla || direccion.endsWith(`@${enLaRegla}`) || direccion.endsWith(`.${enLaRegla}`);
+}
+
+/**
+ * Desde donde escribe un banco del catalogo: sus remitentes exactos si Luka
+ * ya tiene sus plantillas; si no, sus dominios, para que sus avisos lleguen
+ * igual y los lea la IA.
+ */
+export function remitentesDelBanco(banco: BancoConocido): string[] {
+  const conocidos = remitentesConocidos(banco.id);
+  return conocidos.length > 0 ? conocidos : [...banco.dominios];
+}
 
 /**
  * Los remitentes que conviene poner en la regla de reenvio: los de los
@@ -290,8 +372,11 @@ export function remitentesParaLaRegla(
   const lista: string[] = [];
   for (const banco of bancos) {
     const conocido = bancoConocido(banco);
-    if (conocido) lista.push(...remitentesConocidos(conocido.id));
-    lista.push(...aprendidos.filter((a) => mismoBanco(a.banco, banco)).map((a) => a.remitente.toLowerCase()));
+    if (conocido) lista.push(...remitentesDelBanco(conocido));
+    for (const aprendido of aprendidos.filter((a) => mismoBanco(a.banco, banco))) {
+      const remitente = aprendido.remitente.toLowerCase();
+      if (!lista.some((r) => cubre(r, remitente))) lista.push(remitente);
+    }
   }
   for (const tienda of TIENDAS) lista.push(...remitentesConocidos(tienda.id));
   return [...new Set(lista)];
@@ -318,15 +403,17 @@ export type BancoDelHogar = {
 /**
  * Los bancos del hogar, cada uno con sus cuentas, el ultimo comprobante que
  * llego y sus remitentes. Los bancos van en el orden en que se agregaron sus
- * cuentas; los comprobantes, cada uno con el banco ya resuelto.
+ * cuentas, y despues los que alguien marco y todavia no tienen ninguna; los
+ * comprobantes, cada uno con el banco ya resuelto.
  */
 export function bancosDelHogar(
   cuentas: readonly CuentaBancariaDelHogar[],
   llegados: readonly { banco: string; fecha: string; fuente: string; remitente: string | null }[],
+  marcados: readonly string[] = [],
 ): BancoDelHogar[] {
   const grupos: BancoDelHogar[] = [];
-  for (const cuenta of cuentas) {
-    const nombre = nombreParaAgrupar(cuenta.banco);
+  const grupoDe = (banco: string): BancoDelHogar => {
+    const nombre = nombreParaAgrupar(banco);
     let grupo = grupos.find((g) => mismoBanco(g.banco, nombre));
     if (!grupo) {
       const conocido = bancoConocido(nombre);
@@ -335,12 +422,15 @@ export function bancosDelHogar(
         conPlantillas: conocido !== null && remitentesConocidos(conocido.id).length > 0,
         cuentas: [],
         ultimo: null,
-        remitentes: conocido ? remitentesConocidos(conocido.id) : [],
+        remitentes: conocido ? remitentesDelBanco(conocido) : [],
       };
       grupos.push(grupo);
     }
-    grupo.cuentas.push(cuenta);
-  }
+    return grupo;
+  };
+  for (const cuenta of cuentas) grupoDe(cuenta.banco).cuentas.push(cuenta);
+  // Los que alguien marco al conectar su correo, aunque todavia no llegue nada.
+  for (const banco of marcados) grupoDe(banco);
 
   for (const llegado of llegados) {
     const grupo = grupos.find((g) => mismoBanco(g.banco, llegado.banco));
@@ -349,7 +439,7 @@ export function bancosDelHogar(
       grupo.ultimo = { fecha: llegado.fecha, fuente: llegado.fuente };
     }
     const remitente = llegado.remitente?.toLowerCase();
-    if (remitente && !grupo.remitentes.some((r) => remitente === r || remitente.endsWith(`@${r}`) || remitente.endsWith(`.${r}`))) {
+    if (remitente && !grupo.remitentes.some((r) => cubre(r, remitente))) {
       grupo.remitentes.push(remitente);
     }
   }

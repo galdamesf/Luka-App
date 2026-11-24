@@ -5,7 +5,7 @@ import { ESTADO_INICIAL, type AccionFormulario } from "@/dominio/formulario";
 import {
   BANCOS,
   NOMBRE_DEL_TIPO,
-  TIPOS_DE_CUENTA,
+  TIPOS_QUE_SE_OFRECEN,
   limpiarUltimos4,
   mismoBanco,
   nombreDeLaCuenta,
@@ -30,8 +30,6 @@ type Props = {
   bancos: BancoDelHogar[];
   /** De quien es cada cuenta, por persona: «tuya», «de Ana». Vacio si en el hogar hay una sola persona. */
   nombres: Record<string, string>;
-  /** Los remitentes que Luka ya conoce de cada banco del catalogo, por su id. */
-  remitentesDelCatalogo: Record<string, string[]>;
   accionAgregar: AccionFormulario;
   accionEditar: AccionFormulario;
   accionQuitar: AccionFormulario;
@@ -50,18 +48,21 @@ type CuentaEnArmado = { tipo: TipoCuentaBancaria; apodo: string; ultimos4: strin
 
 /**
  * «Tus bancos y tarjetas»: los bancos del hogar con sus cuentas (solo los
- * ultimos 4 digitos), lo ultimo que llego de cada uno y sus remitentes, y el
- * paso a paso para agregar otro: el banco, sus cuentas, y que el banco le
- * avise a Luka por correo.
+ * ultimos 4 digitos), lo ultimo que llego de cada uno y sus remitentes. Las
+ * cuentas Luka las reconoce sola con los avisos; agregarlas a mano queda
+ * para la que todavia no tiene ninguno.
  */
-export function TusBancos({ bancos, nombres, remitentesDelCatalogo, accionAgregar, accionEditar, accionQuitar, cartolas }: Props) {
+export function TusBancos({ bancos, nombres, accionAgregar, accionEditar, accionQuitar, cartolas }: Props) {
   const [agregando, setAgregando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
 
   return (
     <div className="space-y-4">
       {bancos.length === 0 && !agregando && (
-        <p className="text-sm text-texto-tenue">Todavía no agregas ningún banco. Con tus cuentas, Luka sabe de cuál es cada comprobante.</p>
+        <p className="text-sm text-texto-tenue">
+          Todavía no hay ninguno. Marca tus bancos en «Que tus gastos lleguen solos», y Luka reconoce tus cuentas y
+          tarjetas con los primeros avisos.
+        </p>
       )}
 
       {bancos.length > 0 && (
@@ -82,7 +83,6 @@ export function TusBancos({ bancos, nombres, remitentesDelCatalogo, accionAgrega
       {agregando ? (
         <AgregarBanco
           accion={accionAgregar}
-          remitentesDelCatalogo={remitentesDelCatalogo}
           alTerminar={(mensaje) => {
             setAgregando(false);
             setAviso(mensaje);
@@ -92,13 +92,13 @@ export function TusBancos({ bancos, nombres, remitentesDelCatalogo, accionAgrega
       ) : (
         <button
           type="button"
-          className="boton-luka cursor-pointer"
+          className={SECUNDARIO}
           onClick={() => {
             setAviso(null);
             setAgregando(true);
           }}
         >
-          Agregar banco
+          Agregar una cuenta a mano
         </button>
       )}
       <p role="status" aria-live="polite" className="text-sm font-semibold text-exito-fuerte empty:hidden">
@@ -131,7 +131,7 @@ function FilaBanco({
         </p>
       </div>
 
-      <ul className="space-y-2" aria-label={`Cuentas y tarjetas de ${banco.banco}`}>
+      <ul className="space-y-2 empty:hidden" aria-label={`Cuentas y tarjetas de ${banco.banco}`}>
         {banco.cuentas.map((cuenta) => (
           <FilaCuenta
             key={cuenta.id}
@@ -153,7 +153,10 @@ function FilaBanco({
             </span>
           </>
         ) : (
-          <span className="text-texto-tenue">Todavía no llega ningún comprobante de {banco.banco}.</span>
+          <span className="text-texto-tenue">
+            Todavía no llega ningún aviso de {banco.banco}.
+            {banco.cuentas.length === 0 && " Con el primero, Luka reconoce tu cuenta o tarjeta."}
+          </span>
         )}
       </p>
       {banco.remitentes.length > 0 && (
@@ -209,8 +212,9 @@ function FilaCuenta({
             <div>
               <label htmlFor={ids.tipo} className="mb-1 block text-xs font-semibold text-texto-tenue">Tipo</label>
               <select id={ids.tipo} name="tipo" defaultValue={cuenta.tipo} className={`${CAMPO} cursor-pointer bg-superficie`}>
-                {TIPOS_DE_CUENTA.map((tipo) => (
-                  <option key={tipo} value={tipo}>{NOMBRE_DEL_TIPO[tipo]}</option>
+                {/* «Cuenta» (la que Luka reconocio sin saber su tipo) solo mientras lo sea. */}
+                {[...TIPOS_QUE_SE_OFRECEN, ...(cuenta.tipo === "CUENTA" ? (["CUENTA"] as const) : [])].map((tipo) => (
+                  <option key={tipo} value={tipo}>{tipo === "CUENTA" ? "Cuenta (no sé de qué tipo)" : NOMBRE_DEL_TIPO[tipo]}</option>
                 ))}
               </select>
             </div>
@@ -270,16 +274,14 @@ function FilaCuenta({
   );
 }
 
-const PASOS = ["El banco", "Sus cuentas", "Los avisos"] as const;
+const PASOS = ["El banco", "Sus cuentas"] as const;
 
 function AgregarBanco({
   accion,
-  remitentesDelCatalogo,
   alTerminar,
   alCancelar,
 }: {
   accion: AccionFormulario;
-  remitentesDelCatalogo: Record<string, string[]>;
   alTerminar: (mensaje: string) => void;
   alCancelar: () => void;
 }) {
@@ -295,7 +297,6 @@ function AgregarBanco({
   const ids = { banco: useId(), otro: useId(), tipo: useId(), apodo: useId(), ultimos4: useId(), error: useId(), titulo: useId() };
 
   const nombre = bancoId === "otro" ? bancoOtro.trim() : (BANCOS.find((b) => b.id === bancoId)?.nombre ?? "");
-  const remitentes = remitentesDelCatalogo[bancoId] ?? [];
 
   // Solo cuando cambia lo que devolvio la accion: alTerminar cambia en cada dibujo del padre.
   const terminar = useRef(alTerminar);
@@ -323,29 +324,29 @@ function AgregarBanco({
   }
 
   function siguiente() {
-    if (paso === 0 && nombre === "") {
+    if (nombre === "") {
       setError("Escribe el nombre de tu banco o billetera.");
       return;
     }
-    // Lo que quedo escrito sin agregar tambien cuenta.
-    if (paso === 1 && ultimos4.trim() !== "") {
-      agregarCuenta();
-      if (limpiarUltimos4(ultimos4) === null) return;
-    }
     setError(null);
-    setPaso((p) => p + 1);
+    setPaso(1);
   }
 
-  const listas = paso === 1 && ultimos4.trim() !== "" ? true : cuentas.length > 0;
+  // Lo que quedo escrito sin apretar «Agregar esta cuenta» tambien se guarda.
+  const escrita = limpiarUltimos4(ultimos4);
+  const porGuardar =
+    escrita !== null && !cuentas.some((c) => c.tipo === tipo && c.ultimos4 === escrita)
+      ? [...cuentas, { tipo, apodo: apodo.trim(), ultimos4: escrita }]
+      : cuentas;
 
   return (
     <section aria-labelledby={ids.titulo} className="rounded-xl border border-borde">
       <div className="border-b border-borde px-4 py-3">
         <div className="flex items-center justify-between gap-3">
-          <h3 id={ids.titulo} className="text-base font-bold tracking-tight">Agregar un banco</h3>
-          <span className="text-xs font-semibold text-texto-tenue">Paso {paso + 1} de 3</span>
+          <h3 id={ids.titulo} className="text-base font-bold tracking-tight">Agregar una cuenta a mano</h3>
+          <span className="text-xs font-semibold text-texto-tenue">Paso {paso + 1} de 2</span>
         </div>
-        <ol className="mt-3 grid grid-cols-3 gap-1.5" aria-label="Pasos">
+        <ol className="mt-3 grid grid-cols-2 gap-1.5" aria-label="Pasos">
           {PASOS.map((nombreDelPaso, i) => (
             <li key={nombreDelPaso} aria-current={i === paso ? "step" : undefined}>
               <span className={`block h-1.5 rounded-full ${i <= paso ? "bg-acento" : "bg-borde"}`} />
@@ -407,7 +408,7 @@ function AgregarBanco({
               <div>
                 <label htmlFor={ids.tipo} className="mb-1 block text-xs font-semibold text-texto-tenue">Tipo</label>
                 <select id={ids.tipo} value={tipo} onChange={(e) => setTipo(e.target.value as TipoCuentaBancaria)} className={`${CAMPO} cursor-pointer`}>
-                  {TIPOS_DE_CUENTA.map((t) => (
+                  {TIPOS_QUE_SE_OFRECEN.map((t) => (
                     <option key={t} value={t}>{NOMBRE_DEL_TIPO[t]}</option>
                   ))}
                 </select>
@@ -449,33 +450,6 @@ function AgregarBanco({
           </>
         )}
 
-        {paso === 2 && (
-          <>
-            <p className="font-semibold">Para que tus compras en {nombre} lleguen solas a Luka</p>
-            <ol className="list-decimal space-y-2 pl-5">
-              <li>
-                En la app o la web de {nombre}, activa que te avise por correo cada compra y transferencia. Si ya te
-                llegan esos correos, esto ya está listo.
-              </li>
-              <li>
-                En tu correo, haz que esos avisos le lleguen solos a Luka. Los pasos están más abajo, en «Tus correos y
-                tu buzón».{" "}
-                {remitentes.length > 0 ? (
-                  <>
-                    {nombre} manda sus avisos desde <span className="break-all font-mono text-[13px]">{remitentes.join(" y ")}</span>.
-                  </>
-                ) : (
-                  <>
-                    Luka todavía no sabe desde qué dirección manda {nombre} sus avisos: cuando te llegue uno, reenvíalo
-                    a mano a tu dirección de Luka y desde ahí lo reconoce.
-                  </>
-                )}
-              </li>
-            </ol>
-            <p className="text-texto-tenue">Esto lo puedes hacer después: ya puedes guardar el banco.</p>
-          </>
-        )}
-
         {error !== null && <p id={ids.error} role="alert" className={ERROR}>{error}</p>}
         {estado.mensaje !== null && !estado.ok && <p role="alert" className={ERROR}>{estado.mensaje}</p>}
       </div>
@@ -483,19 +457,30 @@ function AgregarBanco({
       <form action={guardar} className="flex flex-wrap items-center gap-2 border-t border-borde px-4 py-3">
         <input type="hidden" name="banco" value={bancoId} />
         <input type="hidden" name="bancoOtro" value={bancoOtro} />
-        <input type="hidden" name="cuentas" value={JSON.stringify(cuentas)} />
+        <input type="hidden" name="cuentas" value={JSON.stringify(porGuardar)} />
         <button type="button" onClick={() => (paso === 0 ? alCancelar() : setPaso((p) => p - 1))} className={SECUNDARIO}>
           {paso === 0 ? "Cancelar" : "Atrás"}
         </button>
         {/* Con su key cada uno: si React reusara el mismo boton, al pasar al
             ultimo paso el clic de «Siguiente» terminaria enviando el formulario. */}
-        {paso < 2 ? (
-          <button key="siguiente" type="button" onClick={siguiente} disabled={paso === 1 && !listas} className="boton-luka ml-auto cursor-pointer">
+        {paso === 0 ? (
+          <button key="siguiente" type="button" onClick={siguiente} className="boton-luka ml-auto cursor-pointer">
             Siguiente
           </button>
         ) : (
-          <button key="guardar" type="submit" disabled={guardando || cuentas.length === 0} className="boton-luka ml-auto cursor-pointer">
-            {guardando ? "Guardando…" : "Guardar banco"}
+          <button
+            key="guardar"
+            type="submit"
+            disabled={guardando || porGuardar.length === 0}
+            onClick={(e) => {
+              if (ultimos4.trim() !== "" && escrita === null) {
+                e.preventDefault();
+                setError("Los últimos dígitos son 4 números: nunca el número completo.");
+              }
+            }}
+            className="boton-luka ml-auto cursor-pointer"
+          >
+            {guardando ? "Guardando…" : "Guardar"}
           </button>
         )}
       </form>

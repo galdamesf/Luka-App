@@ -300,9 +300,29 @@ export async function leerCartolaEnPdf(
     await guardarClaveDeCartola(hogarId, entrada.miembroId, leida.banco, escrita, { db, maestra });
   }
 
-  // 3. Si ya se leyo entera, no se anota otra vez.
+  // 3. Su cuenta en el hogar. Si no estaba, la cartola la deja: dice el
+  // banco, el tipo y los digitos. Si Luka la habia reconocido con un aviso
+  // que no decia el tipo («Cuenta»), la cartola lo precisa.
+  let cuenta = await cuentaDeLaCartola(hogarId, leida, entrada.miembroId, db);
+  if (cuenta === null) {
+    await db.cuentaBancaria.createMany({
+      data: [{ hogarId, miembroId: entrada.miembroId, banco: leida.banco, tipo: leida.tipoDeCuenta, ultimos4: leida.ultimos4 }],
+      skipDuplicates: true,
+    });
+    cuenta = await cuentaDeLaCartola(hogarId, leida, entrada.miembroId, db);
+  } else if (cuenta.tipo === "CUENTA" && leida.tipoDeCuenta !== "CUENTA") {
+    const precisada = await db.cuentaBancaria
+      .updateMany({ where: { id: cuenta.id, hogarId, tipo: "CUENTA" }, data: { tipo: leida.tipoDeCuenta } })
+      .catch((error: { code?: string }) => {
+        // Ya hay otra igual con ese tipo: se deja como esta.
+        if (error.code === "P2002") return { count: 0 };
+        throw error;
+      });
+    if (precisada.count === 1) cuenta = { ...cuenta, tipo: leida.tipoDeCuenta };
+  }
+
+  // 4. Si ya se leyo entera, no se anota otra vez.
   const huella = sha256(claveDeLaCartola(leida));
-  const cuenta = await cuentaDeLaCartola(hogarId, leida, entrada.miembroId, db);
   const yaEstaba = await db.cartola.findUnique({ where: { hogarId_huella: { hogarId, huella } }, select: SELECCION_RESUMEN });
   if (yaEstaba !== null && yaEstaba.filas === leida.filas.length) {
     return { ok: true, yaLeida: true, cartola: aResumen(yaEstaba) };
@@ -332,7 +352,7 @@ export async function leerCartolaEnPdf(
       select: SELECCION_RESUMEN,
     }));
 
-  // 4. Cada fila, como un movimiento.
+  // 5. Cada fila, como un movimiento.
   const recibidoEn = entrada.recibidoEn ?? new Date();
   const claves = clavesDeLasFilas(leida);
   let nuevas = 0;

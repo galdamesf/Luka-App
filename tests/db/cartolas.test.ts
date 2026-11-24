@@ -236,9 +236,18 @@ describe("leer la cartola", () => {
     expect(filas.every((f) => f.cuentaBancariaId === cuenta && f.ultimos4 === "4567")).toBe(true);
   });
 
-  test("de una cuenta que no esta en «Tus bancos» se anota igual, sin cuenta", async () => {
+  test("de una cuenta que no estaba en «Tus bancos», la cartola la deja, con su tipo", async () => {
     await prisma.cuentaBancaria.delete({ where: { id: cuenta } });
-    expect(await leer()).toMatchObject({ ok: true, cartola: { cuenta: null, nuevas: 6 } });
+    expect(await leer()).toMatchObject({ ok: true, cartola: { cuenta: "Cuenta corriente •••• 5678", nuevas: 6 } });
+    expect(await prisma.cuentaBancaria.findMany({ select: { banco: true, tipo: true, ultimos4: true, miembroId: true } })).toEqual([
+      { banco: "Santander", tipo: "CUENTA_CORRIENTE", ultimos4: "5678", miembroId: yo },
+    ]);
+  });
+
+  test("a una cuenta que Luka reconocio con un aviso, sin tipo, la cartola le pone el suyo", async () => {
+    await prisma.cuentaBancaria.update({ where: { id: cuenta }, data: { tipo: "CUENTA", apodo: null } });
+    expect(await leer()).toMatchObject({ ok: true, cartola: { cuenta: "Cuenta corriente •••• 5678" } });
+    expect(await prisma.cuentaBancaria.findUniqueOrThrow({ where: { id: cuenta }, select: { tipo: true } })).toEqual({ tipo: "CUENTA_CORRIENTE" });
   });
 
   test("un archivo que no es una cartola que Luka sepa leer", async () => {

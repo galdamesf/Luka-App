@@ -288,7 +288,7 @@ export const TEXTO_DE_LA_LLEGADA: Record<ResultadoDeLlegada, string> = {
   NO_SE_PUDO_LEER: "Parece un comprobante, pero Luka no lo pudo leer.",
   CARTOLA: "Es la cartola del mes, pero Luka todavía no sabe leer las de este banco.",
   CARTOLA_LEIDA: "Leyó la cartola del mes: lo nuevo quedó en «Por revisar».",
-  CARTOLA_SIN_CLAVE: "Llegó la cartola del mes, pero falta la clave de su PDF: escríbela en «Tus bancos» y revisa de nuevo.",
+  CARTOLA_SIN_CLAVE: "Llegó la cartola del mes, pero falta la clave de su PDF: escríbela en Inicio y Luka la lee al tiro.",
   CARTOLA_NO_CUADRA: "Llegó la cartola del mes, pero lo que Luka leyó no suma lo que dice el banco: no anotó nada.",
   SIN_CONFIRMAR: "Llegó desde un correo que no está confirmado: no se leyó.",
   SIN_FIRMA: "Dice venir de tu correo, pero sin su firma: no se leyó.",

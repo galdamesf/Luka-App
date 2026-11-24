@@ -92,7 +92,8 @@ describe("el segundo paso esta en la puerta de todo", () => {
 
 describe("cada ruta con datos revisa el hogar contra la base", () => {
   const SIN_DATOS = ["app/api/auth/[...nextauth]/route.ts", "app/sesion/terminada/route.ts"];
-  const rutas = archivos(join(RAIZ, "app"), "route.ts").filter((r) => !SIN_DATOS.includes(r));
+  // Las tareas programadas no tienen sesion: las deja pasar su secreto (abajo).
+  const rutas = archivos(join(RAIZ, "app"), "route.ts").filter((r) => !SIN_DATOS.includes(r) && !r.startsWith("app/api/tareas/"));
 
   test("hay rutas que revisar", () => {
     expect(rutas.length).toBeGreaterThanOrEqual(2);
@@ -102,6 +103,25 @@ describe("cada ruta con datos revisa el hogar contra la base", () => {
     const codigo = leer(ruta);
     expect(codigo).toMatch(/await leerHogarActual\(\)/);
     expect(codigo).toMatch(/status:\s*401/);
+  });
+});
+
+describe("cada tarea programada exige su secreto", () => {
+  const tareas = archivos(join(RAIZ, "app"), "route.ts").filter((r) => r.startsWith("app/api/tareas/"));
+
+  test("hay tareas que revisar", () => {
+    expect(tareas.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test.each(tareas)("%s exige CRON_SECRET: sin el no corre, y sin el secreto responde 401", (ruta) => {
+    const codigo = leer(ruta);
+    expect(codigo).toMatch(/if \(!traeElSecreto\(peticion\.headers\.get\("authorization"\)\)\)/);
+    expect(codigo).toMatch(/status:\s*401/);
+    expect(codigo).toMatch(/status:\s*503/);
+  });
+
+  test("el middleware deja pasar sin sesion a las tareas, y a nada mas de /api", () => {
+    expect(leer("middleware.ts")).toMatch(/matcher: \["\/\(\(\?!api\/auth\|api\/tareas\|_next\/static\|/);
   });
 });
 

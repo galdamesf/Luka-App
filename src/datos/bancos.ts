@@ -164,15 +164,17 @@ export type LosBancosDelHogar = {
 };
 
 /**
- * Lo que se muestra en «Tus bancos y tarjetas»: cada banco con sus cuentas,
- * el ultimo comprobante que llego y sus remitentes, mas la lista de
- * remitentes para la regla de reenvio.
+ * Lo que se muestra en «Tus bancos y tarjetas»: cada banco con sus cuentas
+ * (las que alguien agrego y las que Luka reconocio sola), el ultimo
+ * comprobante que llego y sus remitentes, mas la lista de remitentes para la
+ * regla de reenvio. Van tambien los bancos que alguien marco al conectar su
+ * correo, aunque todavia no tengan cuentas.
  */
 export async function leerLosBancosDelHogar(
   hogarId: string,
   { db = prisma, hoy }: { db?: Db; hoy: string },
 ): Promise<LosBancosDelHogar> {
-  const [cuentas, llegados] = await Promise.all([
+  const [cuentas, llegados, marcados] = await Promise.all([
     leerCuentasBancarias(hogarId, db),
     db.movimiento.findMany({
       where: { hogarId, fecha: { gte: fechaDesdeISO(sumarDias(hoy, -DIAS_DE_LO_QUE_LLEGO)) } },
@@ -180,13 +182,15 @@ export async function leerLosBancosDelHogar(
       take: 500,
       select: { fecha: true, fuente: true, plantilla: true, remitente: true, cuentaBancaria: { select: { banco: true } } },
     }),
+    // Los que marco cada persona al conectar su correo.
+    db.bancoMarcado.findMany({ where: { miembro: { hogarId } }, orderBy: { creadoEn: "asc" }, select: { banco: true } }),
   ]);
 
   const conBanco = llegados.flatMap((m) => {
     const banco = m.cuentaBancaria?.banco ?? bancoDelComprobante({ plantilla: m.plantilla, remitente: m.remitente, fuente: m.fuente });
     return banco === null ? [] : [{ banco, fecha: isoDesdeFecha(m.fecha), fuente: m.fuente, remitente: m.remitente }];
   });
-  const bancos = bancosDelHogar(cuentas, conBanco);
+  const bancos = bancosDelHogar(cuentas, conBanco, marcados.map((m) => m.banco));
   const aprendidos = conBanco.flatMap((m) => (m.remitente ? [{ banco: m.banco, remitente: m.remitente }] : []));
   return { bancos, remitentes: remitentesParaLaRegla(bancos.map((b) => b.banco), aprendidos) };
 }

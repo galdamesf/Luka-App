@@ -365,6 +365,7 @@ describe("borrar el hogar, con el codigo del correo", () => {
         data: { miembroId: alguien.id, resultado: "NUEVO", remitente: "mensajeria@santander.cl", movimientoId: boleta.id },
       });
       await prisma.claveDeCartola.create({ data: { miembroId: alguien.id, banco: "Santander", cifrada: "v1.aaaa.bbbb.cccc" } });
+      await prisma.bancoMarcado.create({ data: { miembroId: alguien.id, banco: "Santander" } });
     }
     // Y una cartola leida, con una fila que salio de ella.
     const cartola = await prisma.cartola.create({
@@ -417,6 +418,7 @@ describe("borrar el hogar, con el codigo del correo", () => {
       prisma.llegadaAlBuzon.count({ where: { miembro: { hogarId } } }),
       prisma.cartola.count({ where: { hogarId } }),
       prisma.claveDeCartola.count({ where: { miembro: { hogarId } } }),
+      prisma.bancoMarcado.count({ where: { miembro: { hogarId } } }),
     ]);
 
   test("el codigo llega al correo del dueno, y en la base queda solo su huella", async () => {
@@ -443,7 +445,7 @@ describe("borrar el hogar, con el codigo del correo", () => {
     await borrar(OTRO, ana, ` ${codigo.slice(0, 3)} ${codigo.slice(3)} `);
 
     expect(await prisma.hogar.count({ where: { id: OTRO } })).toBe(0);
-    expect(await filasDe(OTRO)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(await filasDe(OTRO)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(await prisma.miembro.count({ where: { correo: "invitada@gmail.com" } })).toBe(0);
     expect(existsSync(join(raiz, OTRO))).toBe(false);
 

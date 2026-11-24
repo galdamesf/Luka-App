@@ -37,6 +37,8 @@ async function llenarMac() {
     data: { id: "m-yo", hogarId: HOGAR_INICIAL, correo: YO, nombre: "Yo", rol: "DUENO", entroEn: new Date("2026-11-01T12:00:00Z") },
   });
   await mac.miembro.create({ data: { hogarId: HOGAR_INICIAL, correo: "pareja@gmail.com" } });
+  // Los bancos que marco al conectar su correo.
+  await mac.bancoMarcado.createMany({ data: [{ miembroId: dueno.id, banco: "Santander" }, { miembroId: dueno.id, banco: "Consorcio" }] });
   // Su otro correo, confirmado, y su direccion de Luka: en la nube siguen iguales.
   await mac.correoRegistrado.create({
     data: { miembroId: dueno.id, direccion: "yo@hotmail.com", proveedor: "OUTLOOK", confirmadoEn: new Date("2026-11-02T12:00:00Z") },
@@ -252,7 +254,7 @@ describe("loQueSePierde, con lo que de verdad hay en la nube", () => {
     expect(perdida.filas.map((f) => f.tabla)).toEqual(["hogar", "miembro"]);
   });
 
-  test("lee las diecisiete tablas", async () => {
+  test("lee las dieciocho tablas", async () => {
     const datos = await leerTodo(nube);
     expect(Object.keys(datos).sort()).toEqual([...TABLAS].sort());
   });

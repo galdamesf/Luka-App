@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { fechaDesdeISO, hoyISO, isoDesdeFecha, mesDesdeFecha, rangoDelMesISO, sumarMeses } from "@/lib/fecha";
 import { periodoDeFecha, sumarDias } from "@/lib/periodo";
 import { cuotaEnMes } from "@/dominio/balance";
-import { bancoDelComprobante, cuentaDelMovimiento, nombreDeLaCuenta } from "@/dominio/bancos";
+import { bancoDelComprobante, cuentaDelMovimiento, cuentaQueSeAprende, nombreDeLaCuenta } from "@/dominio/bancos";
 import type { Bandeja, ItemDejadoFuera, ItemPorRevisar, ReglaPosible } from "@/dominio/bandeja";
 import type { LecturaLeida } from "@/dominio/comprobantes/tipos";
 import type { MedioPago } from "@/dominio/esquemas";
@@ -133,19 +133,31 @@ export async function registrarMovimiento(
 
   try {
     return await db.$transaction(async (tx) => {
-      const cuentas = await tx.cuentaBancaria.findMany({
-        where: { hogarId },
-        select: { id: true, banco: true, tipo: true, ultimos4: true, miembroId: true },
-      });
-      const datos = deLectura(entrada.lectura, cuentas);
+      const seleccion = { id: true, banco: true, tipo: true, ultimos4: true, miembroId: true } as const;
+      let cuentas = await tx.cuentaBancaria.findMany({ where: { hogarId }, select: seleccion });
 
-      // Quien lo reenvio, solo si es del hogar; y de que cuenta es.
+      // Quien lo reenvio, solo si es del hogar; y de que banco es.
       const miembroId =
         entrada.miembroId
           ? ((await tx.miembro.findFirst({ where: { id: entrada.miembroId, hogarId }, select: { id: true } }))?.id ?? null)
           : null;
       const remitente = entrada.remitente?.trim().toLowerCase().slice(0, 254) || null;
-      const banco = bancoDelComprobante({ plantilla: datos.plantilla, remitente, fuente: datos.fuente });
+      const plantilla = entrada.lectura.via === "plantilla" ? (entrada.lectura.plantilla ?? "plantilla") : null;
+      const banco = bancoDelComprobante({ plantilla, remitente, fuente: entrada.lectura.fuente });
+
+      // La cuenta o tarjeta de un aviso que llego por el buzon y que el hogar
+      // no tenia: Luka la reconoce sola, como de quien lo reenvio. Asi nadie
+      // tiene que escribir sus ultimos 4 digitos. Las filas de una cartola
+      // no: la cartola reconoce su cuenta por su lado.
+      const aprendida =
+        miembroId !== null && entrada.reenviadoPor && !entrada.cartola ? cuentaQueSeAprende(entrada.lectura, banco, cuentas) : null;
+      if (aprendida !== null) {
+        // Sin error si otra revision la agrego recien: dentro de la transaccion,
+        // un choque con el indice unico la abortaria entera.
+        await tx.cuentaBancaria.createMany({ data: [{ hogarId, miembroId, ...aprendida }], skipDuplicates: true });
+        cuentas = await tx.cuentaBancaria.findMany({ where: { hogarId }, select: seleccion });
+      }
+      const datos = deLectura(entrada.lectura, cuentas);
       const cuentaCon = (ultimos4: string | null) =>
         cuentaDelMovimiento({ tipo: datos.tipo, medioPago: datos.medioPago, ultimos4 }, banco, cuentas, miembroId);
       const delBuzon = {

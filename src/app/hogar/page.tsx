@@ -16,13 +16,17 @@ import { BorrarHogar } from "@/componentes/hogar/BorrarHogar";
 import { RenovarRespaldos } from "@/componentes/hogar/RenovarRespaldos";
 import { TusBancos } from "@/componentes/hogar/TusBancos";
 import { TusCorreos } from "@/componentes/hogar/TusCorreos";
+import { ConectarTusCorreos } from "@/componentes/hogar/ConectarTusCorreos";
+import { ResumenDiario } from "@/componentes/hogar/ResumenDiario";
 import { leerLosBancosDelHogar } from "@/datos/bancos";
 import { leerMisCorreos } from "@/datos/correos-registrados";
 import { leerMiBuzon } from "@/datos/buzon";
 import { bancosConClave, leerCartolasDelHogar } from "@/datos/cartolas";
+import { leerParaConectar } from "@/datos/conectar";
 import { PISTA_DE_LA_CLAVE } from "@/dominio/cartolas";
-import { BANCOS, remitentesConocidos } from "@/dominio/bancos";
+import { pasoParaConectar } from "@/dominio/conectar";
 import { configuracionDelBuzon } from "@/lib/buzon";
+import { revisionAutomatica } from "@/lib/automatico";
 import {
   accionBorrarHogar,
   accionCambiarDeCelular,
@@ -47,6 +51,7 @@ import {
   accionQuitarCorreo,
   accionRevisarBuzon,
 } from "../acciones/correos";
+import { accionBuscarCodigoDeGmail, accionCambiarResumenDiario, accionMarcarMisBancos } from "../acciones/conectar";
 
 export const metadata: Metadata = {
   title: "Hogar · Luka",
@@ -69,7 +74,7 @@ export default async function PaginaHogar() {
   // ningun otro, se lee todo lo que sigue.
   const { hogarId, miembroId, rol } = await hogarActual();
   const configDelBuzon = configuracionDelBuzon();
-  const [hogar, miApp, conApp, losBancos, misCorreos, miBuzon, misClaves, cartolasLeidas] = await Promise.all([
+  const [hogar, miApp, conApp, losBancos, misCorreos, miBuzon, misClaves, cartolasLeidas, paraConectar] = await Promise.all([
     leerHogar(hogarId),
     estadoDeLaApp(miembroId),
     appsDelHogar(hogarId),
@@ -78,6 +83,7 @@ export default async function PaginaHogar() {
     configDelBuzon === null ? null : leerMiBuzon(hogarId, miembroId, { base: configDelBuzon.direccion }),
     bancosConClave(miembroId),
     leerCartolasDelHogar(hogarId),
+    leerParaConectar(hogarId, miembroId),
   ]);
   const soyDueno = rol === "DUENO";
   const entraron = hogar.miembros.filter((m) => m.entroEn !== null).length;
@@ -87,7 +93,17 @@ export default async function PaginaHogar() {
   // De quien es cada cuenta, solo si en el hogar hay mas de una persona.
   const nombres: Record<string, string> =
     entraron > 1 ? Object.fromEntries(hogar.miembros.map((m) => [m.id, m.id === miembroId ? "tuya" : `de ${primerNombre(m)}`])) : {};
-  const remitentesDelCatalogo = Object.fromEntries(BANCOS.map((banco) => [banco.id, remitentesConocidos(banco.id)]));
+  // Para conectar su correo: los que ya confirmo, sus bancos (los marcados y
+  // los de sus cuentas) y en que paso va.
+  const correosConfirmados = misCorreos.filter((c) => c.confirmado).map((c) => ({ direccion: c.direccion, proveedor: c.proveedor }));
+  const misBancos = [
+    ...paraConectar.bancos,
+    ...losBancos.bancos.filter((b) => b.cuentas.some((c) => c.miembroId === miembroId)).map((b) => b.banco),
+  ];
+  const pasoDeConectar = pasoParaConectar(
+    { ...paraConectar, codigoDeGmail: miBuzon?.codigoDeGmail?.codigo ?? null },
+    correosConfirmados[0]?.proveedor ?? "GMAIL",
+  );
 
   return (
     <main
@@ -141,18 +157,58 @@ export default async function PaginaHogar() {
         </section>
       )}
 
+      <section id="correos" aria-labelledby="titulo-correos" className={`mt-6 scroll-mt-24 ${TARJETA}`}>
+        <h2 id="titulo-correos" className="text-lg font-bold tracking-tight">
+          Tus correos y tu buzón
+        </h2>
+        <p className="mt-1 mb-4 max-w-[60ch] text-sm leading-relaxed text-texto-tenue">
+          Tus bancos te mandan un aviso por correo con cada compra y transferencia. Con un filtro en tu correo, esos
+          avisos le llegan solos a Luka, y Luka los deja en «Por revisar», en el panel. Nada cuenta hasta que lo
+          confirmas. Luka nunca entra a tu correo ni te pide su contraseña.
+        </p>
+        <div className="space-y-6">
+          {miBuzon !== null && correosConfirmados.length > 0 && (
+            <ConectarTusCorreos
+              paso={pasoDeConectar}
+              miembroId={miembroId}
+              correos={correosConfirmados}
+              direccionDeLuka={miBuzon.direccion}
+              misBancos={misBancos}
+              remitentes={losBancos.remitentes}
+              codigoDeGmail={miBuzon.codigoDeGmail ? { codigo: miBuzon.codigoDeGmail.codigo, de: miBuzon.codigoDeGmail.de } : null}
+              revisaSolo={revisionAutomatica()}
+              accionMarcarBancos={accionMarcarMisBancos}
+              accionBuscarCodigo={accionBuscarCodigoDeGmail}
+              accionOlvidarCodigoDeGmail={accionOlvidarCodigoDeGmail}
+            />
+          )}
+          <TusCorreos
+            correos={misCorreos}
+            buzon={miBuzon}
+            puedeMandarCodigos={hayCorreo}
+            accionAgregar={accionAgregarCorreo}
+            accionPedirCodigo={accionPedirCodigoDeCorreo}
+            accionConfirmar={accionConfirmarCorreo}
+            accionQuitar={accionQuitarCorreo}
+            accionRevisar={accionRevisarBuzon}
+            accionCambiarDireccion={accionCambiarMiDireccion}
+          />
+          <ResumenDiario activo={paraConectar.resumenDiario} puedeMandar={hayCorreo} correo={miCorreo} accion={accionCambiarResumenDiario} />
+        </div>
+      </section>
+
       <section id="bancos" aria-labelledby="titulo-bancos" className={`mt-6 scroll-mt-24 ${TARJETA}`}>
         <h2 id="titulo-bancos" className="text-lg font-bold tracking-tight">
           Tus bancos y tarjetas
         </h2>
         <p className="mt-1 mb-4 max-w-[60ch] text-sm leading-relaxed text-texto-tenue">
-          De cada cuenta Luka guarda solo el banco y los últimos 4 dígitos: así sabe de cuál es cada comprobante y
-          reconoce los traspasos entre las cuentas del hogar. Todos los del hogar las ven.
+          Luka reconoce tus cuentas y tarjetas sola, con los avisos que van llegando, y de cada una guarda solo el banco
+          y los últimos 4 dígitos: así sabe de cuál es cada comprobante y reconoce los traspasos entre las cuentas del
+          hogar. Todos los del hogar las ven.
         </p>
         <TusBancos
           bancos={losBancos.bancos}
           nombres={nombres}
-          remitentesDelCatalogo={remitentesDelCatalogo}
           accionAgregar={accionAgregarBanco}
           accionEditar={accionEditarCuentaBancaria}
           accionQuitar={accionQuitarCuentaBancaria}
@@ -164,29 +220,6 @@ export default async function PaginaHogar() {
             accionQuitarClave: accionQuitarClaveDeCartola,
             accionSubir: accionSubirCartola,
           }}
-        />
-      </section>
-
-      <section id="correos" aria-labelledby="titulo-correos" className={`mt-6 scroll-mt-24 ${TARJETA}`}>
-        <h2 id="titulo-correos" className="text-lg font-bold tracking-tight">
-          Tus correos y tu buzón
-        </h2>
-        <p className="mt-1 mb-4 max-w-[60ch] text-sm leading-relaxed text-texto-tenue">
-          Tus bancos y tiendas te mandan los comprobantes por correo. Con una regla en tu correo se los reenvías a tu
-          dirección de Luka, y Luka los deja en «Por revisar», en el panel. Nada cuenta hasta que lo confirmas.
-        </p>
-        <TusCorreos
-          correos={misCorreos}
-          buzon={miBuzon}
-          remitentes={losBancos.remitentes}
-          puedeMandarCodigos={hayCorreo}
-          accionAgregar={accionAgregarCorreo}
-          accionPedirCodigo={accionPedirCodigoDeCorreo}
-          accionConfirmar={accionConfirmarCorreo}
-          accionQuitar={accionQuitarCorreo}
-          accionRevisar={accionRevisarBuzon}
-          accionCambiarDireccion={accionCambiarMiDireccion}
-          accionOlvidarCodigoDeGmail={accionOlvidarCodigoDeGmail}
         />
       </section>
 

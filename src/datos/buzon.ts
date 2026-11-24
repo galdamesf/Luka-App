@@ -274,14 +274,21 @@ async function leerLaCartola(
     return { tipo: "leido", resultado: "CARTOLA_LEIDA" };
   }
   if (leida.motivo === "falta-la-clave" || leida.motivo === "clave-incorrecta") {
-    const ultima = await db.llegadaAlBuzon.findFirst({
-      where: { miembroId },
-      orderBy: [{ llegoEn: "desc" }, { id: "desc" }],
-      select: { resultado: true, remitente: true },
-    });
-    if (ultima?.resultado !== "CARTOLA_SIN_CLAVE" || ultima.remitente !== remitente.trim().toLowerCase()) {
-      await anotar("CARTOLA_SIN_CLAVE", leida.mensaje);
-    }
+    // Se anota una vez, y otra si despues alguien del hogar guardo una clave
+    // que tampoco la abre: asi Inicio vuelve a pedirla.
+    const [ultima, claveMasNueva] = await Promise.all([
+      db.llegadaAlBuzon.findFirst({
+        where: { miembroId },
+        orderBy: [{ llegoEn: "desc" }, { id: "desc" }],
+        select: { resultado: true, remitente: true, llegoEn: true },
+      }),
+      db.claveDeCartola.findFirst({ where: { miembro: { hogarId } }, orderBy: { creadaEn: "desc" }, select: { creadaEn: true } }),
+    ]);
+    const yaAvisada =
+      ultima?.resultado === "CARTOLA_SIN_CLAVE" &&
+      ultima.remitente === remitente.trim().toLowerCase() &&
+      (claveMasNueva === null || claveMasNueva.creadaEn <= ultima.llegoEn);
+    if (!yaAvisada) await anotar("CARTOLA_SIN_CLAVE", leida.mensaje);
     return { tipo: "reintentar", motivo: "Falta la clave del PDF de la cartola.", porLaClave: true };
   }
   if (leida.motivo === "no-cuadra" || leida.motivo === "incompleta") {

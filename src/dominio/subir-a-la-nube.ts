@@ -24,6 +24,7 @@
 export const TABLAS = [
   "hogar",
   "miembro",
+  "bancoMarcado",
   "correoRegistrado",
   "buzon",
   "categoria",
@@ -53,6 +54,7 @@ export type Datos = Record<Tabla, Fila[]>;
 export const NOMBRE_DE_TABLA: Record<Tabla, string> = {
   hogar: "hogares",
   miembro: "miembros",
+  bancoMarcado: "bancos marcados",
   correoRegistrado: "correos registrados",
   buzon: "buzones",
   categoria: "categorias",
@@ -83,11 +85,13 @@ export function enOrdenDeInsercion(tabla: Tabla, filas: readonly Fila[]): Fila[]
 
 /**
  * La llave primaria de cada fila: `id`, salvo en ajustes, que es la del
- * hogar, y en el buzon, que es la de la persona.
+ * hogar; en el buzon, que es la de la persona; y en los bancos marcados, la
+ * persona y el banco.
  */
 export function llavePrimaria(tabla: Tabla, fila: Fila): string {
   if (tabla === "ajustes") return String(fila.hogarId);
   if (tabla === "buzon") return String(fila.miembroId);
+  if (tabla === "bancoMarcado") return `${String(fila.miembroId)}|${String(fila.banco)}`;
   return String(fila.id);
 }
 

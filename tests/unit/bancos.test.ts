@@ -87,12 +87,13 @@ describe("los remitentes que Luka ya conoce", () => {
         { banco: "Itaú", remitente: "avisos@itau.cl" },
       ],
     );
+    // BCI no tiene plantillas: va su dominio, que ya toma la direccion aprendida.
     expect(lista).toEqual([
       "mensajeria@santander.cl",
       "bdp@santander.cl",
       "bancoconsorcio@bancoconsorcio.cl",
       "mensajes@bancoconsorcio.cl",
-      "notificaciones@bci.cl",
+      "bci.cl",
       "lider.cl",
       "bsale.app",
       "bsale.cl",
@@ -213,17 +214,18 @@ describe("los bancos del hogar en la pantalla", () => {
     expect(grupos[0]!.ultimo).toBeNull();
   });
 
-  test("cada banco muestra su ultimo comprobante y aprende los remitentes nuevos", () => {
+  test("cada banco muestra su ultimo comprobante y aprende los remitentes que su dominio no toma", () => {
     const [bci] = bancosDelHogar(
       [cuenta({ id: "a", banco: "BCI" })],
       [
         { banco: "BCI", fecha: "2026-11-10", fuente: "Aviso de BCI", remitente: "Notificaciones@bci.cl" },
         { banco: "BCI", fecha: "2026-11-18", fuente: "Comprobante de BCI", remitente: "notificaciones@bci.cl" },
+        { banco: "BCI", fecha: "2026-11-12", fuente: "Aviso de BCI", remitente: "avisos@bci-pagos.com" },
         { banco: "Itaú", fecha: "2026-11-19", fuente: "Itaú", remitente: "avisos@itau.cl" },
       ],
     );
     expect(bci!.conPlantillas).toBe(false);
     expect(bci!.ultimo).toEqual({ fecha: "2026-11-18", fuente: "Comprobante de BCI" });
-    expect(bci!.remitentes).toEqual(["notificaciones@bci.cl"]);
+    expect(bci!.remitentes).toEqual(["bci.cl", "avisos@bci-pagos.com"]);
   });
 });

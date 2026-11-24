@@ -16,7 +16,9 @@ const { auth } = NextAuth(configuracionBase);
  * - /privacidad y /terminos se ven siempre, con o sin sesion: Google los pide
  *   publicos para el ingreso con Google.
  * - /api/auth queda fuera del matcher (es la puerta misma), igual que los
- *   archivos estaticos de Next.
+ *   archivos estaticos de Next, y /api/tareas, la tarea programada de cada
+ *   mañana, que no tiene sesion: la deja pasar su propio secreto
+ *   (CRON_SECRET).
  *
  * La decision usa solo la cookie firmada (sesion JWT): el middleware no toca
  * la base de datos. Una cookie vencida o sin hogar cuenta como sin sesion.
@@ -38,7 +40,7 @@ export default auth((peticion) => {
 });
 
 export const config = {
-  // Todo menos la puerta (/api/auth), lo estatico de Next y los archivos con
-  // extension (iconos, imagenes, fuentes).
-  matcher: ["/((?!api/auth|_next/static|_next/image|.*\\..*).*)"],
+  // Todo menos la puerta (/api/auth), la tarea programada (/api/tareas), lo
+  // estatico de Next y los archivos con extension (iconos, imagenes, fuentes).
+  matcher: ["/((?!api/auth|api/tareas|_next/static|_next/image|.*\\..*).*)"],
 };

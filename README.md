@@ -46,6 +46,7 @@ escuchando. `docker compose ps` te dice si el contenedor quedo `healthy`.
 | `npm run ejemplos:bandeja` | Llena la bandeja «Por revisar» con comprobantes de ejemplo (`-- --quitar` los saca) |
 | `npm run correos:probar -- correo.eml` | Muestra como lee Luka un correo guardado (`--guardar --correo tu@gmail.com` lo deja «Por revisar») |
 | `npm run cartola:probar -- cartolas/cartola.pdf` | Muestra como lee Luka una cartola en PDF y si cuadra (`--guardar --correo tu@gmail.com` la anota, `--volcar` deja su texto) |
+| `curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/tareas/diaria` | Corre a mano la tarea de cada mañana: revisa el buzon y manda el resumen diario |
 
 Los tests van separados en dos proyectos a proposito: mientras trabajas en una
 seccion corres solo la que toca con `test:unit` o `test:db`, en vez de la suite
@@ -239,6 +240,29 @@ la cartola de otro banco, `--volcar` deja el texto de cada pagina con su
 posicion. Se prueba con `npm run test:unit -- cartola` y
 `npm run test:db -- cartolas`.
 
+**Conectar el correo es una sola vez, en unos minutos, y sin escribir
+numeros.** Es la seccion E. En Hogar, el asistente «Que tus gastos lleguen
+solos» tiene tres pasos: la persona toca sus bancos; en Gmail agrega su
+direccion de Luka para reenviar (un boton abre la pantalla exacta, y el codigo
+con que Gmail confirma aparece solo en el asistente); y crea el filtro, con lo
+que va en «De» listo para pegar. Con otro correo, los dos ultimos son una sola
+regla. Luka no entra al correo de nadie: leerlo directo, o crear el filtro por
+la persona, exige permisos de Google que piden una auditoria de seguridad cada
+año. De los bancos sin plantillas, el filtro lleva su dominio (`bci.cl`), asi
+que sus avisos llegan igual y los lee la IA. Las cuentas y tarjetas no se
+escriben: con el primer aviso que llega reenviado, Luka la deja en «Tus bancos
+y tarjetas», como de quien lo reenvio (`cuentaQueSeAprende`), solo si lo leyo
+una plantilla y los 4 digitos son de una cuenta de ese banco. Si el aviso no
+dice el tipo, queda «Cuenta», y la cartola lo precisa (y deja la cuenta, si no
+estaba). Cuando llega una cartola sin su clave, se pide en Inicio y se lee al
+tiro. El buzon se revisa solo al abrir el panel y cada mañana, con la tarea de
+`vercel.json` (`/api/tareas/diaria`, protegida con `CRON_SECRET`), que ademas
+manda el resumen diario: lo que se anoto ayer, lo que espera en «Por revisar»
+y las cuentas por vencer, uno por dia y solo si hay algo que contar. Se apaga
+en Hogar. En tu computador el buzon no se revisa solo (`BUZON_AUTOMATICO`),
+para no llevarse los correos de la nube. Se prueba con
+`npm run test:unit -- conectar` y `npm run test:db -- conectar`.
+
 ## Sobre las dependencias
 
 `npm audit` deja **3 avisos altos** que no se pueden cerrar hoy, y es a
@@ -278,6 +302,7 @@ prisma/
   ejemplos-por-revisar.ts  Comprobantes de ejemplo para ver la bandeja en local
   probar-correo.ts   npm run correos:probar: como lee Luka un .eml
   probar-cartola.ts  npm run cartola:probar: como lee Luka una cartola en PDF
+vercel.json          La tarea de cada mañana (/api/tareas/diaria)
 src/
   app/
     acciones/        Server Actions (crear y eliminar gastos)
@@ -306,6 +331,7 @@ src/
                      y la confirmacion de Gmail
     cartolas/        La cartola del mes: la plantilla de cada banco, el cuadre
                      con sus totales y como queda cada fila
+    conectar.ts      El asistente para conectar el correo y el resumen diario
   datos/             Acceso a Prisma. Recibe el cliente por parametro
     gastos.ts
     categorias.ts
@@ -314,6 +340,8 @@ src/
     correos-registrados.ts  Registrar y confirmar correos con su codigo
     buzon.ts         Procesar lo que llega al buzon y la direccion de cada persona
     cartolas.ts      Leer una cartola y anotar sus filas, y la clave de su PDF
+    conectar.ts      Los bancos de cada persona, la cartola que espera su clave
+                     y el resumen diario
   lib/
     prisma.ts        Cliente singleton, para no agotar el pool en dev
     fecha.ts         Helpers de fecha UTC y rangos de mes
@@ -329,6 +357,8 @@ src/
     mx.ts            Los MX de un dominio, para reconocer su proveedor
     cartola-pdf.ts   Abrir el PDF de la cartola, con su clave, y sacar su texto
     claves-de-cartola.ts  Cifrar y descifrar la clave del PDF
+    automatico.ts    Lo que Luka hace sola: si revisa el buzon y el secreto
+                     de la tarea de cada mañana
 tests/
   unit/              Logica pura
   db/                Integracion contra Postgres
@@ -348,11 +378,12 @@ tests/
 - [x] Seccion 6: navbar e informe mensual
 - [ ] Seccion 7: login con Google y autoria
 - [ ] Seccion 8: despliegue (y mover las boletas a object storage)
-- [ ] Seccion 9: resumen diario por correo
+- [x] Seccion 9: resumen diario por correo (en la seccion E)
 - [ ] Mas adelante: presupuestos por categoria
 - [x] Gastos que llegan solos, seccion A: lector de comprobantes (plantillas + IA)
 - [x] Gastos que llegan solos, seccion B: movimientos y la bandeja «Por revisar»
 - [x] Gastos que llegan solos, seccion C: bancos, correos confirmados y el buzon
 - [x] Gastos que llegan solos, seccion D: la cartola del mes (Santander)
-- [ ] Gastos que llegan solos, secciones E y F: puesta en marcha y Luka
+- [x] Gastos que llegan solos, seccion E: conectar el correo, el buzon solo y el resumen diario
+- [ ] Gastos que llegan solos, seccion F: Claude como copiloto
       en Claude

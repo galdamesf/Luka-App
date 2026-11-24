@@ -20,6 +20,7 @@ export const PLANTILLAS_BANCOESTADO: readonly Plantilla[] = [
     fuente: "Aviso de BancoEstado",
     tipo: "ABONO",
     sentido: "ingreso",
+    cuentaDeOtroBanco: true,
     campos: {
       monto: { patron: patron`\bMonto:?\s*${PESOS}` },
       fecha: { patron: patron`Fecha de Pago:?\s*${FECHA}` },

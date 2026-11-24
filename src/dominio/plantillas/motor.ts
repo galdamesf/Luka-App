@@ -49,6 +49,12 @@ export type PlantillaDeLectura = Condiciones & {
   sentido: Sentido;
   /** El aviso no dice con quien fue (ver LecturaLeida.sinDetalle). */
   sinDetalle?: true;
+  /**
+   * Los ultimos 4 digitos que lee son de una cuenta de otro banco: BancoEstado
+   * le avisa a quien recibe una transferencia, y su cuenta puede ser de
+   * cualquier banco. Con esto, Luka no la reconoce como de este banco.
+   */
+  cuentaDeOtroBanco?: true;
   campos: {
     monto: Campo;
     /** Sin este campo vale el dia en que llego el correo. Con el, es obligatorio. */

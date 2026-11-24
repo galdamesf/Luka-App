@@ -125,12 +125,16 @@ describe("un comprobante que llega bien", () => {
     expect((await prisma.movimiento.findFirstOrThrow()).cuentaBancariaId).toBe(santander.id);
   });
 
-  test("sin una cuenta que calce, queda sin cuenta: es mejor no decir que decir la equivocada", async () => {
-    await prisma.cuentaBancaria.create({
+  test("sin una cuenta que calce, no la confunde con otra: reconoce la suya", async () => {
+    const otra = await prisma.cuentaBancaria.create({
       data: { hogarId: HOGAR_INICIAL, miembroId: yo, banco: "Santander", tipo: "CUENTA_CORRIENTE", ultimos4: "9999" },
     });
     await procesarCorreo(await transferencia(), opciones());
-    expect((await prisma.movimiento.findFirstOrThrow()).cuentaBancariaId).toBeNull();
+    const { cuentaBancaria } = await prisma.movimiento.findFirstOrThrow({
+      select: { cuentaBancaria: { select: { id: true, banco: true, tipo: true, ultimos4: true, miembroId: true } } },
+    });
+    expect(cuentaBancaria).toMatchObject({ banco: "Santander", tipo: "CUENTA", ultimos4: "5678", miembroId: yo });
+    expect(cuentaBancaria!.id).not.toBe(otra.id);
   });
 
   test("la boleta de Lider, con su PDF, queda en la tarjeta con que se pago", async () => {

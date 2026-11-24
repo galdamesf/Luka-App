@@ -136,9 +136,10 @@ describe("lo que se muestra de cada banco", () => {
     await agregarCuentas(HOGAR_INICIAL, yo, [{ banco: "BCI", tipo: "TARJETA_CREDITO", ultimos4: "4444" }], prisma);
     const [, bci] = await leerCuentasBancarias(HOGAR_INICIAL, prisma);
     const base = { hogarId: HOGAR_INICIAL, sentido: "GASTO" as const, monto: 5_000, comercio: "X", recibidoEn: new Date() };
-    // Uno de BCI leido con IA (sin plantilla) y en su tarjeta: Luka aprende su remitente.
+    // Uno de BCI leido con IA (sin plantilla) y en su tarjeta, desde una
+    // direccion que el dominio de BCI no toma: Luka aprende su remitente.
     await prisma.movimiento.create({
-      data: { ...base, huella: "d".repeat(64), tipo: "COMPRA", fecha: fechaDesdeISO("2026-11-17"), fuente: "Aviso de compra BCI", remitente: "notificaciones@bci.cl", cuentaBancariaId: bci!.id },
+      data: { ...base, huella: "d".repeat(64), tipo: "COMPRA", fecha: fechaDesdeISO("2026-11-17"), fuente: "Aviso de compra BCI", remitente: "notificaciones@bcimail.cl", cuentaBancariaId: bci!.id },
     });
     // Uno de Santander, leido con su plantilla.
     await prisma.movimiento.create({
@@ -157,8 +158,21 @@ describe("lo que se muestra de cada banco", () => {
         ultimo: { fecha: "2026-11-18", fuente: "Comprobante de Santander" },
         remitentes: ["mensajeria@santander.cl", "bdp@santander.cl"],
       },
-      { banco: "BCI", conPlantillas: false, ultimo: { fecha: "2026-11-17", fuente: "Aviso de compra BCI" }, remitentes: ["notificaciones@bci.cl"] },
+      {
+        banco: "BCI",
+        conPlantillas: false,
+        ultimo: { fecha: "2026-11-17", fuente: "Aviso de compra BCI" },
+        remitentes: ["bci.cl", "notificaciones@bcimail.cl"],
+      },
     ]);
-    expect(remitentes).toEqual(["mensajeria@santander.cl", "bdp@santander.cl", "notificaciones@bci.cl", "lider.cl", "bsale.app", "bsale.cl"]);
+    expect(remitentes).toEqual([
+      "mensajeria@santander.cl",
+      "bdp@santander.cl",
+      "bci.cl",
+      "notificaciones@bcimail.cl",
+      "lider.cl",
+      "bsale.app",
+      "bsale.cl",
+    ]);
   });
 });
