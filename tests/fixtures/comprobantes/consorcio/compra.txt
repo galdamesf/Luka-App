@@ -1,0 +1,41 @@
+De: mensajes@bancoconsorcio.cl
+Reenviado-por: camila@ejemplo.cl
+Asunto: Notificacion de Compra - Banco Consorcio
+Recibido: 2026-11-23T21:57:12Z
+
+<!DOCTYPE html>
+<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>Consorcio</title></head>
+<body>
+<div style="display:none;">Conoce más aquí</div>
+<table role="presentation"><tbody><tr><td>
+<h1>
+Notificación de compra</h1>
+<p>
+<b>CAMILA ANDREA ROJAS SOTO</b></p>
+<p>
+Te informamos que, se ha realizado una <b>compra con cargo a tu Tarjeta</b>, enviamos los detalles:</p>
+</td></tr></tbody></table>
+<center>
+<table class="table-rounded"><tbody>
+<tr class="fondo-caja"><th align="left">
+Número de tarjeta: </th>
+<td align="left">
+*******4821 </td>
+</tr>
+<tr><th align="left">Fecha de la compra: </th>
+<td align="left">23/11/2026 </td>
+</tr>
+<tr class="fondo-caja"><th align="left">
+Monto de la compra: </th>
+<td align="left">
+$ 12.990 </td>
+</tr>
+<tr><th align="left">Nombre comercio: </th>
+<td align="left">Cafe Los Aromos Providencia CHL </td>
+</tr>
+</tbody></table>
+</center>
+<p>Un cordial saludo,<br><b>Banco Consorcio</b></p>
+<p>Si te llaman para solicitar tus <b>claves</b> o <b>números de tarjetas</b>, no entregues la información. ¡Es fraude!</p>
+</body>
+</html>

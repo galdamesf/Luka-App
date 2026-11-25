@@ -215,6 +215,14 @@ describe("la boleta y el aviso de la misma compra", () => {
     expect(sonLaMismaCompra(paraJuntar(cargo), paraJuntar(transferencia))).toBe(true);
   });
 
+  test("la compra de Consorcio y el cargo de la cuenta por lo mismo son uno, y queda a la vista la compra", async () => {
+    const compra = deLectura(await leer("consorcio/compra.txt"), []);
+    const cargo = deLectura(lectura({ tipo: "CARGO", monto: 12_990, fecha: "2026-11-23", ultimos4: "2345", sinDetalle: true }), []);
+    expect(sonLaMismaCompra(paraJuntar(compra), paraJuntar(cargo))).toBe(true);
+    expect(elegirPareja(paraJuntar(cargo), [candidato(compra)])?.principal).toBe("candidato");
+    expect(elegirPareja(paraJuntar(compra), [candidato(cargo)])?.principal).toBe("nuevo");
+  });
+
   test("llegue primero el que llegue, queda a la vista el que dice con quien", async () => {
     const cargo = deLectura(await leer("consorcio/cargo.txt"), []);
     const transferencia = deLectura(await leer("consorcio/transferencia-enviada.txt"), []);

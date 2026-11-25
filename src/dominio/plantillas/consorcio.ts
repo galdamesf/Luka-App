@@ -12,6 +12,11 @@ import { FECHA, NUMERO_DE_CUENTA, N_DE_CUENTA, PESOS_SIN_SIGNO, patron } from ".
  * leidos, el aviso marcado sinDetalle, y las reglas de los movimientos los
  * juntan. Los asuntos de esos avisos llegan con la o de "Notificacion" rota,
  * por eso se reconocen por el texto.
+ *
+ * Cada compra con la tarjeta de debito llega en su propio aviso, con el
+ * comercio y los ultimos 4 de la tarjeta (no los de la cuenta): "se ha
+ * realizado una compra con cargo a tu Tarjeta". El comercio viene con el
+ * pais al final ("Cafe Los Aromos Providencia CHL"), que se quita.
  */
 
 const MONTO_DE_LA_TRANSFERENCIA: Campo = { patron: patron`Monto Transacci[oó]n:?\s*${PESOS_SIN_SIGNO}` };
@@ -21,6 +26,11 @@ const DESTINATARIO: Campo = { patron: patron`al siguiente destinatario:?\s+(.+?)
 const QUIEN_TE_TRANSFIRIO: Campo = { patron: patron`por parte de:?\s+(.+?)\s*,\s*te enviamos` };
 
 const AVISOS = ["mensajes@bancoconsorcio.cl"];
+
+/** "Nombre comercio: Cafe Los Aromos Providencia CHL": el nombre, sin el pais. */
+const COMERCIO_DE_LA_COMPRA: Campo = {
+  patron: patron`Nombre (?:del )?comercio:?\s*([^\n]+?)(?:\s+(?:CHL|CL))?\s*(?:\n|Un cordial saludo|$)`,
+};
 
 export const PLANTILLAS_CONSORCIO: readonly Plantilla[] = [
   {
@@ -102,6 +112,23 @@ export const PLANTILLAS_CONSORCIO: readonly Plantilla[] = [
       fecha: { patron: patron`Fecha (?:de )?cargo:?\s*${FECHA}` },
       comercio: { fijo: "Cargo en cuenta Consorcio" },
       ultimos4: { patron: patron`N[uú]mero de cuenta:?\s*${NUMERO_DE_CUENTA}` },
+    },
+  },
+  {
+    id: "consorcio/compra",
+    remitentes: AVISOS,
+    asunto: /compra/i,
+    // La de credito, si un dia avisa igual, no se lee como debito.
+    contiene: /se\s+ha\s+realizado\s+una\s+compra\s+con\s+cargo\s+a\s+tu\s+tarjeta(?!\s+de\s+cr[eé]dito)/i,
+    fuente: "Aviso de compra de Consorcio",
+    tipo: "COMPRA",
+    sentido: "gasto",
+    campos: {
+      monto: { patron: patron`Monto de la compra:?\s*${PESOS_SIN_SIGNO}` },
+      fecha: { patron: patron`Fecha de la compra:?\s*${FECHA}` },
+      comercio: COMERCIO_DE_LA_COMPRA,
+      medioPago: { fijo: "DEBITO" },
+      ultimos4: { patron: patron`N[uú]mero de tarjeta:?\s*[*•xX.\s]*${NUMERO_DE_CUENTA}` },
     },
   },
   {
