@@ -223,17 +223,22 @@ probar con un correo de verdad sin el buzon:
 `npm run test:db -- buzon correos-registrados cuentas-bancarias`.
 
 **La cartola del mes cuadra el mes y trae lo que no tuvo aviso.** Es la
-seccion D, por ahora solo con Santander. La cartola llega en un PDF con clave
-(el RUT sin puntos, sin guion y sin el digito verificador). Cada persona la
+seccion D, con Santander y Consorcio. La cartola llega en un PDF con clave
+(Santander: el RUT sin puntos, sin guion y sin el digito verificador;
+Consorcio: solo los ultimos 4 digitos del RUT del titular, sin el digito
+verificador). Cada persona la
 escribe una vez en Hogar, en la ficha de su banco, y Luka la guarda cifrada
 (AES-256-GCM, con una llave que sale de `CLAVE_DOS_PASOS`) y nunca la muestra.
 Con la clave guardada, la cartola que llega al buzon se lee sola; sin ella, el
 correo espera en el buzon y queda anotado que falta la clave. Tambien se puede
-subir a mano desde la misma ficha. La plantilla
-(`src/dominio/cartolas/santander.ts`) lee cada fila por la posicion de su texto
-en la pagina, y antes de anotar nada se cuadra: los cargos y los abonos tienen
-que sumar lo que dice el resumen del banco, y el saldo de cada dia tiene que
-calzar. Si no cuadra, no se anota nada. Cada fila es un movimiento mas: lo que
+subir a mano desde la misma ficha. Las plantillas
+(`src/dominio/cartolas/santander.ts` y `consorcio.ts`) leen cada fila por la
+posicion de su texto en la pagina, y antes de anotar nada se cuadra: los cargos y los abonos tienen
+que sumar lo que dice el resumen del banco, y cada saldo que imprime el banco tiene que
+calzar. Si no cuadra, no se anota nada. La de Consorcio no dice "Consorcio"
+en ninguna parte (va en el logo) y no trae los movimientos de cada dia en el
+orden en que pasaron: se reconoce por su forma y se ordena siguiendo los saldos.
+Cada fila es un movimiento mas: lo que
 ya llego por correo se reconoce (mismo monto y sentido, hasta 3 dias de
 diferencia, la misma cuenta y, en las transferencias, un nombre en comun) y se
 junta con el, sin duplicarse; la misma cartola dos veces no anota nada la
@@ -398,7 +403,7 @@ tests/
 - [x] Gastos que llegan solos, seccion A: lector de comprobantes (plantillas + IA)
 - [x] Gastos que llegan solos, seccion B: movimientos y la bandeja «Por revisar»
 - [x] Gastos que llegan solos, seccion C: bancos, correos confirmados y el buzon
-- [x] Gastos que llegan solos, seccion D: la cartola del mes (Santander)
+- [x] Gastos que llegan solos, seccion D: la cartola del mes (Santander y Consorcio)
 - [x] Gastos que llegan solos, seccion E: conectar el correo, el buzon solo y el resumen diario
 - [ ] Gastos que llegan solos, seccion F: Claude como copiloto
       en Claude

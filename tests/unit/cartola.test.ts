@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import {
+  BANCOS_CON_CARTOLA,
+  PISTA_DE_LA_CLAVE,
   claveDeLaCartola,
   clavesDeLasFilas,
   cuadrar,
@@ -9,11 +11,13 @@ import {
   lecturaDeLaFila,
   type CartolaLeida,
   type FilaDeCartola,
+  type PaginaDeCartola,
 } from "@/dominio/cartolas";
 import { armarLineas, leerPesos } from "@/dominio/cartolas/lineas";
 import { elegirPareja, nombresEnComun, sonLaMismaCompra, type CandidatoParaJuntar, type MovimientoParaJuntar } from "@/dominio/movimientos";
 import { abrirCartola } from "@/lib/cartola-pdf";
 import { cifrarClaveDeCartola, descifrarClaveDeCartola } from "@/lib/claves-de-cartola";
+import * as consorcio from "../fixtures/cartolas/consorcio";
 import { OCTUBRE, conSaldos, paginasDeEjemplo, pdfDeEjemplo, type CartolaDeEjemplo } from "../fixtures/cartolas/santander";
 
 /**
@@ -22,10 +26,18 @@ import { OCTUBRE, conSaldos, paginasDeEjemplo, pdfDeEjemplo, type CartolaDeEjemp
  * ejemplo de datos inventados (tests/fixtures/cartolas).
  */
 
-function leida(c: CartolaDeEjemplo): CartolaLeida {
-  const lectura = leerCartola(paginasDeEjemplo(c));
+function leidaDeLasPaginas(paginas: PaginaDeCartola[]): CartolaLeida {
+  const lectura = leerCartola(paginas);
   if (!lectura.ok) throw new Error(`No se leyo: ${lectura.detalle}`);
   return lectura;
+}
+
+const leida = (c: CartolaDeEjemplo) => leidaDeLasPaginas(paginasDeEjemplo(c));
+const leidaDeConsorcio = (c: consorcio.CartolaDeEjemplo) => leidaDeLasPaginas(consorcio.paginasDeEjemplo(c));
+
+/** Una pagina con estos textos, uno debajo del otro. */
+function paginaCon(...textos: string[]): PaginaDeCartola {
+  return { numero: 1, ancho: 612, alto: 792, piezas: textos.map((texto, i) => ({ x: 40, y: 760 - i * 20, ancho: texto.length * 5, alto: 10, texto })) };
 }
 
 describe("leer la cartola de Santander", () => {
@@ -89,14 +101,170 @@ describe("leer la cartola de Santander", () => {
   });
 
   test("la cartola de un banco que Luka no sabe leer dice cual es", () => {
-    const pagina = {
-      numero: 1,
-      ancho: 612,
-      alto: 792,
-      piezas: [{ x: 40, y: 760, ancho: 120, alto: 10, texto: "BANCO CONSORCIO" }, { x: 40, y: 740, ancho: 80, alto: 10, texto: "Cartola" }],
-    };
-    expect(leerCartola([pagina])).toMatchObject({ ok: false, motivo: "formato-desconocido", banco: "Consorcio", detalle: "Luka todavía no sabe leer las cartolas de Consorcio." });
+    expect(leerCartola([paginaCon("SCOTIABANK", "Cartola")])).toMatchObject({
+      ok: false,
+      motivo: "formato-desconocido",
+      banco: "Scotiabank",
+      detalle: "Luka todavía no sabe leer las cartolas de Scotiabank.",
+    });
     expect(leerCartola([])).toMatchObject({ ok: false, motivo: "formato-desconocido", banco: null });
+  });
+});
+
+describe("leer la cartola de Consorcio", () => {
+  const texto = (paginas: PaginaDeCartola[]) => paginas.flatMap((p) => armarLineas(p).map((l) => l.texto)).join("\n");
+
+  test("se reconoce por su forma, aunque no diga Consorcio: la cuenta, el periodo y el numero", () => {
+    expect(texto(consorcio.paginasDeEjemplo(consorcio.OCTUBRE))).not.toMatch(/consorcio/i);
+    expect(leidaDeConsorcio(consorcio.OCTUBRE)).toMatchObject({
+      plantilla: "consorcio/cuenta-corriente",
+      banco: "Consorcio",
+      tipoDeCuenta: "CUENTA_CORRIENTE",
+      ultimos4: "2345",
+      ultimos4SinVerificador: null,
+      numero: 102026,
+      desde: "2026-10-01",
+      hasta: "2026-10-31",
+    });
+  });
+
+  test("cada fila con su fecha, su lado segun la columna, el numero de la operacion y el saldo que dejo", () => {
+    const { filas } = leidaDeConsorcio(consorcio.OCTUBRE);
+    expect(filas).toHaveLength(11);
+    expect(filas[0]).toEqual({ fecha: "2026-10-01", descripcion: "COMPRAS POS FARMACIA AHUMA", monto: 4_590, lado: "cargo", documento: "100000000303", saldo: 795_410 });
+    // El banco de la otra persona viene en su propio pedazo, y queda en la glosa.
+    expect(filas[1]).toMatchObject({ descripcion: "TEF ANA ROJAS BANCO DE C", documento: "100000000202", lado: "cargo", monto: 12_500, saldo: 782_910 });
+    expect(filas[5]).toMatchObject({ fecha: "2026-10-02", descripcion: "TEF PEDRO SOTO GAJARDO", lado: "abono", monto: 18_000, saldo: 751_690 });
+    // "PAGO DE REMUNERACIONES -": el banco corta lo que sigue, y el guion sobra.
+    expect(filas[6]).toMatchObject({ fecha: "2026-10-05", descripcion: "PAGO DE REMUNERACIONES", documento: "10000000077", lado: "abono", monto: 1_250_000, saldo: 2_001_690 });
+  });
+
+  test("las de un mismo dia quedan en el orden de sus saldos, no en el que vienen, y cuadra", () => {
+    const paginas = texto(consorcio.paginasDeEjemplo(consorcio.OCTUBRE));
+    expect(paginas.indexOf("LIDER EXPRESS")).toBeLessThan(paginas.indexOf("FARMACIA AHUMA"));
+    const cartola = leidaDeConsorcio(consorcio.OCTUBRE);
+    expect(cartola.filas.map((f) => f.descripcion)).toEqual([
+      "COMPRAS POS FARMACIA AHUMA",
+      "TEF ANA ROJAS BANCO DE C",
+      "COMPRAS POS LIDER EXPRESS",
+      "COMPRAS POS PANADERIA LA E",
+      "GIRO EN CAJERO AUTOMATICO",
+      "TEF PEDRO SOTO GAJARDO",
+      "PAGO DE REMUNERACIONES",
+      "COMPRA WEBPAY CINE PLANET",
+      "TEF NOMBRE DESTINATARIO",
+      "TEF CAMILA ROJAS SCOTIABANK",
+      "COMISION MANTENCION",
+    ]);
+    expect(cuadrar(cartola)).toEqual({ cuadra: true, problemas: [], cargos: 174_100, abonos: 1_268_000 });
+  });
+
+  test("un dia en que dos filas pueden ir primero (una compra, su reversa y otra compra) tambien se ordena", () => {
+    const cartola = leidaDeConsorcio({
+      desde: "01/10/2026",
+      hasta: "31/10/2026",
+      saldoInicial: 70_000,
+      filas: consorcio.conSaldos(70_000, [
+        { fecha: "03/10/2026", glosa: "COMPRAS POS CAFE", cargo: 2_500 },
+        { fecha: "03/10/2026", glosa: "REVERSA COMPRAS POS CAFE", abono: 2_500 },
+        { fecha: "03/10/2026", glosa: "COMPRAS POS LIBRERIA", cargo: 3_700 },
+      ]),
+    });
+    expect(cartola.filas.map((f) => f.descripcion)).toEqual(["COMPRAS POS CAFE", "REVERSA COMPRAS POS CAFE", "COMPRAS POS LIBRERIA"]);
+    expect(cuadrar(cartola).cuadra).toBe(true);
+  });
+
+  test("el encabezado y el resumen van en cada pagina: nada se cuenta dos veces, y los totales salen del resumen", () => {
+    expect(consorcio.paginasDeEjemplo(consorcio.OCTUBRE)).toHaveLength(3);
+    const cartola = leidaDeConsorcio(consorcio.OCTUBRE);
+    expect(cartola.filas).toHaveLength(11);
+    expect(cartola.totales).toEqual({ saldoInicial: 800_000, cargos: 174_100, abonos: 1_268_000, saldoFinal: 1_893_900 });
+  });
+
+  test("un saldo que no calza con nada o un monto mal leido no cuadran", () => {
+    // El 02/10, la compra en la panaderia con $1.000 de mas en su saldo: ese dia no se puede ordenar.
+    const conUnSaldoMalo = leidaDeConsorcio({ ...consorcio.OCTUBRE, filas: consorcio.OCTUBRE.filas.map((f, i) => (i === 3 ? { ...f, saldo: f.saldo! + 1_000 } : f)) });
+    expect(cuadrar(conUnSaldoMalo)).toMatchObject({ cuadra: false, problemas: ["El saldo del 02/10 da $769.040 y la cartola dice $751.690."] });
+
+    const cartola = leidaDeConsorcio(consorcio.OCTUBRE);
+    const conUnMontoMalo = { ...cartola, filas: cartola.filas.map((f, i) => (i === 0 ? { ...f, monto: 4_500 } : f)) };
+    expect(cuadrar(conUnMontoMalo).problemas).toEqual([
+      "Los cargos suman $174.010 y el banco dice $174.100.",
+      "El saldo del 01/10 da $795.500 y la cartola dice $795.410.",
+    ]);
+  });
+
+  test("sin el periodo, sin el numero de cuenta o con una fila fuera del periodo, no se lee", () => {
+    const sinLeer = (c: consorcio.CartolaDeEjemplo) => leerCartola(consorcio.paginasDeEjemplo(c));
+    expect(sinLeer({ ...consorcio.OCTUBRE, sinPeriodo: true })).toEqual({
+      ok: false,
+      motivo: "incompleta",
+      banco: "Consorcio",
+      detalle: "No se encontró el periodo de la cartola (desde y hasta).",
+    });
+    expect(sinLeer({ ...consorcio.OCTUBRE, cuenta: null })).toMatchObject({ ok: false, motivo: "incompleta", detalle: "No se encontró el número de cuenta." });
+    expect(sinLeer({ ...consorcio.OCTUBRE, filas: [{ fecha: "01/11/2026", glosa: "COMPRAS POS CAFE", cargo: 2_500 }] })).toMatchObject({
+      ok: false,
+      motivo: "incompleta",
+      detalle: "La fecha 01/11/2026 no cae en el periodo de la cartola.",
+    });
+  });
+
+  test("una cartola de Consorcio en un formato que Luka no conoce lo dice asi", () => {
+    expect(leerCartola([paginaCon("BANCO CONSORCIO", "Cartola")])).toMatchObject({
+      ok: false,
+      motivo: "formato-desconocido",
+      banco: "Consorcio",
+      detalle: "Esta cartola de Consorcio viene en un formato que Luka todavía no conoce.",
+    });
+  });
+
+  test("Luka sabe leer las de Santander y las de Consorcio, y dice cual es la clave de cada una", () => {
+    expect(BANCOS_CON_CARTOLA).toEqual(["Santander", "Consorcio"]);
+    expect(PISTA_DE_LA_CLAVE.Consorcio).toBe("el RUT del titular de la cuenta, pero solo sus últimos 4 dígitos y sin el dígito verificador");
+  });
+
+  test("la clave de la cartola, y una distinta para cada fila", () => {
+    const cartola = leidaDeConsorcio(consorcio.OCTUBRE);
+    expect(claveDeLaCartola(cartola)).toBe("cartola|Consorcio|2345|102026|2026-10-01|2026-10-31");
+    expect(new Set(clavesDeLasFilas(cartola)).size).toBe(11);
+  });
+});
+
+describe("de una fila de la cartola de Consorcio a la lectura", () => {
+  const cartola = leidaDeConsorcio(consorcio.OCTUBRE);
+  const lectura = (descripcion: string) => lecturaDeLaFila(cartola.filas.find((f) => f.descripcion === descripcion)!, cartola);
+
+  test("una compra con la tarjeta de debito, en el local o por internet", () => {
+    expect(lectura("COMPRAS POS FARMACIA AHUMA")).toMatchObject({
+      ok: true,
+      tipo: "COMPRA",
+      sentido: "gasto",
+      monto: 4_590,
+      fecha: "2026-10-01",
+      comercio: "FARMACIA AHUMA",
+      medioPago: "DEBITO",
+      fuente: "Cartola de Consorcio",
+      via: "plantilla",
+      plantilla: "consorcio/cuenta-corriente",
+      ultimos4: "2345",
+    });
+    expect(lectura("COMPRA WEBPAY CINE PLANET")).toMatchObject({ tipo: "COMPRA", comercio: "CINE PLANET", medioPago: "DEBITO" });
+  });
+
+  test("una transferencia: la persona sin el banco del final; si el banco no supo el nombre, solo «Transferencia»", () => {
+    expect(lectura("TEF ANA ROJAS BANCO DE C")).toMatchObject({ tipo: "TRANSFERENCIA", sentido: "gasto", comercio: "ANA ROJAS", contraparte: { nombre: "ANA ROJAS" }, medioPago: "TRANSFERENCIA" });
+    expect(lectura("TEF CAMILA ROJAS SCOTIABANK")).toMatchObject({ tipo: "TRANSFERENCIA", comercio: "CAMILA ROJAS", contraparte: { nombre: "CAMILA ROJAS" } });
+    expect(lectura("TEF PEDRO SOTO GAJARDO")).toMatchObject({ tipo: "ABONO", sentido: "ingreso", comercio: "PEDRO SOTO GAJARDO" });
+    const sinNombre = lectura("TEF NOMBRE DESTINATARIO");
+    expect(sinNombre).toMatchObject({ tipo: "TRANSFERENCIA", sentido: "gasto", comercio: "Transferencia", medioPago: "TRANSFERENCIA" });
+    expect(sinNombre).not.toHaveProperty("contraparte");
+  });
+
+  test("el giro, el sueldo y lo que cobra el banco", () => {
+    expect(lectura("GIRO EN CAJERO AUTOMATICO")).toMatchObject({ tipo: "GIRO", sentido: "gasto" });
+    expect(lectura("PAGO DE REMUNERACIONES")).toMatchObject({ tipo: "ABONO", sentido: "ingreso", comercio: "PAGO DE REMUNERACIONES", monto: 1_250_000 });
+    expect(lectura("COMISION MANTENCION")).toMatchObject({ tipo: "PAGO", comercio: "Consorcio · COMISION MANTENCION" });
   });
 });
 
@@ -230,6 +398,13 @@ describe("abrir el PDF", () => {
     if (!pdf.ok) return;
     const lectura = leerCartola(pdf.paginas);
     expect(lectura.ok && lectura.filas).toEqual(leida(OCTUBRE).filas);
+  });
+
+  test("un PDF de Consorcio de varias hojas se lee igual que sus paginas", async () => {
+    const pdf = await abrirCartola(await consorcio.pdfDeEjemplo(consorcio.OCTUBRE));
+    expect(pdf.ok && pdf.paginas).toHaveLength(3);
+    if (!pdf.ok) return;
+    expect(leerCartola(pdf.paginas)).toEqual({ ok: true, ...leidaDeConsorcio(consorcio.OCTUBRE) });
   });
 
   test("con clave: sin ella falta, con otra no abre, con la del banco si", async () => {
