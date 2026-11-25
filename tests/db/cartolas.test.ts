@@ -15,6 +15,7 @@ import {
 } from "@/datos/cartolas";
 import { leerBandeja, registrarMovimiento } from "@/datos/movimientos";
 import { leerMiBuzon, procesarCorreo, revisarBuzon, type OpcionesDelBuzon } from "@/datos/buzon";
+import * as consorcio from "../fixtures/cartolas/consorcio";
 import { OCTUBRE, conSaldos, pdfDeEjemplo, type CartolaDeEjemplo } from "../fixtures/cartolas/santander";
 import { armarCorreo, reenvioDeGmail } from "../fixtures/correos/armar";
 import { buzonEnMemoria } from "../fixtures/correos/buzon-en-memoria";
@@ -250,6 +251,24 @@ describe("leer la cartola", () => {
     expect(await prisma.cuentaBancaria.findUniqueOrThrow({ where: { id: cuenta }, select: { tipo: true } })).toEqual({ tipo: "CUENTA_CORRIENTE" });
   });
 
+  test("la de Consorcio, de varias hojas: a su cuenta por los 4 digitos, con los ingresos y el giro fuera", async () => {
+    const sueldo = (
+      await prisma.cuentaBancaria.create({
+        data: { hogarId: HOGAR_INICIAL, miembroId: yo, banco: "Consorcio", tipo: "CUENTA_CORRIENTE", ultimos4: "2345", apodo: "Sueldo" },
+      })
+    ).id;
+    const leida = await leerCartolaEnPdf(HOGAR_INICIAL, { pdf: await consorcio.pdfDeEjemplo(consorcio.OCTUBRE), miembroId: yo }, opciones());
+    expect(leida).toMatchObject({
+      ok: true,
+      yaLeida: false,
+      cartola: { banco: "Consorcio", ultimos4: "2345", cuenta: "Sueldo · •••• 2345", desde: "2026-10-01", hasta: "2026-10-31", filas: 11, yaEstaban: 0, cargos: 174_100, abonos: 1_268_000 },
+    });
+    const filas = await prisma.movimiento.findMany({ where: { cartolaId: { not: null } }, select: { estado: true, cuentaBancariaId: true, tipo: true, fuente: true } });
+    expect(filas).toHaveLength(11);
+    expect(filas.every((f) => f.cuentaBancariaId === sueldo && f.fuente === "Cartola de Consorcio")).toBe(true);
+    expect(filas.filter((f) => f.estado === "IGNORADO").map((f) => f.tipo).sort()).toEqual(["ABONO", "ABONO", "GIRO"]);
+  });
+
   test("un archivo que no es una cartola que Luka sepa leer", async () => {
     expect(await leerCartolaEnPdf(HOGAR_INICIAL, { pdf: new TextEncoder().encode("hola"), miembroId: yo }, opciones())).toMatchObject({
       ok: false,
@@ -281,9 +300,10 @@ describe("la clave del PDF", () => {
   });
 
   test("solo de los bancos cuyas cartolas Luka sabe leer, y de alguien del hogar", async () => {
-    await expect(guardarClaveDeCartola(HOGAR_INICIAL, yo, "Consorcio", CLAVE, opciones())).rejects.toThrow(
-      new ErrorDeCartola("Luka todavía no sabe leer las cartolas de Consorcio."),
+    await expect(guardarClaveDeCartola(HOGAR_INICIAL, yo, "Scotiabank", CLAVE, opciones())).rejects.toThrow(
+      new ErrorDeCartola("Luka todavía no sabe leer las cartolas de Scotiabank."),
     );
+    expect(await guardarClaveDeCartola(HOGAR_INICIAL, yo, "Banco Consorcio", "1234", opciones())).toEqual({ banco: "Consorcio" });
     await expect(guardarClaveDeCartola(HOGAR_INICIAL, yo, "Santander", "  ", opciones())).rejects.toThrow("Escribe la clave del PDF.");
     await prisma.hogar.create({ data: { id: "otro", nombre: "Otro" } });
     const ajeno = await miembroDePrueba(prisma, { hogarId: "otro", correo: "ajeno@ejemplo.cl" });

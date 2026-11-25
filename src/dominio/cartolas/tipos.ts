@@ -28,7 +28,10 @@ export type FilaDeCartola = {
   lado: LadoDeLaFila;
   /** El numero de documento, si la fila lo trae. */
   documento: string | null;
-  /** El saldo al final del dia: el banco lo imprime en la ultima fila de cada dia. */
+  /**
+   * El saldo despues de esta fila, si el banco lo imprime: Santander, solo
+   * en la ultima fila de cada dia; Consorcio, en cada una.
+   */
   saldo: number | null;
 };
 

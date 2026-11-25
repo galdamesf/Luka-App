@@ -1,5 +1,6 @@
 import { BANCOS } from "@/dominio/bancos";
 import { armarLineas, compacto } from "./lineas";
+import { esCartolaConsorcio, leerCartolaConsorcio } from "./consorcio";
 import { esCartolaSantander, leerCartolaSantander } from "./santander";
 import type { LecturaDeCartola, PaginaDeCartola } from "./tipos";
 
@@ -19,6 +20,14 @@ const PLANTILLAS = [
     pista: "tu RUT sin puntos, sin guión y sin el dígito verificador",
     es: esCartolaSantander,
     leer: leerCartolaSantander,
+  },
+  {
+    banco: "Consorcio",
+    // Lo que dice el correo de Consorcio: "ingresa los últimos 4 dígitos del RUT sin dígito verificador".
+    // Del titular: la cuenta puede ser de otra persona del hogar, y es su RUT el que abre el PDF.
+    pista: "el RUT del titular de la cuenta, pero solo sus últimos 4 dígitos y sin el dígito verificador",
+    es: esCartolaConsorcio,
+    leer: leerCartolaConsorcio,
   },
 ] as const;
 
@@ -50,7 +59,9 @@ export function leerCartola(paginas: readonly PaginaDeCartola[]): LecturaDeCarto
     motivo: "formato-desconocido",
     banco,
     detalle: banco
-      ? `Luka todavía no sabe leer las cartolas de ${banco}.`
+      ? BANCOS_CON_CARTOLA.includes(banco)
+        ? `Esta cartola de ${banco} viene en un formato que Luka todavía no conoce.`
+        : `Luka todavía no sabe leer las cartolas de ${banco}.`
       : "No parece la cartola de ningún banco que Luka sepa leer.",
   };
 }

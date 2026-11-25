@@ -11,8 +11,10 @@ import type { CartolaLeida, FilaDeCartola } from "./tipos";
  * El lado de la fila dice si la plata salio o entro; la glosa dice que fue:
  *
  *   "Compra Nacional MD LIDER EXPRESS"        compra con la tarjeta de debito
+ *   "COMPRAS POS LIDER EXPRESS"               (Consorcio, y "COMPRA WEBPAY" por internet)
  *   "Pagos Rec. Internacional MD NETFLIX"     cargo automatico a la tarjeta
  *   "Transf a Ana Rojas" / "Transf de ..."    transferencias
+ *   "TEF ANA ROJAS BANCO DE C"                (Consorcio: el banco de la otra persona al final)
  *   "Giro Cajero Automatico"                  giro
  *   "Pago Tarjeta de Credito"                 pago de la tarjeta
  *   "RECUP COM PLAN MES ANT ..."              comisiones e impuestos del banco
@@ -20,8 +22,12 @@ import type { CartolaLeida, FilaDeCartola } from "./tipos";
 
 type Clase = { tipo: TipoMovimiento; comercio: string; medioPago?: MedioPago; contraparte?: string };
 
-const COMPRA = /^(?:compras?|pagos?\s+rec\.?(?:urrentes?)?|pago\s+automatico|cargo\s+automatico)\s+(?:(?:nacional|internacional|nac\.?|int\.?)\s+)?(?:(?:md|mc|vd|vi|db|cd|tdb|tdc)\s+)?(.+)$/i;
-const TRANSFERENCIA = /^transf(?:erencia)?\.?\s*(?:(?:a|de|desde|hacia|para)\s+)?(.+)$/i;
+const COMPRA = /^(?:compras?|pagos?\s+rec\.?(?:urrentes?)?|pago\s+automatico|cargo\s+automatico)\s+(?:(?:nacional|internacional|nac\.?|int\.?)\s+)?(?:(?:md|mc|vd|vi|db|cd|tdb|tdc|pos|webpay)\s+)?(.+)$/i;
+const TRANSFERENCIA = /^(?:transf(?:erencia)?\.?|tef\b)\s*(?:(?:a|de|desde|hacia|para)\s+)?(.+)$/i;
+/** En la TEF de Consorcio, el banco de la otra persona va al final, cortado: "ANA ROJAS BANCO DE C". */
+const BANCO_AL_FINAL = /\s+(?:BAN|BANCO\w*|SCOTIABANK|BCI|ITA[UÚ]|MERCADO\s+PA\w*|TENPO|MACH|COOPEUCH|BICE|SECURITY|FALABELLA|RIPLEY|SANTANDER|CONSORCIO)(?:\s.*)?$/i;
+/** Cuando el banco no supo el nombre de la otra persona. */
+const SIN_NOMBRE = /^nombre\s+destinatario$/i;
 const GIRO = /^giro\b/i;
 const PAGO_DE_TARJETA = /^pago\s+(?:de\s+)?(?:la\s+)?(?:tarjeta|tc\b|t\.?\s*cr[eé]dito|tarj)/i;
 const DEL_BANCO = /\b(?:com(?:ision)?|recup\s+com|mantencion|impto|impuesto|intereses?|seguro|cargo\s+por)\b/i;
@@ -32,8 +38,14 @@ function clasificar(fila: FilaDeCartola, banco: string): Clase {
   if (fila.lado === "cargo" && PAGO_DE_TARJETA.test(glosa)) return { tipo: "PAGO_TARJETA", comercio: `Pago de la tarjeta ${banco}` };
 
   const transferencia = TRANSFERENCIA.exec(glosa);
-  if (transferencia && /^transf/i.test(glosa)) {
-    const nombre = pulirComercio(transferencia[1]) ?? glosa;
+  if (transferencia && /^(?:transf|tef\b)/i.test(glosa)) {
+    const resto = /^tef\b/i.test(glosa) ? transferencia[1]!.replace(BANCO_AL_FINAL, "") : transferencia[1]!;
+    if (SIN_NOMBRE.test(resto.trim())) {
+      return fila.lado === "cargo"
+        ? { tipo: "TRANSFERENCIA", comercio: "Transferencia", medioPago: "TRANSFERENCIA" }
+        : { tipo: "ABONO", comercio: "Transferencia" };
+    }
+    const nombre = pulirComercio(resto) ?? glosa;
     return fila.lado === "cargo"
       ? { tipo: "TRANSFERENCIA", comercio: nombre, medioPago: "TRANSFERENCIA", contraparte: nombre }
       : { tipo: "ABONO", comercio: nombre, contraparte: nombre };
