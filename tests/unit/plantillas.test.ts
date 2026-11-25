@@ -77,6 +77,21 @@ const CARGO_DE_CONSORCIO: LecturaLeida = {
   sinDetalle: true,
 };
 
+const COMPRA_DE_CONSORCIO: LecturaLeida = {
+  ok: true,
+  tipo: "COMPRA",
+  sentido: "gasto",
+  monto: 12_990,
+  moneda: "CLP",
+  fecha: "2026-11-23",
+  comercio: "Cafe Los Aromos Providencia",
+  fuente: "Aviso de compra de Consorcio",
+  via: "plantilla",
+  plantilla: "consorcio/compra",
+  medioPago: "DEBITO",
+  ultimos4: "4821",
+};
+
 const BOLETA_DE_BSALE: LecturaLeida = {
   ok: true,
   tipo: "BOLETA",
@@ -164,6 +179,7 @@ describe("cada formato real, con datos inventados, se lee exacto", () => {
       },
     ],
     ["consorcio/cargo.txt", CARGO_DE_CONSORCIO],
+    ["consorcio/compra.txt", COMPRA_DE_CONSORCIO],
     ["bancoestado/transferencia-recibida.txt", TRANSFERENCIA_DE_BANCOESTADO],
     [
       "lider/boleta-digital.txt",
@@ -195,6 +211,7 @@ describe("los mismos comprobantes reenviados a mano se leen igual, marcados", ()
     ["reenvios/santander-desde-outlook.txt", TRANSFERENCIA_ENVIADA],
     ["reenvios/bancoestado-citado.txt", TRANSFERENCIA_DE_BANCOESTADO],
     ["reenvios/bsale-desde-gmail.txt", BOLETA_DE_BSALE],
+    ["reenvios/consorcio-compra-desde-gmail.txt", COMPRA_DE_CONSORCIO],
   ] as const)("%s", async (ruta, esperada) => {
     expect(await leer(cargarEjemplo(ruta))).toStrictEqual({ ...esperada, reenviadoAMano: true });
   });
@@ -228,6 +245,24 @@ describe("Consorcio avisa el cargo y ademas manda el comprobante de la transfere
 
   test("el asunto de los avisos llega con la o rota, y se reconocen igual", () => {
     expect(cargarEjemplo("consorcio/cargo.txt").asunto).toContain("�");
+  });
+});
+
+describe("Consorcio avisa cada compra con la tarjeta de debito", () => {
+  test("con el comercio sin el pais y los 4 de la tarjeta, que no son los de la cuenta", async () => {
+    const compra = await leer(cargarEjemplo("consorcio/compra.txt"));
+    const cargo = await leer(cargarEjemplo("consorcio/cargo.txt"));
+    expect(compra).toMatchObject({ ok: true, comercio: "Cafe Los Aromos Providencia", ultimos4: "4821" });
+    expect(compra.ok && cargo.ok && compra.ultimos4 !== cargo.ultimos4).toBe(true);
+  });
+
+  test("si un dia avisa igual una compra con credito, no se lee como debito", async () => {
+    const debito = cargarEjemplo("consorcio/compra.txt");
+    const credito: Comprobante = {
+      ...debito,
+      texto: debito.texto.replace("compra con cargo a tu Tarjeta", "compra con cargo a tu Tarjeta de Crédito"),
+    };
+    expect(await leer(credito)).not.toMatchObject({ plantilla: "consorcio/compra" });
   });
 });
 

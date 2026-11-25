@@ -263,7 +263,11 @@ escriben: con el primer aviso que llega reenviado, Luka la deja en «Tus bancos
 y tarjetas», como de quien lo reenvio (`cuentaQueSeAprende`), solo si lo leyo
 una plantilla y los 4 digitos son de una cuenta de ese banco. Si el aviso no
 dice el tipo, queda «Cuenta», y la cartola lo precisa (y deja la cuenta, si no
-estaba). Cuando llega una cartola sin su clave, se pide en Inicio y se lee al
+estaba). Cada banco dice distinto de donde salio: los cargos, abonos y
+transferencias traen los 4 de la cuenta, y una compra con tarjeta (la de
+debito de Consorcio, por ejemplo) los de la tarjeta, que queda como otra
+entrada del mismo banco. Cuando llega una cartola sin su clave, se pide en
+Inicio y se lee al
 tiro. El buzon se revisa solo al abrir el panel y cada mañana, con la tarea de
 `vercel.json` (`/api/tareas/diaria`, protegida con `CRON_SECRET`), que ademas
 manda el resumen diario: lo que se anoto ayer, lo que espera en «Por revisar»

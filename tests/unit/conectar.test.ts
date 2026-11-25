@@ -139,6 +139,13 @@ describe("las cuentas que Luka reconoce sola", () => {
     expect(cuentaQueSeAprende(lectura, "Consorcio", [])).toMatchObject({ banco: "Consorcio", tipo: "CUENTA" });
   });
 
+  test("de una compra de Consorcio, la tarjeta de debito: con los 4 de la tarjeta", async () => {
+    const lectura = await lecturaDe("consorcio/compra.txt");
+    expect(cuentaQueSeAprende(lectura, "Consorcio", [])).toEqual({ banco: "Consorcio", tipo: "TARJETA_DEBITO", ultimos4: "4821" });
+    // La cuenta corriente de esa tarjeta no la tapa: son otros 4 digitos.
+    expect(cuentaQueSeAprende(lectura, "Consorcio", [{ banco: "Consorcio", ultimos4: "2345" }])).not.toBeNull();
+  });
+
   test("no del aviso de BancoEstado a quien recibe: esa cuenta es de otro banco", async () => {
     const lectura = await lecturaDe("bancoestado/transferencia-recibida.txt");
     expect(lectura.ultimos4).toBe("5678");
