@@ -12,16 +12,17 @@ import type { ResultadoDeLlegada } from "./buzon";
  *
  *   1. Sus bancos, con un toque cada uno. Sus cuentas y tarjetas no se
  *      escriben: Luka las reconoce con los primeros avisos.
- *   2. En Gmail, la direccion de Luka para reenviar. Gmail le manda a Luka un
- *      codigo para confirmarla, y el codigo aparece solo en el asistente.
- *   3. En Gmail, el filtro que le pasa a Luka solo los avisos de esos bancos.
+ *   2. En Gmail, la direccion de Luka para reenviar. Gmail le pide permiso a
+ *      Luka, y Luka lo da sola (si no puede, el asistente muestra el enlace).
+ *   3. En Gmail, el filtro que le pasa a Luka solo los avisos de esos bancos:
+ *      se abre ya empezado, con los bancos escritos en «De».
  *
  * Con otro correo, los pasos 2 y 3 son una sola regla.
  *
  * Luka nunca entra al correo de nadie. Leerlo directo, o crear el filtro por
  * la persona, exige permisos de Google que piden una auditoria de seguridad
  * cada año: por eso los pasos se hacen a mano, con botones que abren la
- * pantalla exacta de Gmail y todo listo para pegar.
+ * pantalla exacta de Gmail y lo demas ya escrito.
  */
 
 // ---------------------------------------------------------------------------
@@ -35,7 +36,7 @@ export type EstadoParaConectar = {
   bancos: readonly string[];
   /** Si ya tiene cuentas o tarjetas suyas en el hogar. */
   conCuentas: boolean;
-  /** El codigo con que Gmail pide confirmar el reenvio, si llego y no lo ha puesto. */
+  /** El enlace o el codigo con que Gmail pide permiso para reenviar, si Luka no pudo darlo. */
   codigoDeGmail: string | null;
   /** Si ya llego algo reenviado desde uno de sus correos: un comprobante, publicidad, la cartola. */
   yaLlegoAlgo: boolean;
@@ -43,9 +44,9 @@ export type EstadoParaConectar = {
 
 /**
  * Donde retoma el asistente. Listo apenas llega algo reenviado: eso prueba
- * que el reenvio y el filtro funcionan. Si Gmail ya mando su codigo, en el
- * paso del reenvio, para escribirlo. Con los bancos ya marcados (o con
- * cuentas suyas), en el paso siguiente; si no, en el primero.
+ * que el reenvio y el filtro funcionan. Si Gmail pidio permiso y Luka no
+ * pudo darlo, en el paso del reenvio, para darlo. Con los bancos ya marcados
+ * (o con cuentas suyas), en el paso siguiente; si no, en el primero.
  */
 export function pasoParaConectar(estado: EstadoParaConectar, proveedor: ProveedorDeCorreo): PasoParaConectar {
   if (estado.yaLlegoAlgo) return "listo";
@@ -56,11 +57,16 @@ export function pasoParaConectar(estado: EstadoParaConectar, proveedor: Proveedo
 
 /**
  * Lo que llega reenviado de verdad desde un correo confirmado. La
- * confirmacion de Gmail no cuenta (todavia no hay filtro), ni lo que llego
- * desde un correo sin confirmar o sin su firma.
+ * confirmacion de Gmail no cuenta, pedida o ya aceptada (todavia no hay
+ * filtro), ni lo que llego desde un correo sin confirmar o sin su firma.
  */
 export function pruebaQueLlega(resultado: ResultadoDeLlegada): boolean {
-  return resultado !== "CONFIRMACION_DE_GMAIL" && resultado !== "SIN_CONFIRMAR" && resultado !== "SIN_FIRMA";
+  return (
+    resultado !== "CONFIRMACION_DE_GMAIL" &&
+    resultado !== "REENVIO_CONFIRMADO" &&
+    resultado !== "SIN_CONFIRMAR" &&
+    resultado !== "SIN_FIRMA"
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -75,6 +81,22 @@ export function pruebaQueLlega(resultado: ResultadoDeLlegada): boolean {
 export function enlaceDeGmail(donde: "reenvio" | "filtros", correo: string): string {
   const seccion = donde === "reenvio" ? "fwdandpop" : "filters";
   return `https://mail.google.com/mail/?authuser=${encodeURIComponent(correo.trim().toLowerCase())}#settings/${seccion}`;
+}
+
+/**
+ * En que va el permiso que pide Gmail para reenviarle a la direccion de
+ * Luka: ya aceptado, o lo que falta para darlo (el enlace, o el codigo con
+ * el Gmail de antes), y que correo lo pidio.
+ */
+export type PermisoDeGmail = { codigo: string | null; enlace: string | null; de: string | null; aceptado: boolean };
+
+/**
+ * Gmail con el filtro nuevo ya empezado: se abre «Crear filtro» con los
+ * remitentes escritos en «De». Falta solo elegir «Reenviar a».
+ */
+export function enlaceParaCrearElFiltro(correo: string, remitentes: readonly string[]): string {
+  const de = encodeURIComponent(remitentes.join(" OR ")).replace(/%20/g, "+");
+  return `https://mail.google.com/mail/?authuser=${encodeURIComponent(correo.trim().toLowerCase())}#create-filter/from=${de}`;
 }
 
 /**

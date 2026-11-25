@@ -17,7 +17,6 @@ export type CorreoParaMostrar = {
 
 export type BuzonParaMostrar = {
   direccion: string;
-  codigoDeGmail: { codigo: string; de: string | null; llegoEn: Date } | null;
   llegadas: { id: string; llegoEn: Date; resultado: ResultadoDeLlegada; remitente: string; detalle: string | null }[];
 };
 
@@ -233,7 +232,7 @@ function LoUltimo({
             <li key={llegada.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-3 py-2 text-sm">
               <span className="cifra text-xs text-texto-tenue">{HORA.format(llegada.llegoEn)}</span>
               <span className="min-w-0 flex-1">
-                <span className="break-all font-semibold">{llegada.detalle && !pideAlgo(llegada.resultado) && llegada.resultado !== "NO_ES_COMPROBANTE" ? llegada.detalle : llegada.remitente}</span>{" "}
+                <span className="font-semibold [overflow-wrap:anywhere]">{llegada.detalle && !pideAlgo(llegada.resultado) && llegada.resultado !== "NO_ES_COMPROBANTE" ? llegada.detalle : llegada.remitente}</span>{" "}
                 <span className={pideAlgo(llegada.resultado) ? "text-alerta" : "text-texto-tenue"}>{TEXTO_DE_LA_LLEGADA[llegada.resultado]}</span>
               </span>
             </li>

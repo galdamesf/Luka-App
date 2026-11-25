@@ -12,6 +12,7 @@ import {
 import { configuracionDelBuzon, type ConfiguracionDelBuzon } from "@/lib/buzon";
 import { abrirBuzonImap, type FuenteDeCorreos } from "@/lib/buzon-imap";
 import { leerConIADelEntorno } from "@/lib/leer-con-ia";
+import { darPermisoDeGmail } from "@/lib/permiso-de-gmail";
 import { crearLector } from "@/dominio/comprobantes/lector";
 import { htmlATexto, normalizarComprobante } from "@/dominio/comprobantes/normalizar";
 import type { Comprobante, Lector, Lectura } from "@/dominio/comprobantes/tipos";
@@ -38,8 +39,9 @@ import { huellaDeCorreo, registrarMovimiento } from "./movimientos";
  * Por cada correo que va a una direccion con clave:
  *
  *   1. De quien es la clave. Si no es de nadie, se borra.
- *   2. Si es Gmail pidiendo confirmar el reenvio, se guarda el codigo para
- *      mostrarlo.
+ *   2. Si es Gmail pidiendo confirmar el reenvio desde un correo confirmado
+ *      de esa persona, Luka da el permiso sola; si no puede, deja el enlace
+ *      (o el codigo, como era antes) a la vista para que la persona lo de.
  *   3. Quien lo reenvio: si no es un correo confirmado de esa persona, no se
  *      lee, y queda anotado por que.
  *   4. El lector (plantillas y, si esta, la IA). Si la IA falla por algo
@@ -76,6 +78,8 @@ export type OpcionesDelBuzon = {
   ahora?: Date;
   /** Para descifrar las claves de las cartolas. Por omision, la de CLAVE_DOS_PASOS. */
   maestra?: Buffer;
+  /** Abre el enlace con que Gmail pide aceptar el reenvio. Por omision, src/lib/permiso-de-gmail.ts. */
+  darPermiso?: (enlace: string) => Promise<boolean>;
 };
 
 function lectorDelEntorno(nombres: readonly string[]): Lector {
@@ -159,7 +163,7 @@ async function anotarLlegada(
 
 /** Procesa un correo tal como llego al buzon. Ver la explicacion arriba. */
 export async function procesarCorreo(fuente: Uint8Array | string, opciones: OpcionesDelBuzon): Promise<ResultadoDelCorreo> {
-  const { db = prisma, base, lectorPara = lectorDelEntorno, ahora = new Date() } = opciones;
+  const { db = prisma, base, lectorPara = lectorDelEntorno, ahora = new Date(), darPermiso = darPermisoDeGmail } = opciones;
 
   let correo: CorreoEntrante;
   try {
@@ -183,17 +187,35 @@ export async function procesarCorreo(fuente: Uint8Array | string, opciones: Opci
   const esDeLuka = (direccion: string) => esDelBuzon(direccion, base);
   const llegada = datosDeLlegada(correo, esDeLuka);
 
-  // Gmail pide confirmar el reenvio: se guarda el codigo, no se abre su enlace.
+  // Gmail pide confirmar el reenvio. Si lo pidio un correo confirmado de
+  // esta persona, Luka da el permiso sola. Si no pudo, el enlace (o el
+  // codigo, con el Gmail de antes) queda a la vista para que lo de ella. Un
+  // enlace pedido desde otro correo no se abre ni se muestra.
   const gmail = confirmacionDeGmail(
     { de: correo.de, asunto: correo.asunto, texto: correo.texto ?? htmlATexto(correo.html ?? ""), autenticacion: llegada.autenticacion },
     esDeLuka,
   );
   if (gmail !== null) {
+    const suyo = gmail.solicitante !== null && (await correosConfirmados(miembroId, db)).includes(gmail.solicitante);
+    const remitenteDeGmail = gmail.solicitante ?? correo.de ?? "gmail";
+    if (suyo && gmail.enlace !== null && (await darPermiso(gmail.enlace))) {
+      await db.buzon.update({
+        where: { miembroId },
+        data: { codigoDeGmail: null, enlaceDeGmail: null, codigoDeGmailDe: gmail.solicitante, codigoDeGmailEn: ahora },
+      });
+      await anotarLlegada(db, miembroId, { resultado: "REENVIO_CONFIRMADO", remitente: remitenteDeGmail }, ahora);
+      return { tipo: "leido", resultado: "REENVIO_CONFIRMADO" };
+    }
+    const enlace = suyo ? gmail.enlace : null;
+    if (gmail.codigo === null && enlace === null) {
+      await anotarLlegada(db, miembroId, { resultado: "SIN_CONFIRMAR", remitente: remitenteDeGmail }, ahora);
+      return { tipo: "leido", resultado: "SIN_CONFIRMAR" };
+    }
     await db.buzon.update({
       where: { miembroId },
-      data: { codigoDeGmail: gmail.codigo, codigoDeGmailDe: gmail.solicitante, codigoDeGmailEn: ahora },
+      data: { codigoDeGmail: gmail.codigo, enlaceDeGmail: enlace, codigoDeGmailDe: gmail.solicitante, codigoDeGmailEn: ahora },
     });
-    await anotarLlegada(db, miembroId, { resultado: "CONFIRMACION_DE_GMAIL", remitente: gmail.solicitante ?? correo.de ?? "gmail" }, ahora);
+    await anotarLlegada(db, miembroId, { resultado: "CONFIRMACION_DE_GMAIL", remitente: remitenteDeGmail }, ahora);
     return { tipo: "leido", resultado: "CONFIRMACION_DE_GMAIL" };
   }
 
@@ -361,7 +383,12 @@ export async function revisarBuzon(fuente: FuenteDeCorreos, opciones: OpcionesDe
     else if (resultado.resultado === "CARTOLA_LEIDA") resumen.cartolas += 1;
     else if (resultado.resultado === "REPETIDO") resumen.repetidos += 1;
     else if (resultado.resultado === "SIN_CONFIRMAR" || resultado.resultado === "SIN_FIRMA") resumen.rechazados += 1;
-    else if (resultado.resultado !== "CONFIRMACION_DE_GMAIL" && resultado.resultado !== "SIN_DUENO") resumen.sinMovimiento += 1;
+    else if (
+      resultado.resultado !== "CONFIRMACION_DE_GMAIL" &&
+      resultado.resultado !== "REENVIO_CONFIRMADO" &&
+      resultado.resultado !== "SIN_DUENO"
+    )
+      resumen.sinMovimiento += 1;
   }
 
   if (listos.length > 0) await fuente.borrar(listos);
@@ -414,8 +441,13 @@ export type LlegadaParaMostrar = {
 
 export type MiBuzon = {
   direccion: string;
-  /** El codigo que mando Gmail para confirmar el reenvio, si llego hace poco. */
-  codigoDeGmail: { codigo: string; de: string | null; llegoEn: Date } | null;
+  /**
+   * Lo que mando Gmail para confirmar el reenvio y falta, si llego hace poco:
+   * el codigo (el Gmail de antes) o el enlace para dar el permiso.
+   */
+  codigoDeGmail: { codigo: string | null; enlace: string | null; de: string | null; llegoEn: Date } | null;
+  /** Si Luka ya acepto el reenvio de Gmail, desde que correo y cuando. */
+  reenvioAceptado: { de: string; llegoEn: Date } | null;
   /** Lo ultimo que llego, lo mas nuevo primero. */
   llegadas: LlegadaParaMostrar[];
 };
@@ -455,13 +487,19 @@ export async function leerMiBuzon(
     take: cuantas,
     select: { id: true, llegoEn: true, resultado: true, remitente: true, detalle: true },
   });
+  const falta = buzon.codigoDeGmail !== null || buzon.enlaceDeGmail !== null;
   const vigente =
-    buzon.codigoDeGmail !== null &&
+    falta &&
     buzon.codigoDeGmailEn !== null &&
     ahora.getTime() - buzon.codigoDeGmailEn.getTime() < DIAS_DEL_CODIGO_DE_GMAIL * 24 * 60 * 60_000;
+  // Aceptado: quedo quien lo pidio y cuando, sin nada que falte.
+  const aceptado = !falta && buzon.codigoDeGmailDe !== null && buzon.codigoDeGmailEn !== null;
   return {
     direccion: direccionDelBuzon(base, buzon.clave),
-    codigoDeGmail: vigente ? { codigo: buzon.codigoDeGmail!, de: buzon.codigoDeGmailDe, llegoEn: buzon.codigoDeGmailEn! } : null,
+    codigoDeGmail: vigente
+      ? { codigo: buzon.codigoDeGmail, enlace: buzon.enlaceDeGmail, de: buzon.codigoDeGmailDe, llegoEn: buzon.codigoDeGmailEn! }
+      : null,
+    reenvioAceptado: aceptado ? { de: buzon.codigoDeGmailDe!, llegoEn: buzon.codigoDeGmailEn! } : null,
     llegadas,
   };
 }
@@ -475,7 +513,10 @@ export async function cambiarMiDireccion(hogarId: string, miembroId: string, bas
   for (let intento = 0; intento < 3; intento++) {
     const clave = claveDeBuzonAlAzar();
     try {
-      await db.buzon.update({ where: { miembroId }, data: { clave, codigoDeGmail: null, codigoDeGmailDe: null, codigoDeGmailEn: null } });
+      await db.buzon.update({
+        where: { miembroId },
+        data: { clave, codigoDeGmail: null, enlaceDeGmail: null, codigoDeGmailDe: null, codigoDeGmailEn: null },
+      });
       return direccionDelBuzon(base, clave);
     } catch (error) {
       if ((error as { code?: string }).code !== "P2002") throw error;
@@ -484,8 +525,11 @@ export async function cambiarMiDireccion(hogarId: string, miembroId: string, bas
   throw new ErrorDelBuzon("No se pudo cambiar tu dirección de Luka. Intenta de nuevo.");
 }
 
-/** Saca el codigo de Gmail de la pantalla, cuando ya se uso. */
+/** Saca el codigo o el enlace de Gmail de la pantalla, cuando ya se uso. */
 export async function olvidarCodigoDeGmail(hogarId: string, miembroId: string, db: Db = prisma): Promise<void> {
   await buzonDe(db, hogarId, miembroId);
-  await db.buzon.update({ where: { miembroId }, data: { codigoDeGmail: null, codigoDeGmailDe: null, codigoDeGmailEn: null } });
+  await db.buzon.update({
+    where: { miembroId },
+    data: { codigoDeGmail: null, enlaceDeGmail: null, codigoDeGmailDe: null, codigoDeGmailEn: null },
+  });
 }

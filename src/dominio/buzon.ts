@@ -235,17 +235,48 @@ export const DIAS_DEL_CODIGO_DE_GMAIL = 7;
 
 const UN_CORREO = /[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)+/gi;
 
+/** El largo maximo de un enlace de Gmail que se guarda (buzones.enlace_de_gmail). */
+export const LARGO_DEL_ENLACE_DE_GMAIL = 600;
+
+/**
+ * Si es el enlace con que Gmail pide aceptar el reenvio, y no otro: en
+ * https, de mail-settings.google.com o mail.google.com, y que empiece con
+ * /mail/vf- (el de cancelar empieza con /mail/uf- y nunca se toma).
+ */
+export function esEnlaceParaDarElPermiso(enlace: string): boolean {
+  if (enlace.length > LARGO_DEL_ENLACE_DE_GMAIL) return false;
+  let url: URL;
+  try {
+    url = new URL(enlace);
+  } catch {
+    return false;
+  }
+  return (
+    url.protocol === "https:" &&
+    (url.hostname === "mail-settings.google.com" || url.hostname === "mail.google.com") &&
+    url.port === "" &&
+    url.username === "" &&
+    url.password === "" &&
+    /^\/mail(?:\/u\/\d+)?\/vf-[^/]+$/.test(url.pathname)
+  );
+}
+
+const UN_ENLACE_DE_GMAIL = /https:\/\/mail(?:-settings)?\.google\.com\/[^\s"'<>]+/gi;
+
 /**
  * Cuando alguien agrega su direccion de Luka como direccion de reenvio,
- * Gmail le escribe al buzon con un codigo de confirmacion: «(#123456789)
- * Confirmación de reenvío de Gmail - Recibir correo de ana@gmail.com». Luka
- * no abre el enlace que trae: muestra el codigo para que la persona lo
- * escriba en Gmail. Tiene que venir firmado por Google.
+ * Gmail le escribe al buzon para que el destino lo acepte. Antes mandaba un
+ * codigo para escribirlo en Gmail: «(#123456789) Confirmación de reenvío de
+ * Gmail - Recibir correo de ana@gmail.com». Ahora manda solo un enlace
+ * (https://mail-settings.google.com/mail/vf-...). Se saca lo que traiga y
+ * quien lo pidio; tiene que venir firmado por Google. Que hacer con el
+ * enlace lo decide src/datos/buzon.ts: solo se abre si lo pidio un correo
+ * confirmado de la persona.
  */
 export function confirmacionDeGmail(
   correo: { de: string | null; asunto: string; texto: string; autenticacion: Autenticacion | null },
   esDeLuka: (direccion: string) => boolean,
-): { codigo: string; solicitante: string | null } | null {
+): { codigo: string | null; enlace: string | null; solicitante: string | null } | null {
   if (correo.de === null || correo.de.toLowerCase() !== REMITENTE_DE_GMAIL) return null;
   if (!firmadoPor(correo.autenticacion, "google.com")) return null;
 
@@ -253,11 +284,13 @@ export function confirmacionDeGmail(
     /\(\s*(?:#|n\.?\s*[º°o]\.?)?\s*(\d{6,12})\s*\)/i.exec(correo.asunto)?.[1] ??
     /(?:c[oó]digo\s+de\s+confirmaci[oó]n|confirmation\s+code)\s*:?\s*(\d{6,12})/i.exec(correo.texto)?.[1] ??
     null;
-  if (codigo === null) return null;
+  const enlace =
+    [...correo.texto.matchAll(UN_ENLACE_DE_GMAIL)].map((m) => m[0].replace(/[.,;:!?)\]]+$/, "")).find(esEnlaceParaDarElPermiso) ?? null;
+  if (codigo === null && enlace === null) return null;
 
   const candidatos = [...correo.asunto.matchAll(UN_CORREO), ...correo.texto.matchAll(UN_CORREO)].map((m) => m[0].toLowerCase());
   const solicitante = candidatos.find((c) => !esDeLuka(c) && !/@(?:[a-z0-9-]+\.)*google\.com$/.test(c)) ?? null;
-  return { codigo, solicitante };
+  return { codigo, enlace, solicitante };
 }
 
 // ---------------------------------------------------------------------------
@@ -276,7 +309,8 @@ export type ResultadoDeLlegada =
   | "CARTOLA_NO_CUADRA"
   | "SIN_CONFIRMAR"
   | "SIN_FIRMA"
-  | "CONFIRMACION_DE_GMAIL";
+  | "CONFIRMACION_DE_GMAIL"
+  | "REENVIO_CONFIRMADO";
 
 /** Cuantas llegadas se guardan de cada persona: las ultimas. */
 export const LLEGADAS_QUE_SE_GUARDAN = 30;
@@ -292,7 +326,8 @@ export const TEXTO_DE_LA_LLEGADA: Record<ResultadoDeLlegada, string> = {
   CARTOLA_NO_CUADRA: "Llegó la cartola del mes, pero lo que Luka leyó no suma lo que dice el banco: no anotó nada.",
   SIN_CONFIRMAR: "Llegó desde un correo que no está confirmado: no se leyó.",
   SIN_FIRMA: "Dice venir de tu correo, pero sin su firma: no se leyó.",
-  CONFIRMACION_DE_GMAIL: "Gmail pidió confirmar el reenvío: el código está arriba.",
+  CONFIRMACION_DE_GMAIL: "Gmail pidió permiso para reenviarle a Luka: dalo en «Que tus gastos lleguen solos», más abajo.",
+  REENVIO_CONFIRMADO: "Luka aceptó que Gmail le reenvíe desde este correo.",
 };
 
 /** Las llegadas que necesitan que la persona haga algo. */
@@ -302,6 +337,7 @@ export function pideAlgo(resultado: ResultadoDeLlegada): boolean {
     resultado === "SIN_FIRMA" ||
     resultado === "NO_SE_PUDO_LEER" ||
     resultado === "CARTOLA_SIN_CLAVE" ||
-    resultado === "CARTOLA_NO_CUADRA"
+    resultado === "CARTOLA_NO_CUADRA" ||
+    resultado === "CONFIRMACION_DE_GMAIL"
   );
 }

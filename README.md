@@ -209,13 +209,17 @@ servidor del buzon), porque cualquiera puede escribir «De: tu correo»; el
 mismo correo dos veces es un solo movimiento (tambien reenviado a mano, o como
 archivo adjunto); y cada comprobante va a la cuenta o tarjeta del hogar que
 calza por banco y ultimos 4 digitos, o a ninguna si no hay certeza. Cuando
-Gmail pide confirmar el reenvio, Luka muestra el codigo sin abrir el enlace. Lo
-que va llegando a cada buzon queda anotado (quien lo mando y que paso, nunca
-el correo). Por ahora el buzon se revisa con «Revisar ahora» en Hogar: si Luka
-corre en tu Mac y en la nube a la vez, revisalo desde uno solo, porque el
-primero que lee un correo se lo lleva. Para probar con un correo de verdad sin
-el buzon: `npm run correos:probar -- comprobante.eml`. Se prueba con
-`npm run test:unit -- correos bancos` y
+Gmail pide permiso para reenviarle a Luka, y lo pide uno de los correos
+confirmados de esa persona, Luka abre el enlace y lo da sola
+(`src/lib/permiso-de-gmail.ts`): solo si el enlace es de Gmail y nunca el de
+cancelar. Si no pudo, el asistente muestra «Dar el permiso» con ese enlace (o el
+codigo, con el Gmail de antes). Lo que va llegando a cada buzon queda anotado
+(quien lo mando y que paso, nunca el correo). Por ahora el buzon se revisa con
+«Revisar ahora» en Hogar: si Luka corre en tu Mac y en la nube a la vez,
+revisalo desde uno solo, porque el primero que lee un correo se lo lleva. Para
+probar con un correo de verdad sin el buzon:
+`npm run correos:probar -- comprobante.eml`. Se prueba con
+`npm run test:unit -- correos bancos permiso` y
 `npm run test:db -- buzon correos-registrados cuentas-bancarias`.
 
 **La cartola del mes cuadra el mes y trae lo que no tuvo aviso.** Es la
@@ -247,11 +251,12 @@ Luka con «Copiar» y «Guardar "Luka" en mis contactos», que descarga la tarje
 banco desde el celular es escribir «Luka». Para quien no quiere reenviar cada
 aviso queda, plegado en Hogar, el asistente «Que tus gastos lleguen solos»: la
 persona toca sus bancos; en Gmail agrega su direccion de Luka para reenviar (un
-boton abre la pantalla exacta, y el codigo con que Gmail confirma aparece solo
-en el asistente); y crea el filtro, con lo que va en «De» listo para pegar. Con
-otro correo, los dos ultimos son una sola regla. Luka no entra al correo de
-nadie: leerlo directo, o crear el filtro por la persona, exige permisos de
-Google que piden una auditoria de seguridad cada año. De los bancos sin
+boton abre la pantalla exacta, y el permiso que pide Gmail lo da Luka sola); y
+crea el filtro: otro boton abre Gmail con el filtro empezado y sus bancos ya
+escritos en «De», y solo falta marcar «Reenviar a». Con otro correo, los dos
+ultimos son una sola regla. Luka no entra al correo de nadie: leerlo directo,
+o crear el filtro por la persona, exige permisos de Google que piden una
+auditoria de seguridad cada año. De los bancos sin
 plantillas, el filtro lleva su dominio (`bci.cl`), asi que sus avisos llegan
 igual y los lee la IA. Las cuentas y tarjetas no se
 escriben: con el primer aviso que llega reenviado, Luka la deja en «Tus bancos
