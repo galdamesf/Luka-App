@@ -764,9 +764,11 @@ model Buzon {
   /// puede escribir a nadie. Cambiarla deja la direccion anterior sin uso.
   clave           String    @unique @db.VarChar(20)
   creadoEn        DateTime  @default(now()) @map("creado_en")
-  /// La ultima confirmacion de reenvio que mando Gmail: el codigo que hay que
-  /// escribir en Gmail para que empiece a reenviar, y para que correo.
+  /// La ultima confirmacion de reenvio que mando Gmail y que falta: el codigo
+  /// que hay que escribir en Gmail (como era antes) o el enlace para dar el
+  /// permiso (como es ahora), y para que correo.
   codigoDeGmail   String?   @map("codigo_de_gmail") @db.VarChar(12)
+  enlaceDeGmail   String?   @map("enlace_de_gmail") @db.VarChar(600)
   codigoDeGmailDe String?   @map("codigo_de_gmail_de") @db.VarChar(254)
   codigoDeGmailEn DateTime? @map("codigo_de_gmail_en")
 
@@ -801,8 +803,11 @@ enum ResultadoDeLlegada {
   SIN_CONFIRMAR
   /// Dice venir de un correo confirmado, pero sin la firma de ese correo.
   SIN_FIRMA
-  /// Gmail pide confirmar el reenvio: el codigo queda a la vista.
+  /// Gmail pide confirmar el reenvio: el codigo o el enlace queda a la vista.
   CONFIRMACION_DE_GMAIL
+  /// Gmail pidio confirmar el reenvio desde un correo confirmado de la
+  /// persona, y Luka dio el permiso sola.
+  REENVIO_CONFIRMADO
 }
 
 /// Lo que fue llegando al buzon de cada persona, para que vea si Luka lo

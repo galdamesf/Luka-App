@@ -4,10 +4,14 @@ import { useActionState, useEffect, useId, useRef, useState, useTransition, type
 import { ESTADO_INICIAL, type AccionFormulario } from "@/dominio/formulario";
 import { BANCOS, mismoBanco } from "@/dominio/bancos";
 import { PASOS, type ProveedorDeCorreo } from "@/dominio/correos-registrados";
-import { enlaceDeGmail, textoDelFiltro, type PasoParaConectar } from "@/dominio/conectar";
+import {
+  enlaceDeGmail,
+  enlaceParaCrearElFiltro,
+  textoDelFiltro,
+  type PasoParaConectar,
+  type PermisoDeGmail,
+} from "@/dominio/conectar";
 import { BotonCopiar } from "./BotonCopiar";
-
-type CodigoDeGmail = { codigo: string | null; de: string | null };
 
 type Props = {
   /** Donde retoma: lo calcula el servidor con pasoParaConectar. */
@@ -20,13 +24,13 @@ type Props = {
   misBancos: string[];
   /** Lo que va en el campo «De» del filtro: los remitentes de los bancos del hogar y de las tiendas. */
   remitentes: string[];
-  /** El codigo de Gmail, si ya llego. */
-  codigoDeGmail: CodigoDeGmail | null;
-  /** Si el buzon se revisa solo: entonces el codigo aparece sin apretar nada. */
+  /** En que va el permiso que pide Gmail para reenviarle a Luka, si ya pidio. */
+  permisoDeGmail: PermisoDeGmail | null;
+  /** Si el buzon se revisa solo: entonces el permiso se da sin apretar nada. */
   revisaSolo: boolean;
   accionMarcarBancos: AccionFormulario;
-  accionBuscarCodigo: (aMano: boolean) => Promise<CodigoDeGmail>;
-  /** «Ya lo puse»: el codigo de Gmail deja de mostrarse. */
+  accionBuscarCodigo: (aMano: boolean) => Promise<PermisoDeGmail>;
+  /** «Ya lo di»: el codigo o el enlace de Gmail deja de mostrarse. */
   accionOlvidarCodigoDeGmail: AccionFormulario;
 };
 
@@ -37,19 +41,19 @@ const DE_TEXTO =
 const ERROR = "rounded-lg border border-peligro/40 bg-peligro/10 px-3 py-2 text-sm";
 const PARA_COPIAR = "flex flex-wrap items-center gap-2 rounded-lg border border-borde bg-superficie-tenue p-2 pl-3";
 
-/** Cada cuanto se pregunta por el codigo de Gmail, y hasta cuando. */
+/** Cada cuanto se pregunta si Gmail ya pidio permiso, y hasta cuando. */
 const CADA_MS = 6_000;
 const HASTA_MS = 5 * 60_000;
 
 /**
  * La opcion de mas, para quien no quiere reenviar cada aviso: que le lleguen
  * solos a Luka, configurando su correo una vez. Con Gmail, sus bancos, el
- * reenvio (el codigo de Gmail aparece solo) y el filtro; con otro correo, sus
- * bancos y la regla. Luka no entra al correo: cada paso abre la pantalla
- * exacta y deja todo listo para pegar.
+ * reenvio (el permiso que pide Gmail lo da Luka sola) y el filtro, que se
+ * abre ya empezado; con otro correo, sus bancos y la regla. Luka no entra al
+ * correo: cada paso abre la pantalla exacta y deja lo demas escrito.
  *
  * Se ve plegada, en una linea: lo principal es reenviar a mano. Se abre sola
- * cuando Gmail esta esperando su codigo. No dice «Conectado»: con lo que
+ * cuando Gmail pidio permiso y falta darlo. No dice «Conectado»: con lo que
  * llega, Luka no sabe si llego por el filtro o reenviado a mano.
  */
 export function ConectarTusCorreos(props: Props) {
@@ -64,7 +68,8 @@ export function ConectarTusCorreos(props: Props) {
     listo: "Listo",
   };
 
-  const conCodigo = proveedor === "GMAIL" && Boolean(props.codigoDeGmail?.codigo);
+  // Gmail pidio permiso y falta darlo: el asistente se abre ahi.
+  const conCodigo = proveedor === "GMAIL" && Boolean(props.permisoDeGmail?.codigo || props.permisoDeGmail?.enlace);
   const desde: PasoParaConectar = conCodigo
     ? "reenvio"
     : pasoInicial === "listo"
@@ -268,37 +273,42 @@ function PasoBancos({
   );
 }
 
+/** Si Gmail ya contesto: Luka dio el permiso, o hay un enlace o un codigo para darlo. */
+function contesto(permiso: PermisoDeGmail | null): boolean {
+  return Boolean(permiso && (permiso.aceptado || permiso.enlace || permiso.codigo));
+}
+
 function PasoReenvio({
   correo,
   direccionDeLuka,
-  codigoDeGmail,
+  permisoDeGmail,
   revisaSolo,
   accionBuscarCodigo,
   accionOlvidarCodigoDeGmail,
   alVolver,
   alSeguir,
 }: Props & { correo: string; alVolver: () => void; alSeguir: () => void }) {
-  const [codigo, setCodigo] = useState<CodigoDeGmail | null>(codigoDeGmail);
-  const [esperando, setEsperando] = useState(revisaSolo && codigoDeGmail === null);
+  const [permiso, setPermiso] = useState<PermisoDeGmail | null>(permisoDeGmail);
+  const [esperando, setEsperando] = useState(revisaSolo && !contesto(permisoDeGmail));
   const [buscando, iniciar] = useTransition();
   const [siguiendo, iniciarSiguiente] = useTransition();
-  const [sinCodigo, setSinCodigo] = useState(false);
+  const [todaviaNo, setTodaviaNo] = useState(false);
 
-  // Con el codigo ya puesto en Gmail, deja de mostrarse (aqui y la proxima vez).
+  // Con el permiso ya dado en Gmail, el enlace o el codigo deja de mostrarse.
   function seguir() {
-    if (!codigo?.codigo) return alSeguir();
+    if (!permiso?.codigo && !permiso?.enlace) return alSeguir();
     iniciarSiguiente(async () => {
       try {
         await accionOlvidarCodigoDeGmail(ESTADO_INICIAL, new FormData());
       } catch {
-        // Da igual: el codigo solo se seguiria mostrando.
+        // Da igual: solo se seguiria mostrando.
       }
       alSeguir();
     });
   }
 
-  // Mientras espera el codigo, pregunta cada pocos segundos (el buzon se
-  // revisa en el servidor). Para a los cinco minutos o cuando llega.
+  // Mientras espera a Gmail, pregunta cada pocos segundos (el buzon se revisa
+  // en el servidor). Para a los cinco minutos o cuando Gmail contesta.
   useEffect(() => {
     if (!esperando) return;
     const desde = Date.now();
@@ -310,8 +320,8 @@ function PasoReenvio({
       }
       try {
         const encontrado = await accionBuscarCodigo(false);
-        if (vivo && encontrado.codigo !== null) {
-          setCodigo(encontrado);
+        if (vivo && contesto(encontrado)) {
+          setPermiso(encontrado);
           setEsperando(false);
         }
       } catch {
@@ -325,11 +335,11 @@ function PasoReenvio({
   }, [esperando, accionBuscarCodigo]);
 
   function buscar() {
-    setSinCodigo(false);
+    setTodaviaNo(false);
     iniciar(async () => {
       const encontrado = await accionBuscarCodigo(true);
-      if (encontrado.codigo !== null) setCodigo(encontrado);
-      else setSinCodigo(true);
+      if (contesto(encontrado)) setPermiso(encontrado);
+      else setTodaviaNo(true);
     });
   }
 
@@ -348,7 +358,8 @@ function PasoReenvio({
           </li>
           <li className="space-y-2">
             <p>
-              <span className="font-bold">2.</span> Presiona «Agregar una dirección de reenvío», pega esta y presiona Siguiente:
+              <span className="font-bold">2.</span> Presiona «Agregar una dirección de reenvío», pega esta dirección y
+              presiona «Siguiente», «Continuar» y «Aceptar». Si Gmail te pide confirmar que eres tú, hazlo.
             </p>
             <div className={PARA_COPIAR}>
               <code className="min-w-0 flex-1 break-all font-mono text-sm font-semibold">{direccionDeLuka}</code>
@@ -357,29 +368,40 @@ function PasoReenvio({
           </li>
           <li className="space-y-2">
             <p>
-              <span className="font-bold">3.</span> Gmail le manda un código a Luka para confirmar. Aparece aquí:
+              <span className="font-bold">3.</span> Gmail le pide permiso a Luka, y Luka lo da sola:
             </p>
-            {codigo?.codigo ? (
+            {permiso?.aceptado ? (
+              <p role="status" className="rounded-lg border border-exito/40 bg-exito/10 px-3 py-2.5 font-semibold">
+                ✓ Listo: Gmail ya puede reenviarle a Luka. Presiona «Siguiente».
+              </p>
+            ) : permiso?.enlace ? (
+              <div role="status" className="space-y-2 rounded-lg border border-acento-canto/60 bg-durazno px-3 py-3 text-durazno-texto">
+                <p className="font-semibold">Gmail pidió tu permiso. Dalo con un toque, y después presiona «Siguiente» aquí:</p>
+                <a href={permiso.enlace} target="_blank" rel="noopener noreferrer" className="boton-luka inline-flex">
+                  Dar el permiso ↗
+                </a>
+              </div>
+            ) : permiso?.codigo ? (
               <div role="status" className="space-y-2 rounded-lg border border-acento-canto/60 bg-durazno px-3 py-3 text-durazno-texto">
                 <div className="flex flex-wrap items-center gap-2">
-                  <code className="cifra rounded-md bg-superficie px-3 py-1.5 text-lg font-bold tracking-[0.2em] text-texto">{codigo.codigo}</code>
-                  <BotonCopiar texto={codigo.codigo} descripcion="el código de Gmail" />
+                  <code className="cifra rounded-md bg-superficie px-3 py-1.5 text-lg font-bold tracking-[0.2em] text-texto">{permiso.codigo}</code>
+                  <BotonCopiar texto={permiso.codigo} descripcion="el código de Gmail" />
                 </div>
                 <p className="font-semibold">Pégalo en Gmail, presiona Verificar y después «Siguiente» aquí.</p>
               </div>
             ) : esperando ? (
               <p role="status" className="flex items-center gap-2 rounded-lg border border-borde bg-superficie-tenue px-3 py-2.5 text-texto-tenue">
                 <span aria-hidden className="inline-block size-3 animate-pulse rounded-full bg-acento" />
-                Esperando el código de Gmail… suele llegar en menos de un minuto.
+                Esperando a Gmail… suele tardar menos de un minuto.
               </p>
             ) : (
               <div className="space-y-2">
                 <button type="button" onClick={buscar} disabled={buscando} className={SECUNDARIO}>
-                  {buscando ? "Buscando…" : "Ya lo agregué: buscar el código"}
+                  {buscando ? "Revisando…" : "Ya la agregué: revisar"}
                 </button>
-                {sinCodigo && (
+                {todaviaNo && (
                   <p role="status" className="text-texto-tenue">
-                    Todavía no llega. Espera un momento y busca de nuevo.
+                    Todavía no llega lo de Gmail. Espera un momento y revisa de nuevo.
                   </p>
                 )}
               </div>
@@ -387,7 +409,7 @@ function PasoReenvio({
           </li>
         </ol>
         <p className="text-xs leading-relaxed text-texto-tenue">
-          No actives «Reenviar una copia del correo entrante»: eso le mandaría todo tu correo a Luka. Basta con el
+          No actives «Reenviar una copia de los mensajes entrantes»: eso le mandaría todo tu correo a Luka. Basta con el
           filtro del paso siguiente, que le pasa solo los avisos de tus bancos.
         </p>
       </div>
@@ -423,28 +445,26 @@ function PasoFiltro({
             <ol className="space-y-4">
               <li className="space-y-2">
                 <p>
-                  <span className="font-bold">1.</span> Abre los filtros de {correo} y presiona «Crear un filtro nuevo»:
+                  <span className="font-bold">1.</span> Abre Gmail con el filtro ya escrito, y presiona «Crear filtro»:
                 </p>
-                <a href={enlaceDeGmail("filtros", correo)} target="_blank" rel="noopener noreferrer" className={SECUNDARIO}>
-                  Abrir los filtros de Gmail ↗
+                <a href={enlaceParaCrearElFiltro(correo, remitentes)} target="_blank" rel="noopener noreferrer" className={SECUNDARIO}>
+                  Crear el filtro en Gmail ↗
                 </a>
-              </li>
-              <li className="space-y-2">
-                <p>
-                  <span className="font-bold">2.</span> En «De», pega esto y presiona «Crear filtro»:
-                </p>
-                <div className={PARA_COPIAR}>
-                  <code className="min-w-0 flex-1 break-all font-mono text-[13px]">{filtro}</code>
-                  <BotonCopiar texto={filtro} descripcion="las direcciones de tus bancos y tiendas" />
-                </div>
               </li>
               <li>
                 <p>
-                  <span className="font-bold">3.</span> Marca «Reenviarlo a» con tu dirección de Luka y «Nunca enviarlo a
-                  Spam», y presiona «Crear filtro» otra vez.
+                  <span className="font-bold">2.</span> Marca «Reenviar a», elige tu dirección de Luka y presiona «Crear
+                  filtro». Si Gmail te pide confirmar que eres tú, hazlo.
                 </p>
               </li>
             </ol>
+            <details className="text-xs text-texto-tenue">
+              <summary className="cursor-pointer">¿No aparecieron tus bancos en «De»? Cópialos de aquí</summary>
+              <div className={`mt-2 ${PARA_COPIAR}`}>
+                <code className="min-w-0 flex-1 break-all font-mono text-[13px] text-texto">{filtro}</code>
+                <BotonCopiar texto={filtro} descripcion="las direcciones de tus bancos y tiendas" />
+              </div>
+            </details>
           </>
         ) : (
           <>

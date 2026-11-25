@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { EstadoFormulario } from "@/dominio/formulario";
+import type { PermisoDeGmail } from "@/dominio/conectar";
 import { ErrorDelBuzon, leerMiBuzon, revisarElBuzon } from "@/datos/buzon";
 import { ErrorDeCartola, guardarClaveDeCartola, quitarClaveDeCartola } from "@/datos/cartolas";
 import { ErrorAlConectar, cambiarResumenDiario, cartolaQueEsperaClave, marcarMisBancos } from "@/datos/conectar";
@@ -74,16 +75,17 @@ const ESPERA_ENTRE_BUSQUEDAS_MS = 10_000;
 let ultimaBusqueda = 0;
 
 /**
- * El codigo con que Gmail pide confirmar el reenvio a la direccion de Luka
- * de esta persona, si ya llego. Mientras el asistente lo espera, revisa el
- * buzon: solo si Luka lo revisa sola, o si la persona apreto el boton
- * («aMano»), como con «Revisar ahora». Esperando, no mas seguido que cada
- * 10 segundos: Gmail no quiere que se entre a cada rato.
+ * En que va el permiso que pide Gmail para reenviarle a la direccion de Luka
+ * de esta persona: si Luka ya lo dio, o el enlace (o el codigo, con el Gmail
+ * de antes) que falta. Mientras el asistente espera, revisa el buzon: solo
+ * si Luka lo revisa sola, o si la persona apreto el boton («aMano»), como
+ * con «Revisar ahora». Esperando, no mas seguido que cada 10 segundos: Gmail
+ * no quiere que se entre a cada rato.
  */
-export async function accionBuscarCodigoDeGmail(aMano: boolean): Promise<{ codigo: string | null; de: string | null }> {
+export async function accionBuscarCodigoDeGmail(aMano: boolean): Promise<PermisoDeGmail> {
   const { hogarId, miembroId } = await hogarActual();
   const config = configuracionDelBuzon();
-  if (config === null) return { codigo: null, de: null };
+  if (config === null) return { codigo: null, enlace: null, de: null, aceptado: false };
   const ahora = Date.now();
   if (aMano || (revisionAutomatica() && ahora - ultimaBusqueda >= ESPERA_ENTRE_BUSQUEDAS_MS)) {
     ultimaBusqueda = ahora;
@@ -94,7 +96,12 @@ export async function accionBuscarCodigoDeGmail(aMano: boolean): Promise<{ codig
     }
   }
   const buzon = await leerMiBuzon(hogarId, miembroId, { base: config.direccion });
-  return { codigo: buzon.codigoDeGmail?.codigo ?? null, de: buzon.codigoDeGmail?.de ?? null };
+  return {
+    codigo: buzon.codigoDeGmail?.codigo ?? null,
+    enlace: buzon.codigoDeGmail?.enlace ?? null,
+    de: buzon.codigoDeGmail?.de ?? buzon.reenvioAceptado?.de ?? null,
+    aceptado: buzon.codigoDeGmail === null && buzon.reenvioAceptado !== null,
+  };
 }
 
 /**

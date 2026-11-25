@@ -4,6 +4,7 @@ import {
   confirmacionDeGmail,
   direccionDelBuzon,
   esDelBuzon,
+  esEnlaceParaDarElPermiso,
   firmadoPor,
   leerAutenticacion,
   mismaDireccion,
@@ -131,7 +132,7 @@ describe("la confirmacion de reenvio de Gmail", () => {
         },
         esDeLuka,
       ),
-    ).toEqual({ codigo: "123456789", solicitante: "camila@gmail.com" });
+    ).toEqual({ codigo: "123456789", enlace: null, solicitante: "camila@gmail.com" });
 
     expect(
       confirmacionDeGmail(
@@ -143,7 +144,60 @@ describe("la confirmacion de reenvio de Gmail", () => {
         },
         esDeLuka,
       ),
-    ).toEqual({ codigo: "556677889", solicitante: "ana@empresa.cl" });
+    ).toEqual({ codigo: "556677889", enlace: null, solicitante: "ana@empresa.cl" });
+  });
+
+  // Como llega desde 2026: sin codigo, con el enlace para aceptar y el de cancelar.
+  const ACEPTAR = "https://mail-settings.google.com/mail/vf-%5BANGjdJ9x2Qa7%5D-Zq8w3Lk1mN0pR5tY";
+  const CANCELAR = "https://mail-settings.google.com/mail/uf-%5BANGjdJ-B4c7%5D-Zq8w3Lk1mN0pR5tY";
+  const confirmacionNueva = (texto: string) =>
+    confirmacionDeGmail(
+      {
+        de: "forwarding-noreply@google.com",
+        asunto: "(Gmail Confirmación de reenvío - Recibir correos de camila@gmail.com",
+        texto,
+        autenticacion: firmaDeGoogle,
+      },
+      esDeLuka,
+    );
+
+  test("la de ahora no trae codigo: trae el enlace para aceptar, y nunca se toma el de cancelar", () => {
+    const texto = [
+      `camila@gmail.com solicitó reenviar automáticamente el correo electrónico a tu dirección ${MIA}.`,
+      "Para permitir que camila@gmail.com reenvíe el correo electrónico automáticamente a tu dirección, haz clic en el siguiente vínculo para confirmar la solicitud:",
+      "",
+      ACEPTAR,
+      "",
+      "Si no apruebas esta solicitud, no es necesario que realices ninguna otra acción. ... haz clic en este vínculo para cancelar la verificación:",
+      CANCELAR,
+    ].join("\n");
+    expect(confirmacionNueva(texto)).toEqual({ codigo: null, enlace: ACEPTAR, solicitante: "camila@gmail.com" });
+    // Aunque el de cancelar venga primero, o el enlace termine la frase.
+    expect(confirmacionNueva(`camila@gmail.com\n${CANCELAR}\n${ACEPTAR}`)?.enlace).toBe(ACEPTAR);
+    expect(confirmacionNueva(`camila@gmail.com pide permiso: ${ACEPTAR}.`)?.enlace).toBe(ACEPTAR);
+    // Solo el de cancelar, o ninguno: no es una confirmacion que sirva.
+    expect(confirmacionNueva(`camila@gmail.com\n${CANCELAR}`)).toBeNull();
+    expect(confirmacionNueva("camila@gmail.com quiere reenviarte correos")).toBeNull();
+  });
+
+  test("el enlace para aceptar es de Google, en https y con /mail/vf-, y nada mas", () => {
+    expect(esEnlaceParaDarElPermiso(ACEPTAR)).toBe(true);
+    expect(esEnlaceParaDarElPermiso("https://mail.google.com/mail/vf-%5Babc%5D-xyz")).toBe(true);
+    expect(esEnlaceParaDarElPermiso("https://mail.google.com/mail/u/0/vf-%5Babc%5D-xyz")).toBe(true);
+    for (const malo of [
+      CANCELAR,
+      "http://mail-settings.google.com/mail/vf-abc",
+      "https://mail-settings.google.com.evil.cl/mail/vf-abc",
+      "https://evil.cl/mail-settings.google.com/mail/vf-abc",
+      "https://ana@mail-settings.google.com/mail/vf-abc",
+      "https://mail-settings.google.com:8443/mail/vf-abc",
+      "https://mail-settings.google.com/mail/vf-abc/otra",
+      "https://accounts.google.com/mail/vf-abc",
+      `https://mail-settings.google.com/mail/vf-${"x".repeat(600)}`,
+      "no es un enlace",
+    ]) {
+      expect(esEnlaceParaDarElPermiso(malo), malo).toBe(false);
+    }
   });
 
   test("sin la firma de Google, o de otro remitente, no es una confirmacion", () => {

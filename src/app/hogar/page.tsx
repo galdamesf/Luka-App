@@ -102,7 +102,7 @@ export default async function PaginaHogar() {
     ...losBancos.bancos.filter((b) => b.cuentas.some((c) => c.miembroId === miembroId)).map((b) => b.banco),
   ];
   const pasoDeConectar = pasoParaConectar(
-    { ...paraConectar, codigoDeGmail: miBuzon?.codigoDeGmail?.codigo ?? null },
+    { ...paraConectar, codigoDeGmail: miBuzon?.codigoDeGmail?.codigo ?? miBuzon?.codigoDeGmail?.enlace ?? null },
     correosConfirmados[0]?.proveedor ?? "GMAIL",
   );
 
@@ -199,7 +199,13 @@ export default async function PaginaHogar() {
               direccionDeLuka={miBuzon.direccion}
               misBancos={misBancos}
               remitentes={losBancos.remitentes}
-              codigoDeGmail={miBuzon.codigoDeGmail ? { codigo: miBuzon.codigoDeGmail.codigo, de: miBuzon.codigoDeGmail.de } : null}
+              permisoDeGmail={
+                miBuzon.codigoDeGmail
+                  ? { codigo: miBuzon.codigoDeGmail.codigo, enlace: miBuzon.codigoDeGmail.enlace, de: miBuzon.codigoDeGmail.de, aceptado: false }
+                  : miBuzon.reenvioAceptado
+                    ? { codigo: null, enlace: null, de: miBuzon.reenvioAceptado.de, aceptado: true }
+                    : null
+              }
               revisaSolo={revisionAutomatica()}
               accionMarcarBancos={accionMarcarMisBancos}
               accionBuscarCodigo={accionBuscarCodigoDeGmail}

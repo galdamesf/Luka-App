@@ -65,6 +65,8 @@ const opciones = (extra: Partial<OpcionesDelBuzon> = {}): OpcionesDelBuzon => ({
   lectorPara: () => lector,
   ahora: AHORA,
   maestra: MAESTRA,
+  // Sin red: Gmail no contesta.
+  darPermiso: async () => false,
   ...extra,
 });
 

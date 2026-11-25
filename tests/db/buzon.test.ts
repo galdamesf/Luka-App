@@ -60,6 +60,8 @@ const opciones = (extra: Partial<OpcionesDelBuzon> = {}): OpcionesDelBuzon => ({
   base: BASE,
   lectorPara: () => lector,
   ahora: AHORA,
+  // Sin red: Gmail no contesta, salvo en las pruebas del permiso.
+  darPermiso: async () => false,
   ...extra,
 });
 
@@ -322,12 +324,18 @@ describe("la confirmacion de reenvio de Gmail", () => {
       ],
     });
 
-  test("deja el codigo a la vista de quien es el buzon, sin abrir su enlace", async () => {
+  test("si Gmail no acepto el enlace, deja el codigo y el enlace a la vista de quien es el buzon", async () => {
     expect(await procesarCorreo(await confirmacion(firmaDe("google.com")), opciones())).toMatchObject({
       resultado: "CONFIRMACION_DE_GMAIL",
     });
     const buzon = await leerMiBuzon(HOGAR_INICIAL, yo, { base: BASE, db: prisma, ahora: AHORA });
-    expect(buzon.codigoDeGmail).toEqual({ codigo: "987654321", de: "camila@ejemplo.cl", llegoEn: AHORA });
+    expect(buzon.codigoDeGmail).toEqual({
+      codigo: "987654321",
+      enlace: "https://mail-settings.google.com/mail/vf-ejemplo",
+      de: "camila@ejemplo.cl",
+      llegoEn: AHORA,
+    });
+    expect(buzon.reenvioAceptado).toBeNull();
     expect(buzon.llegadas[0]).toMatchObject({ resultado: "CONFIRMACION_DE_GMAIL", remitente: "camila@ejemplo.cl" });
 
     // Despues de una semana ya no se muestra, y se puede sacar antes.
@@ -340,6 +348,75 @@ describe("la confirmacion de reenvio de Gmail", () => {
   test("una falsa, sin la firma de Google, no deja ningun codigo", async () => {
     expect(await procesarCorreo(await confirmacion(sinFirmaDe("google.com")), opciones())).toMatchObject({ resultado: "SIN_CONFIRMAR" });
     expect((await leerMiBuzon(HOGAR_INICIAL, yo, { base: BASE, db: prisma })).codigoDeGmail).toBeNull();
+  });
+
+  // Como llega desde 2026: sin codigo, solo con los enlaces para aceptar y para cancelar.
+  const ACEPTAR = "https://mail-settings.google.com/mail/vf-%5BANGjdJ9x2Qa7%5D-Zq8w3Lk1mN0pR5tY";
+  const CANCELAR = "https://mail-settings.google.com/mail/uf-%5BANGjdJ-B4c7%5D-Zq8w3Lk1mN0pR5tY";
+  const confirmacionNueva = (solicitante: string) =>
+    armarCorreo({
+      de: "El equipo de Gmail <forwarding-noreply@google.com>",
+      para: miDireccion,
+      asunto: `(Gmail Confirmación de reenvío - Recibir correos de ${solicitante}`,
+      texto: [
+        `${solicitante} solicitó reenviar automáticamente el correo electrónico a tu dirección ${miDireccion}.`,
+        `Para permitir que ${solicitante} reenvíe el correo electrónico automáticamente a tu dirección, haz clic en el siguiente vínculo para confirmar la solicitud:`,
+        ACEPTAR,
+        "Si no quieres permitirlo, haz clic en este vínculo para cancelar la verificación:",
+        CANCELAR,
+      ].join("\n"),
+      arriba: [
+        ["Delivered-To", miDireccion],
+        ["Authentication-Results", firmaDe("google.com")],
+      ],
+    });
+
+  test("si la pidio un correo suyo, Luka da el permiso sola: abre el enlace para aceptar, una vez", async () => {
+    const abiertos: string[] = [];
+    const darPermiso = async (enlace: string) => {
+      abiertos.push(enlace);
+      return true;
+    };
+    const buzon = buzonEnMemoria([await confirmacionNueva("camila@ejemplo.cl")]);
+    expect(await revisarBuzon(buzon, opciones({ darPermiso }))).toMatchObject({ revisados: 1, sinMovimiento: 0, pendientes: 0 });
+    expect(buzon.quedan()).toBe(0);
+    expect(abiertos).toEqual([ACEPTAR]);
+
+    const mio = await leerMiBuzon(HOGAR_INICIAL, yo, { base: BASE, db: prisma, ahora: AHORA });
+    expect(mio.codigoDeGmail).toBeNull();
+    expect(mio.reenvioAceptado).toEqual({ de: "camila@ejemplo.cl", llegoEn: AHORA });
+    expect(mio.llegadas[0]).toMatchObject({ resultado: "REENVIO_CONFIRMADO", remitente: "camila@ejemplo.cl" });
+
+    // Una direccion nueva necesita su propio permiso.
+    await cambiarMiDireccion(HOGAR_INICIAL, yo, BASE, prisma);
+    expect((await leerMiBuzon(HOGAR_INICIAL, yo, { base: BASE, db: prisma, ahora: AHORA })).reenvioAceptado).toBeNull();
+  });
+
+  test("si Gmail no contesto que lo acepto, el enlace queda para darlo con un toque", async () => {
+    expect(await procesarCorreo(await confirmacionNueva("camila@ejemplo.cl"), opciones())).toMatchObject({
+      resultado: "CONFIRMACION_DE_GMAIL",
+    });
+    const mio = await leerMiBuzon(HOGAR_INICIAL, yo, { base: BASE, db: prisma, ahora: AHORA });
+    expect(mio.codigoDeGmail).toEqual({ codigo: null, enlace: ACEPTAR, de: "camila@ejemplo.cl", llegoEn: AHORA });
+    expect(mio.reenvioAceptado).toBeNull();
+    await olvidarCodigoDeGmail(HOGAR_INICIAL, yo, prisma);
+    expect((await leerMiBuzon(HOGAR_INICIAL, yo, { base: BASE, db: prisma, ahora: AHORA })).codigoDeGmail).toBeNull();
+  });
+
+  test("pedida desde un correo que no es suyo, el enlace ni se abre ni se muestra", async () => {
+    const abiertos: string[] = [];
+    const darPermiso = async (enlace: string) => {
+      abiertos.push(enlace);
+      return true;
+    };
+    expect(await procesarCorreo(await confirmacionNueva("intruso@ejemplo.cl"), opciones({ darPermiso }))).toMatchObject({
+      resultado: "SIN_CONFIRMAR",
+    });
+    expect(abiertos).toEqual([]);
+    const mio = await leerMiBuzon(HOGAR_INICIAL, yo, { base: BASE, db: prisma, ahora: AHORA });
+    expect(mio.codigoDeGmail).toBeNull();
+    expect(mio.reenvioAceptado).toBeNull();
+    expect(mio.llegadas[0]).toMatchObject({ resultado: "SIN_CONFIRMAR", remitente: "intruso@ejemplo.cl" });
   });
 });
 

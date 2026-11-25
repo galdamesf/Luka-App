@@ -13,6 +13,7 @@ import {
 import {
   armarResumenDiario,
   enlaceDeGmail,
+  enlaceParaCrearElFiltro,
   pasoParaConectar,
   pruebaQueLlega,
   textoDelFiltro,
@@ -64,6 +65,7 @@ describe("en que paso va el asistente", () => {
     expect(pruebaQueLlega("CARTOLA_SIN_CLAVE")).toBe(true);
     // Esto no prueba que el filtro funcione.
     expect(pruebaQueLlega("CONFIRMACION_DE_GMAIL")).toBe(false);
+    expect(pruebaQueLlega("REENVIO_CONFIRMADO")).toBe(false);
     expect(pruebaQueLlega("SIN_CONFIRMAR")).toBe(false);
     expect(pruebaQueLlega("SIN_FIRMA")).toBe(false);
   });
@@ -75,6 +77,12 @@ describe("los botones de Gmail", () => {
       "https://mail.google.com/mail/?authuser=camila.rojas%40gmail.com#settings/fwdandpop",
     );
     expect(enlaceDeGmail("filtros", "camila@gmail.com")).toBe("https://mail.google.com/mail/?authuser=camila%40gmail.com#settings/filters");
+  });
+
+  test("el filtro se abre ya empezado, con los remitentes en «De»", () => {
+    expect(enlaceParaCrearElFiltro(" Camila@Gmail.com ", ["mensajeria@santander.cl", "bci.cl"])).toBe(
+      "https://mail.google.com/mail/?authuser=camila%40gmail.com#create-filter/from=mensajeria%40santander.cl+OR+bci.cl",
+    );
   });
 
   test("el campo «De» va con OR en Gmail, y uno por linea en los demas", () => {
